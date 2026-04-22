@@ -10,8 +10,6 @@
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.4-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
 [![WebApp](https://img.shields.io/badge/WebApp-live-success?style=flat-square)](https://theperfusionist.github.io/perfusioncalc/)
 
-**🌐 [Open WebApp](https://theperfusionist.github.io/perfusioncalc/) · [Download APK](https://github.com/ThePerfusionist/perfusioncalc/releases)**
-
 </div>
 
 ---
