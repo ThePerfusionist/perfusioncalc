@@ -1,11 +1,11 @@
 {
-    "name": "perfusioncalc",
-    "short_name": "perfusioncalc",
+    "name": "PerfusionCalc",
+    "short_name": "PerfusionCalc",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#2C2C2C",
+    "theme_color": "#FFA500",
+    "description": "Medical calculator for perfusionists. Educational use only.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
