@@ -16,7 +16,7 @@
   <!-- ═══ Security Headers ═══════════════════════════════════════════════════ -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com;
+    script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com;
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob:;
     font-src 'self' data:;
@@ -33,12 +33,12 @@
   <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()">
 
   <!-- ═══ Favicon – PerfusionCalc logo (multiple formats for max compatibility) ═══ -->
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3">
-  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico?v=3">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=3">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png?v=3">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png?v=3">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png?v=3">
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=4">
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico?v=4">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=4">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png?v=4">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png?v=4">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png?v=4">
 
   <!-- iOS meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -50,9 +50,26 @@
 
   <title>PerfusionCalc</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Pre-bootstrap: aggressively unregister any old service workers
+       from previous deployments. This eliminates favicon-caching issues. -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(r) { r.unregister(); });
+      });
+      if (window.caches) {
+        caches.keys().then(function(names) {
+          names.forEach(function(n) {
+            if (n.indexOf('flutter') !== -1) caches.delete(n);
+          });
+        });
+      }
+    }
+  </script>
 </head>
 <body>
-  <!-- Modern Flutter 3.22+ bootstrap – single async script tag -->
+  <!-- Modern Flutter 3.22+ bootstrap – custom flutter_bootstrap.js disables SW -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
