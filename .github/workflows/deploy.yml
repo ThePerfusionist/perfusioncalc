@@ -1,45 +1,43 @@
-# PerfusionCalc – Automatisches WebApp Deployment
-# Dieses Workflow baut die Flutter WebApp und veröffentlicht sie
-# auf GitHub Pages bei jedem Push zu main.
+# PerfusionCalc – Automatisches WebApp Deployment zu GitHub Pages
+# Trigger: jeder Push zu main | manuell über Actions-Tab
+# URL: https://theperfusionist.github.io/perfusioncalc/
 
 name: Deploy WebApp to GitHub Pages
 
 on:
   push:
     branches:
-      - main          # Trigger: jeder Push auf main
-  workflow_dispatch:  # Manueller Trigger per Knopf auf github.com
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write     # Nötig um gh-pages Branch zu schreiben
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
 
-      # 1. Repository auschecken
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Flutter installieren (stable channel)
-      - name: Setup Flutter
+      - name: Setup Flutter (stable)
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true     # Builds werden deutlich schneller
+          cache: true
 
-      # 3. Abhängigkeiten installieren
       - name: Install dependencies
         run: flutter pub get
 
-      # 4. WebApp bauen mit korrektem base-href
       - name: Build Flutter Web
         run: flutter build web --release --base-href /perfusioncalc/
 
-      # 5. WebApp auf GitHub Pages veröffentlichen
-      - name: Deploy to GitHub Pages
-        uses: bluefireteam/flutter-gh-pages@v9
+      - name: Deploy to GitHub Pages (gh-pages branch)
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          baseHref: /perfusioncalc/
-          targetBranch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          publish_branch: gh-pages
