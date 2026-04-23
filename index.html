@@ -12,6 +12,33 @@
   <meta name="description" content="PerfusionCalc – Medical calculator for perfusionists. Educational use only.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- ═══ Security Headers ═══════════════════════════════════════════════════ -->
+  <!-- Content Security Policy: restricts what can be loaded/executed.
+       Flutter Web (CanvasKit) requires 'wasm-unsafe-eval' and the CDN for CanvasKit.
+       Allows only self-origin scripts + Google's CanvasKit CDN. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    font-src 'self' data:;
+    connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com;
+    worker-src 'self' blob:;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'none';
+    frame-ancestors 'none';
+  ">
+  <!-- Prevent clickjacking -->
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <!-- Prevent MIME sniffing -->
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <!-- Referrer policy: don't leak URL paths on outgoing links -->
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <!-- Permissions policy: disable unused browser APIs -->
+  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()">
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+
   <!-- ═══ Favicon – mehrfach definiert für maximale Browser-Kompatibilität ═══ -->
   <!-- Standard favicon.ico (wird von allen Browsern erkannt) -->
   <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
@@ -31,7 +58,7 @@
 </head>
 <body>
   <script>
-    const serviceWorkerVersion = "1142562905" /* Flutter's service worker is deprecated and will be removed in a future Flutter release. */;
+    const serviceWorkerVersion = "1541499302" /* Flutter's service worker is deprecated and will be removed in a future Flutter release. */;
     var scriptLoaded = false;
     function loadMainDartJs() {
       if (scriptLoaded) {
