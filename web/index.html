@@ -3,6 +3,7 @@
 <head>
   <!--
     Flutter Web - PerfusionCalc
+    Modern Flutter 3.22+ bootstrap.
     The base href is replaced at build time by flutter build web --base-href
   -->
   <base href="$FLUTTER_BASE_HREF">
@@ -13,9 +14,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- ═══ Security Headers ═══════════════════════════════════════════════════ -->
-  <!-- Content Security Policy: restricts what can be loaded/executed.
-       Flutter Web (CanvasKit) requires 'wasm-unsafe-eval' and the CDN for CanvasKit.
-       Allows only self-origin scripts + Google's CanvasKit CDN. -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com;
@@ -29,85 +27,32 @@
     form-action 'none';
     frame-ancestors 'none';
   ">
-  <!-- Prevent clickjacking -->
   <meta http-equiv="X-Frame-Options" content="DENY">
-  <!-- Prevent MIME sniffing -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <!-- Referrer policy: don't leak URL paths on outgoing links -->
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <!-- Permissions policy: disable unused browser APIs -->
   <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()">
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
 
-  <!-- ═══ Favicon – mehrfach definiert für maximale Browser-Kompatibilität ═══ -->
-  <!-- Standard favicon.ico (wird von allen Browsern erkannt) -->
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-  <!-- PNG Fallback -->
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══ Favicon – PerfusionCalc logo (multiple formats for max compatibility) ═══ -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=2">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png?v=2">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png?v=2">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png?v=2">
 
-  <!-- iOS meta tags & icons -->
+  <!-- iOS meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="PerfusionCalc">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Theme color matches app accent -->
+  <meta name="theme-color" content="#FFA500">
 
   <title>PerfusionCalc</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <script>
-    var serviceWorkerVersion = null;
-    var scriptLoaded = false;
-    function loadMainDartJs() {
-      if (scriptLoaded) {
-        return;
-      }
-      scriptLoaded = true;
-      var scriptTag = document.createElement('script');
-      scriptTag.src = 'main.dart.js';
-      scriptTag.type = 'application/javascript';
-      document.body.append(scriptTag);
-    }
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        var serviceWorkerUrl = 'flutter_service_worker.js?v=' + serviceWorkerVersion;
-        navigator.serviceWorker.register(serviceWorkerUrl)
-          .then((reg) => {
-            function waitForActivation(serviceWorker) {
-              serviceWorker.addEventListener('statechange', () => {
-                if (serviceWorker.state == 'activated') {
-                  console.log('Installed new service worker.');
-                  loadMainDartJs();
-                }
-              });
-            }
-            if (!reg.active && (reg.installing || reg.waiting)) {
-              waitForActivation(reg.installing ?? reg.waiting);
-            } else if (!reg.active.scriptURL.endsWith(serviceWorkerVersion)) {
-              console.log('New service worker available.');
-              reg.update();
-              waitForActivation(reg.installing);
-            } else {
-              console.log('Loading app from service worker.');
-              loadMainDartJs();
-            }
-          });
-
-        setTimeout(() => {
-          if (!scriptLoaded) {
-            console.warn(
-              'Failed to load app from service worker. Falling back to plain <script> tag.',
-            );
-            loadMainDartJs();
-          }
-        }, 4000);
-      });
-    } else {
-      loadMainDartJs();
-    }
-  </script>
+  <!-- Modern Flutter 3.22+ bootstrap – single async script tag -->
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

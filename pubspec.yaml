@@ -21,6 +21,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Note: The web/ folder (favicon.ico, favicon.png, icons/, manifest.json,
+  # index.html) is automatically copied to build/web/ by `flutter build web`.
+  # It must NOT be listed here — these are web assets, not Flutter runtime assets.
   assets:
     - assets/icon.png
     - assets/o2_chart.png
@@ -30,5 +33,3 @@ flutter:
     - assets/heart_posterior.png
     - assets/heart_cross_section.png
     - assets/coronary_arteries.svg
-    - web/favicon.png
-    - web/icons/
