@@ -1,6 +1,14 @@
 import 'dart:math';
 
 class PatientData {
+  // ── Internal helper: guards against NaN/Infinity in results ─────────────
+  // Any calculation producing NaN or Infinity is treated as "no result" (0).
+  // This prevents extreme inputs (e.g. pow overflow) from crashing the UI.
+  static double _safe(double v) {
+    if (v.isNaN || v.isInfinite) return 0;
+    return v;
+  }
+
   // BSA/CO inputs
   double? height;
   double? weight;
@@ -55,11 +63,14 @@ class PatientData {
   // ── BSA/CO calculations ──────────────────────────────────────────────────
   double get bsa {
     if (height == null || weight == null) return 0;
-    return 0.007184 * pow(height!, 0.725) * pow(weight!, 0.425);
+    // Reject non-physiological or extreme inputs that would cause overflow
+    if (height! <= 0 || weight! <= 0 || height! > 300 || weight! > 1000) return 0;
+    final result = 0.007184 * pow(height!, 0.725) * pow(weight!, 0.425);
+    return _safe(result.toDouble());
   }
 
   /// Cardiac output uses user-defined CI (default 2.4) instead of fixed value
-  double get cardiacOutput => bsa * bsaCardiacIndex;
+  double get cardiacOutput => _safe(bsa * bsaCardiacIndex);
 
   double get bloodVolumeMale {
     if (weight == null || weight! <= 0) return 0;

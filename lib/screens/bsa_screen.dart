@@ -21,14 +21,21 @@ class _BSAScreenState extends State<BSAScreen> {
 
   Future<void> _loadCI() async {
     final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getDouble(_kCiKey) ?? 2.4;
+    // Validate against corrupted / tampered preference values
+    final safe = (raw.isNaN || raw.isInfinite || raw <= 0 || raw > 10) ? 2.4 : raw;
     setState(() {
-      widget.patientData.bsaCardiacIndex = prefs.getDouble(_kCiKey) ?? 2.4;
+      widget.patientData.bsaCardiacIndex = safe;
       _loaded = true;
     });
+    // If the stored value was invalid, overwrite with the safe default
+    if (safe != raw) await prefs.setDouble(_kCiKey, safe);
     widget.onChanged();
   }
 
   Future<void> _saveCI(double v) async {
+    // Only persist sensible values; reject NaN/Infinity/out-of-range
+    if (v.isNaN || v.isInfinite || v <= 0 || v > 10) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_kCiKey, v);
   }

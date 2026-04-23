@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 const kCardColor  = Color(0xFF1C1C1C);
 const kGold       = Color(0xFFFFA500);
@@ -58,6 +59,19 @@ class _InputCardState extends State<InputCard> {
     return s;
   }
 
+  /// Safely parse a numeric string input. Returns null for invalid/extreme values.
+  /// Rejects NaN, Infinity, and values outside a sensible clinical range (±1e6).
+  /// This protects all downstream calculations from overflow and malformed input.
+  double? _safeParse(String s) {
+    if (s.isEmpty) return null;
+    final v = double.tryParse(s.replaceAll(',', '.'));
+    if (v == null) return null;
+    if (v.isNaN || v.isInfinite) return null;
+    // Clinical values are always within ±1e6; anything beyond is certainly bogus.
+    if (v.abs() > 1e6) return null;
+    return v;
+  }
+
   void _increment() {
     final v = double.parse(((widget.value ?? 0) + widget.step).toStringAsFixed(4));
     widget.onChanged(v);
@@ -89,13 +103,20 @@ class _InputCardState extends State<InputCard> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 22),
+                // Input validation: max 10 chars, only digits/decimals/minus
+                maxLength: 10,
+                inputFormatters: [
+                  // Allow only digits, single decimal separator (. or ,), optional leading minus
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
+                ],
                 decoration: const InputDecoration(
+                  counterText: '', // hide the "x/10" counter
                   border: InputBorder.none,
                   hintText: 'Enter value',
                   hintStyle: TextStyle(color: Colors.white30, fontSize: 18),
                 ),
                 onTap: () => setState(() => _editing = true),
-                onChanged: (s) => widget.onChanged(double.tryParse(s.replaceAll(',', '.'))),
+                onChanged: (s) => widget.onChanged(_safeParse(s)),
                 onEditingComplete: () { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
                 onTapOutside: (_) { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
               ),
