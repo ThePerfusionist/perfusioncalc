@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PerfusionCalc – Network Security Configuration
+  The app has NO network access at runtime. This config enforces that by
+  disallowing all cleartext traffic and all trust anchors.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
