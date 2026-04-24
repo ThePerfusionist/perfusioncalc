@@ -12,28 +12,41 @@ import 'screens/pediatric_screen.dart';
 import 'screens/reference_pressure_screen.dart';
 import 'screens/heart_anatomy_screen.dart';
 import 'models/patient_data.dart';
+import 'i18n/app_strings.dart';
 
 const kAppVersion = '0.1.7';
 const _kDark = Color(0xFF1C1C1C);
 const _kGold = Color(0xFFFFA500);
 
-void main() { runApp(const PerfusionCalcApp()); }
+void main() async {
+  // Sprache aus SharedPreferences laden bevor die UI gerendert wird,
+  // damit der erste Rebuild schon die richtige Sprache zeigt.
+  WidgetsFlutterBinding.ensureInitialized();
+  await LocaleNotifier.instance.load();
+  runApp(const PerfusionCalcApp());
+}
 
 class PerfusionCalcApp extends StatelessWidget {
   const PerfusionCalcApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PerfusionCalc',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: const ColorScheme.dark(primary: _kGold, surface: _kDark),
-        scaffoldBackgroundColor: const Color(0xFF2C2C2C),
-        appBarTheme: const AppBarTheme(backgroundColor: _kDark, foregroundColor: Colors.white, elevation: 0),
-        useMaterial3: true,
+    // AnimatedBuilder lauscht auf den globalen LocaleNotifier.
+    // Bei jedem Sprachwechsel wird der gesamte Widget-Tree neu aufgebaut,
+    // damit alle t()-Aufrufe die neue Sprache sehen.
+    return AnimatedBuilder(
+      animation: LocaleNotifier.instance,
+      builder: (context, _) => MaterialApp(
+        title: t('app_title'),
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: const ColorScheme.dark(primary: _kGold, surface: _kDark),
+          scaffoldBackgroundColor: const Color(0xFF2C2C2C),
+          appBarTheme: const AppBarTheme(backgroundColor: _kDark, foregroundColor: Colors.white, elevation: 0),
+          useMaterial3: true,
+        ),
+        home: const MainScreen(),
       ),
-      home: const MainScreen(),
     );
   }
 }
@@ -49,18 +62,21 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   final PatientData _patientData = PatientData();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final List<Map<String, dynamic>> _tabs = [
-    {'label': 'BSA/CO/Hb/Hct',             'icon': Icons.monitor_heart_outlined},
-    {'label': 'O\u2082 delivery',           'icon': Icons.air},
-    {'label': 'Resistances',                'icon': Icons.compress},
-    {'label': 'Electrolytes/Buffer',        'icon': Icons.science_outlined},
-    {'label': 'Tube volume',                'icon': Icons.linear_scale},
-    {'label': 'Flow/Drainage rate',         'icon': Icons.water_drop_outlined},
-    {'label': 'Zoll/Chairre',               'icon': Icons.straighten},
-    {'label': 'Hypothermia',                'icon': Icons.ac_unit},
-    {'label': 'Pediatric',                  'icon': Icons.child_care_outlined},
-    {'label': 'Reference values pressure',  'icon': Icons.table_chart_outlined},
-    {'label': 'Heart Anatomy',              'icon': Icons.favorite_border},
+  /// Tabs-Definition: icon ist statisch, label wird per t() bei jedem Build
+  /// frisch übersetzt. Wenn die Sprache wechselt, ruft AnimatedBuilder oben
+  /// einen Rebuild aus und _tabsList() wird neu evaluiert.
+  List<Map<String, dynamic>> _tabsList() => [
+    {'key': 'tab_bsa',          'icon': Icons.monitor_heart_outlined},
+    {'key': 'tab_o2',           'icon': Icons.air},
+    {'key': 'tab_resistances',  'icon': Icons.compress},
+    {'key': 'tab_electrolytes', 'icon': Icons.science_outlined},
+    {'key': 'tab_tube_volume',  'icon': Icons.linear_scale},
+    {'key': 'tab_flow',         'icon': Icons.water_drop_outlined},
+    {'key': 'tab_zoll',         'icon': Icons.straighten},
+    {'key': 'tab_hypothermia',  'icon': Icons.ac_unit},
+    {'key': 'tab_pediatric',    'icon': Icons.child_care_outlined},
+    {'key': 'tab_reference',    'icon': Icons.table_chart_outlined},
+    {'key': 'tab_anatomy',      'icon': Icons.favorite_border},
   ];
 
   @override
@@ -87,39 +103,32 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       builder: (ctx) => AlertDialog(
         backgroundColor: _kDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Disclaimer',
-            style: TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(t('disclaimer_title'),
+            style: const TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 20)),
         content: SingleChildScrollView(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _dLine(Icons.warning_amber_rounded, _kGold,      'Not for clinical use!', bold: true),
-            _dLine(Icons.school_outlined,       Colors.white70, 'Only for education!'),
-            _dLine(Icons.person_outline,        Colors.white70, 'Only for personal use!'),
-            _dLine(Icons.info_outline,          Colors.white70, 'No guarantee of the results!'),
+            _dLine(Icons.warning_amber_rounded, _kGold,        t('disclaimer_clinical'),    bold: true),
+            _dLine(Icons.school_outlined,       Colors.white70, t('disclaimer_education')),
+            _dLine(Icons.person_outline,        Colors.white70, t('disclaimer_personal')),
+            _dLine(Icons.info_outline,          Colors.white70, t('disclaimer_noguarantee')),
             const Divider(color: Colors.white24, height: 24),
-            const Text('Legal Notice',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(t('disclaimer_legal_title'),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 8),
-            const Text(
-              'All content and tools are for educational use only, are not meant to be a '
-              'substitute for professional advice and should not be used for medical diagnosis '
-              'and/or medical treatment.',
-              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
+            Text(t('disclaimer_legal_1'),
+                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
             const SizedBox(height: 8),
-            const Text(
-              'Reliance on or use of any information obtained through this Application is '
-              'solely at your own risk. We are not responsible or liable for any outcome based '
-              'on your decision to utilise the information provided through this application.',
-              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
+            Text(t('disclaimer_legal_2'),
+                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
             const SizedBox(height: 8),
-            const Text(
-              'You are encouraged and instructed to confirm any information with other sources.',
-              style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.5, fontStyle: FontStyle.italic)),
+            Text(t('disclaimer_legal_3'),
+                style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.5, fontStyle: FontStyle.italic)),
           ]),
         ),
         actions: [TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('I understand',
-              style: TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 15)),
+          child: Text(t('disclaimer_understand'),
+              style: const TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 15)),
         )],
       ),
     );
@@ -142,20 +151,20 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       builder: (ctx) => AlertDialog(
         backgroundColor: _kDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Info',
-            style: TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(t('info_title'),
+            style: const TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 18)),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _iRow(Icons.tag,                 'Version', 'v$kAppVersion'),
+          _iRow(Icons.tag,                 t('info_version'), 'v$kAppVersion'),
           const SizedBox(height: 10),
-          _iRow(Icons.gavel_outlined,      'License', 'GNU General Public License v3.0'),
+          _iRow(Icons.gavel_outlined,      t('info_license'), 'GNU General Public License v3.0'),
           const SizedBox(height: 10),
-          _iRow(Icons.smart_toy_outlined,  'Created', 'with \u{1F916} by ThePerfusionist'),
+          _iRow(Icons.smart_toy_outlined,  t('info_created'), t('info_created_value')),
           const SizedBox(height: 10),
-          _iRow(Icons.code,                'GitHub',  'github.com/ThePerfusionist/perfusioncalc'),
+          _iRow(Icons.code,                t('info_github'),  'github.com/ThePerfusionist/perfusioncalc'),
         ]),
         actions: [TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('Close', style: TextStyle(color: _kGold)),
+          child: Text(t('close'), style: const TextStyle(color: _kGold)),
         )],
       ),
     );
@@ -184,45 +193,98 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             child: Text('PerfusionCalc',
                 style: TextStyle(color: _kGold, fontSize: 22, fontWeight: FontWeight.bold)),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: Text('Navigation',
-                style: TextStyle(color: Colors.white38, fontSize: 12)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Text(t('navigation'),
+                style: const TextStyle(color: Colors.white38, fontSize: 12)),
           ),
           const Divider(color: Colors.white12, height: 1),
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: _tabs.length,
-              itemBuilder: (ctx, i) {
-                final isActive = _tabController.index == i;
-                return InkWell(
-                  onTap: () => _goToTab(i),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isActive ? _kGold.withValues(alpha: 0.12) : Colors.transparent,
-                      border: isActive
-                          ? const Border(left: BorderSide(color: _kGold, width: 3))
-                          : const Border(left: BorderSide(color: Colors.transparent, width: 3)),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    child: Row(children: [
-                      Icon(_tabs[i]['icon'] as IconData,
-                          color: isActive ? _kGold : Colors.white54, size: 20),
-                      const SizedBox(width: 14),
-                      Expanded(child: Text(_tabs[i]['label'] as String,
-                          style: TextStyle(
-                            color: isActive ? _kGold : Colors.white70,
-                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                            fontSize: 14,
-                          ))),
-                      if (isActive)
-                        const Icon(Icons.chevron_right, color: _kGold, size: 18),
-                    ]),
-                  ),
+            child: Builder(
+              builder: (context) {
+                // tabs einmal pro Build holen, damit nicht 11x neu evaluiert.
+                final tabs = _tabsList();
+                return ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: tabs.length,
+                  itemBuilder: (ctx, i) {
+                    final isActive = _tabController.index == i;
+                    return InkWell(
+                      onTap: () => _goToTab(i),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isActive ? _kGold.withValues(alpha: 0.12) : Colors.transparent,
+                          border: isActive
+                              ? const Border(left: BorderSide(color: _kGold, width: 3))
+                              : const Border(left: BorderSide(color: Colors.transparent, width: 3)),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        child: Row(children: [
+                          Icon(tabs[i]['icon'] as IconData,
+                              color: isActive ? _kGold : Colors.white54, size: 20),
+                          const SizedBox(width: 14),
+                          Expanded(child: Text(t(tabs[i]['key'] as String),
+                              style: TextStyle(
+                                color: isActive ? _kGold : Colors.white70,
+                                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 14,
+                              ))),
+                          if (isActive)
+                            const Icon(Icons.chevron_right, color: _kGold, size: 18),
+                        ]),
+                      ),
+                    );
+                  },
                 );
               },
             ),
+          ),
+          // ── Language switcher ────────────────────────────────────────────
+          const Divider(color: Colors.white12, height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+            child: Text(t('language'),
+                style: const TextStyle(color: Colors.white38,
+                    fontSize: 11, fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Row(children: AppLocale.values.map((loc) {
+              final isActive = LocaleNotifier.instance.current == loc;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: InkWell(
+                    onTap: () async {
+                      await LocaleNotifier.instance.setLocale(loc);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isActive ? _kGold.withValues(alpha: 0.18) : Colors.white10,
+                        border: Border.all(
+                          color: isActive ? _kGold : Colors.transparent,
+                          width: 1,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${loc.flag}  ${loc.displayName}',
+                          style: TextStyle(
+                            color: isActive ? _kGold : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList()),
           ),
           const Divider(color: Colors.white12, height: 1),
           Padding(
@@ -279,7 +341,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               unselectedLabelColor: Colors.grey,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               unselectedLabelStyle: const TextStyle(fontSize: 13),
-              tabs: _tabs.map((t) => Tab(text: t['label'] as String)).toList(),
+              tabs: _tabsList()
+                  .map((tab) => Tab(text: t(tab['key'] as String)))
+                  .toList(),
             ),
           ),
         ),

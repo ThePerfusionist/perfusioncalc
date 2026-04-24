@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
+import '../i18n/app_strings.dart';
 
 const _kCiKey = 'bsa_cardiac_index';
 
@@ -48,19 +49,19 @@ class _BSAScreenState extends State<BSAScreen> {
     return SingleChildScrollView(
       child: Column(children: [
         const SizedBox(height: 8),
-        InputCard(label: 'Body height', unit: 'cm', value: pd.height,
+        InputCard(label: t('bsa_body_height'), unit: 'cm', value: pd.height,
             range: Ranges.height,
             onChanged: (v) { pd.height = v; widget.onChanged(); }),
-        InputCard(label: 'Body weight', unit: 'kg', value: pd.weight,
+        InputCard(label: t('bsa_body_weight'), unit: 'kg', value: pd.weight,
             range: Ranges.weight,
             onChanged: (v) { pd.weight = v; widget.onChanged(); }),
-        InputCard(label: 'Current Hb', unit: 'g/dl', value: pd.currentHb,
+        InputCard(label: t('bsa_current_hb'), unit: 'g/dl', value: pd.currentHb,
             range: Ranges.hb,
             onChanged: (v) { pd.currentHb = v; widget.onChanged(); }),
-        InputCard(label: 'Current Hct', unit: '%', value: pd.currentHct,
+        InputCard(label: t('bsa_current_hct'), unit: '%', value: pd.currentHct,
             range: Ranges.hct,
             onChanged: (v) { pd.currentHct = v; widget.onChanged(); }),
-        InputCard(label: 'Priming volume', unit: 'ml', value: pd.primingVolume,
+        InputCard(label: t('bsa_priming_volume'), unit: 'ml', value: pd.primingVolume,
             range: Ranges.primingVolume,
             step: 1, onChanged: (v) { pd.primingVolume = v; widget.onChanged(); }),
         _CIInputCard(
@@ -73,17 +74,17 @@ class _BSAScreenState extends State<BSAScreen> {
             }
           },
         ),
-        ResultCard(label: 'BSA (DuBois)', unit: 'm\u00b2', value: pd.bsa),
+        ResultCard(label: t('bsa_result_dubois'), unit: 'm\u00b2', value: pd.bsa),
         ResultCard(
-          label: 'Cardiac output (CI ${pd.bsaCardiacIndex.toStringAsFixed(1)})',
+          label: '${t('bsa_result_co')} (CI ${pd.bsaCardiacIndex.toStringAsFixed(1)})',
           unit: 'l/min', value: pd.cardiacOutput,
         ),
-        ResultCard(label: 'Blood volume man',   unit: 'l', value: pd.bloodVolumeMale),
-        ResultCard(label: 'Blood volume woman', unit: 'l', value: pd.bloodVolumeFemale),
-        const SectionHeader('Expected Hb/Hct after priming'),
-        ResultCard(label: 'Expected Hb',          unit: 'g/dl', value: pd.expectedHb),
-        ResultCard(label: 'Expected Hct (man)',   unit: '%',    value: pd.expectedHctMale),
-        ResultCard(label: 'Expected Hct (woman)', unit: '%',    value: pd.expectedHctFemale),
+        ResultCard(label: t('bsa_result_bv_male'),   unit: 'l', value: pd.bloodVolumeMale),
+        ResultCard(label: t('bsa_result_bv_female'), unit: 'l', value: pd.bloodVolumeFemale),
+        SectionHeader(t('bsa_section_expected')),
+        ResultCard(label: t('bsa_expected_hb'),    unit: 'g/dl', value: pd.expectedHb),
+        ResultCard(label: t('bsa_expected_hct_m'), unit: '%',    value: pd.expectedHctMale),
+        ResultCard(label: t('bsa_expected_hct_f'), unit: '%',    value: pd.expectedHctFemale),
         const SizedBox(height: 8),
         const SourceButton(refs: [
           AppSources.dubois,
@@ -145,12 +146,12 @@ class _CIInputCardState extends State<_CIInputCard> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Row(children: [
-              const Text('Cardiac index', style: TextStyle(color: Colors.white, fontSize: 14)),
+              Text(t('bsa_cardiac_index'), style: const TextStyle(color: Colors.white, fontSize: 14)),
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(color: kGold.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-                child: const Text('saved', style: TextStyle(color: kGold, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: Text(t('bsa_saved'), style: const TextStyle(color: kGold, fontSize: 10, fontWeight: FontWeight.bold)),
               ),
             ]),
             const Text('l/min/m\u00b2', style: TextStyle(color: Colors.white70, fontSize: 13)),
@@ -173,10 +174,10 @@ class _CIInputCardState extends State<_CIInputCard> {
             ),
             _btn(Icons.add, _inc),
           ]),
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Text('Default 2.4  ·  Value is saved between sessions',
-                style: TextStyle(color: Colors.white38, fontSize: 10)),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(t('bsa_saved_hint'),
+                style: const TextStyle(color: Colors.white38, fontSize: 10)),
           ),
         ]),
       ),
