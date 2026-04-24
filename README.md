@@ -181,14 +181,7 @@ On iPhone/iPad: tap **Share → Add to Home Screen** to install as an app icon.
 
 ### 🤖 Android – APK
 
-#### Option A: Download pre-built APK
-
-1. Go to [Releases](https://github.com/ThePerfusionist/perfusioncalc/releases)
-2. Download `app-release.apk`
-3. On your Android device: **Settings → Security → Install unknown apps → allow**
-4. Open the APK file and tap **Install**
-
-#### Option B: Build from source
+#### Build from source
 
 **Requirements:**
 
