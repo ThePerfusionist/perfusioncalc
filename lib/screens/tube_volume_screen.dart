@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
+import '../models/ranges.dart';
 
 class TubeVolumeScreen extends StatelessWidget {
   final PatientData patientData;
@@ -13,6 +14,7 @@ class TubeVolumeScreen extends StatelessWidget {
       child: Column(children: [
         const SizedBox(height: 8),
         InputCard(label: 'Tube length', unit: 'cm', value: patientData.tubeLength,
+            range: Ranges.tubeLength,
             step: 1, onChanged: (v) { patientData.tubeLength = v; onChanged(); }),
         const SectionHeader('Fill volume per cm \u00d7 length (ml)'),
         ResultCard(label: '1/2"',  unit: 'ml', value: patientData.tubeVol12,  decimals: 1),

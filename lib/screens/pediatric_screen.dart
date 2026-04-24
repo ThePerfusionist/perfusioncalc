@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
+import '../models/ranges.dart';
 
 class PediatricScreen extends StatelessWidget {
   final PatientData patientData;
@@ -45,6 +46,7 @@ class PediatricScreen extends StatelessWidget {
           _sectionTitle('Pediatric blood volume'),
           const SizedBox(height: 8),
           InputCard(label: 'Body weight', unit: 'kg', value: patientData.pediatricWeight,
+              range: Ranges.pediatricWeight,
               onChanged: (v) { patientData.pediatricWeight = v; onChanged(); }),
           _bvResult('Premature infants',    100),
           _bvResult('Babies < 3 months',    85),
@@ -55,6 +57,7 @@ class PediatricScreen extends StatelessWidget {
           _sectionTitle('Transfusion volume'),
           const SizedBox(height: 8),
           InputCard(label: 'Desired Hb increase', unit: 'g/dl', value: patientData.desiredHbIncrease,
+              range: Ranges.desiredHbIncrease,
               onChanged: (v) { patientData.desiredHbIncrease = v; onChanged(); }),
           ResultCard(label: 'Transfusion volume', unit: 'ml', value: patientData.transfusionVolume,
               rangeHint: 'Hct in EK = 55%', decimals: 0),

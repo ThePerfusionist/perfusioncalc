@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/bga_model.dart';
 import '../widgets/common.dart';
+import '../models/ranges.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -121,21 +122,25 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       InputCard(
         label: 'Patient temperature', unit: '°C',
         value: _model.temp, step: 0.1,
+        range: Ranges.temperature,
         onChanged: (v) { _model.temp = v; _rebuild(); },
       ),
       InputCard(
         label: 'PaO\u2082 (measured at 37 °C)', unit: 'mmHg',
         value: _model.paO2, step: 1.0,
+        range: Ranges.paO2,
         onChanged: (v) { _model.paO2 = v; _rebuild(); },
       ),
       InputCard(
         label: 'PaCO\u2082 (measured at 37 °C)', unit: 'mmHg',
         value: _model.paCO2, step: 1.0,
+        range: const Range(10, 100, 'mmHg', note: 'Normal 35–45'),
         onChanged: (v) { _model.paCO2 = v; _rebuild(); },
       ),
       InputCard(
         label: 'pH (measured at 37 °C)', unit: '',
         value: _model.pH, step: 0.01,
+        range: Ranges.pH,
         onChanged: (v) { _model.pH = v; _rebuild(); },
       ),
 

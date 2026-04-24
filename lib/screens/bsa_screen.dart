@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
+import '../models/ranges.dart';
 
 const _kCiKey = 'bsa_cardiac_index';
 
@@ -48,14 +49,19 @@ class _BSAScreenState extends State<BSAScreen> {
       child: Column(children: [
         const SizedBox(height: 8),
         InputCard(label: 'Body height', unit: 'cm', value: pd.height,
+            range: Ranges.height,
             onChanged: (v) { pd.height = v; widget.onChanged(); }),
         InputCard(label: 'Body weight', unit: 'kg', value: pd.weight,
+            range: Ranges.weight,
             onChanged: (v) { pd.weight = v; widget.onChanged(); }),
         InputCard(label: 'Current Hb', unit: 'g/dl', value: pd.currentHb,
+            range: Ranges.hb,
             onChanged: (v) { pd.currentHb = v; widget.onChanged(); }),
         InputCard(label: 'Current Hct', unit: '%', value: pd.currentHct,
+            range: Ranges.hct,
             onChanged: (v) { pd.currentHct = v; widget.onChanged(); }),
         InputCard(label: 'Priming volume', unit: 'ml', value: pd.primingVolume,
+            range: Ranges.primingVolume,
             step: 1, onChanged: (v) { pd.primingVolume = v; widget.onChanged(); }),
         _CIInputCard(
           value: pd.bsaCardiacIndex,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
+import '../models/ranges.dart';
 
 class O2DeliveryScreen extends StatefulWidget {
   final PatientData patientData;
@@ -37,18 +38,25 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
           onCiChanged: (v) { pd.cardiacIndex = v; pd.hzv = null; widget.onChanged(); },
         ),
         InputCard(label: 'BSA', unit: 'm\u00b2', value: pd.kof, step: 0.01,
+            range: Ranges.bsa,
             onChanged: (v) { pd.kof = v; widget.onChanged(); }),
         InputCard(label: 'PaO\u2082', unit: 'mmHg', value: pd.paO2,
+            range: Ranges.paO2,
             onChanged: (v) { pd.paO2 = v; widget.onChanged(); }),
         InputCard(label: 'SaO\u2082', unit: '%', value: pd.saO2,
+            range: Ranges.saO2,
             onChanged: (v) { pd.saO2 = v; widget.onChanged(); }),
         InputCard(label: 'art. Hb', unit: 'g/dl', value: pd.artHb,
+            range: Ranges.hb,
             onChanged: (v) { pd.artHb = v; widget.onChanged(); }),
         InputCard(label: 'PvO\u2082', unit: 'mmHg', value: pd.pvO2,
+            range: Ranges.pvO2,
             onChanged: (v) { pd.pvO2 = v; widget.onChanged(); }),
         InputCard(label: 'SvO\u2082', unit: '%', value: pd.svO2,
+            range: Ranges.svO2,
             onChanged: (v) { pd.svO2 = v; widget.onChanged(); }),
         InputCard(label: 'ven. Hb', unit: 'g/dl', value: pd.venHb,
+            range: Ranges.hb,
             onChanged: (v) { pd.venHb = v; widget.onChanged(); }),
         ResultCard(label: 'CaO\u2082',    unit: 'ml/dl',          value: pd.caO2,  rangeHint: '(18-20 ml O\u2082/dl)'),
         ResultCard(label: 'CvO\u2082',    unit: 'ml/dl',          value: pd.cvO2,  rangeHint: '(14-15 ml O\u2082/dl)'),

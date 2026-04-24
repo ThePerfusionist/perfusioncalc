@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/ranges.dart';
 
 const kCardColor  = Color(0xFF1C1C1C);
 const kGold       = Color(0xFFFFA500);
@@ -13,6 +14,12 @@ class InputCard extends StatefulWidget {
   final ValueChanged<double?> onChanged;
   final double step;
 
+  /// Optionaler plausibler Wertebereich. Wenn gesetzt und der Wert liegt
+  /// außerhalb dieses Bereichs, wird das Feld orange umrandet und ein
+  /// Warn-Icon neben dem Label angezeigt (sanfte Warnung - die Berechnung
+  /// läuft trotzdem normal weiter).
+  final Range? range;
+
   const InputCard({
     super.key,
     required this.label,
@@ -20,6 +27,7 @@ class InputCard extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.step = 0.1,
+    this.range,
   });
 
   @override
@@ -84,14 +92,44 @@ class _InputCardState extends State<InputCard> {
 
   @override
   Widget build(BuildContext context) {
+    // Prüfen, ob der aktuelle Wert im plausiblen Bereich liegt.
+    // null (kein Wert eingegeben) gilt als "OK" - keine Warnung anzeigen.
+    final bool outOfRange =
+        widget.range != null && !widget.range!.contains(widget.value);
+
+    // Orange Akzentfarbe für Warnzustand, sonst Standard-Darkcard.
+    const warnColor = Color(0xFFFFA726); // material orange 400
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: kCardColor,
+        borderRadius: BorderRadius.circular(8),
+        // Warnrand: nur wenn outOfRange. Sonst transparenter Border,
+        // damit sich das Layout zwischen "ok" und "warn" nicht verschiebt.
+        border: Border.all(
+          color: outOfRange ? warnColor : Colors.transparent,
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            // Label + optionales Warn-Icon mit Tooltip.
+            Row(children: [
+              Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+              if (outOfRange) ...[
+                const SizedBox(width: 6),
+                Tooltip(
+                  message: _warnTooltipFor(widget.range!),
+                  triggerMode: TooltipTriggerMode.tap,
+                  showDuration: const Duration(seconds: 4),
+                  child: const Icon(Icons.warning_amber_rounded,
+                      color: warnColor, size: 16),
+                ),
+              ],
+            ]),
             Text(widget.unit,  style: const TextStyle(color: Colors.white70, fontSize: 13)),
           ]),
           const SizedBox(height: 4),
@@ -102,7 +140,10 @@ class _InputCardState extends State<InputCard> {
                 controller: _ctrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 22),
+                style: TextStyle(
+                  color: outOfRange ? warnColor : Colors.white70,
+                  fontSize: 22,
+                ),
                 // Input validation: max 10 chars, only digits/decimals/minus
                 maxLength: 10,
                 inputFormatters: [
@@ -126,6 +167,13 @@ class _InputCardState extends State<InputCard> {
         ]),
       ),
     );
+  }
+
+  /// Erzeugt den Tooltip-Text für das Warn-Icon.
+  /// Format: "Ungewöhnlich - plausibel: 5–20 g/dl\nSchwere Anämie bis Polyglobulie"
+  String _warnTooltipFor(Range r) {
+    final base = 'Ungewöhnlicher Wert\nPlausibel: ${r.display}';
+    return r.note != null ? '$base\n${r.note}' : base;
   }
 
   Widget _btn(IconData icon, VoidCallback onTap) => GestureDetector(
@@ -286,29 +334,16 @@ class ImageSectionCard extends StatelessWidget {
       builder: (ctx) => Dialog(
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(8),
-        // SafeArea protects against system UI (notches, home indicator)
-        // and Column with Flexible image guarantees the Close button stays visible.
-        child: SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(title, textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-            ),
-            // Flexible takes all remaining space between title and Close button.
-            // FittedBox + InteractiveViewer scales the image to fit while keeping
-            // pinch/pan gestures functional.
-            Flexible(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 5.0,
-                child: Image.asset(assetPath, fit: BoxFit.contain),
-              ),
-            ),
-            TextButton(onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close', style: TextStyle(color: Colors.redAccent))),
-          ]),
-        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(title, textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+          InteractiveViewer(minScale: 0.5, maxScale: 5.0, child: Image.asset(assetPath)),
+          TextButton(onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close', style: TextStyle(color: Colors.redAccent))),
+        ]),
       ),
     );
   }

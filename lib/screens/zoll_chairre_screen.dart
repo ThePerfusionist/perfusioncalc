@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
+import '../models/ranges.dart';
 
 class ZollChairreScreen extends StatelessWidget {
   final PatientData patientData;
@@ -53,9 +54,11 @@ class ZollChairreScreen extends StatelessWidget {
               style: TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           InputCard(label: 'Charriere to millimeter', unit: 'Ch', value: patientData.chInput,
+              range: Ranges.ch,
               onChanged: (v) { patientData.chInput = v; onChanged(); }),
           ResultCard(label: 'Millimeter', unit: 'mm', value: patientData.chToMm, decimals: 4),
           InputCard(label: 'Millimeter to Charriere', unit: 'mm', value: patientData.mmInput,
+              range: Ranges.mm,
               onChanged: (v) { patientData.mmInput = v; onChanged(); }),
           ResultCard(label: 'Charriere', unit: 'Ch', value: patientData.mmToCh, decimals: 1),
           const SizedBox(height: 16),
