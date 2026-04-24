@@ -286,16 +286,29 @@ class ImageSectionCard extends StatelessWidget {
       builder: (ctx) => Dialog(
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(8),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(title, textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-          ),
-          InteractiveViewer(minScale: 0.5, maxScale: 5.0, child: Image.asset(assetPath)),
-          TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close', style: TextStyle(color: Colors.redAccent))),
-        ]),
+        // SafeArea protects against system UI (notches, home indicator)
+        // and Column with Flexible image guarantees the Close button stays visible.
+        child: SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(title, textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
+            // Flexible takes all remaining space between title and Close button.
+            // FittedBox + InteractiveViewer scales the image to fit while keeping
+            // pinch/pan gestures functional.
+            Flexible(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Image.asset(assetPath, fit: BoxFit.contain),
+              ),
+            ),
+            TextButton(onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close', style: TextStyle(color: Colors.redAccent))),
+          ]),
+        ),
       ),
     );
   }
