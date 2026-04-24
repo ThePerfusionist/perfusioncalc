@@ -1,76 +1,6 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
+import '../models/bga_model.dart';
 import '../widgets/common.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Severinghaus temperature-correction model
-// All outputs are guarded against NaN/Infinity from extreme inputs.
-// ─────────────────────────────────────────────────────────────────────────────
-class _BgaModel {
-  double? paO2;
-  double? paCO2;
-  double? pH;
-  double? temp;
-
-  /// Returns null if value is NaN, Infinity, or clearly non-physiological
-  static double? _safe(double v) {
-    if (v.isNaN || v.isInfinite) return null;
-    return v;
-  }
-
-  double _fT(double po2) {
-    if (po2 <= 0) return 0.013; // minimum coefficient at zero PO2
-    final inner = 0.243 * pow(po2 / 100.0, 3.88) + 1.0;
-    if (inner <= 0) return 0.013;
-    return 0.058 / inner + 0.013;
-  }
-
-  double? get corrPaO2 {
-    if (paO2 == null || temp == null) return null;
-    // Physiological temperature range: 4°C (profound hypothermia) to 42°C (malignant hyperthermia)
-    if (temp! < 4 || temp! > 42) return null;
-    if (paO2! < 0 || paO2! > 800) return null; // typical max PaO2 on 100% O2 is ~600 mmHg
-    return _safe(paO2! * exp(_fT(paO2!) * (temp! - 37.0)));
-  }
-
-  double? get corrPaCO2 {
-    if (paCO2 == null || temp == null) return null;
-    if (temp! < 4 || temp! > 42) return null;
-    if (paCO2! < 0 || paCO2! > 200) return null;
-    final result = paCO2! * pow(10.0, 0.0185 * (temp! - 37.0));
-    return _safe(result.toDouble());
-  }
-
-  double? get corrPH {
-    if (pH == null || temp == null) return null;
-    if (temp! < 4 || temp! > 42) return null;
-    if (pH! < 6.0 || pH! > 8.0) return null; // values outside this range are non-physiological
-    return _safe(pH! - 0.0147 * (temp! - 37.0));
-  }
-
-  double? get satFromPaO2 {
-    final p = corrPaO2 ?? paO2;
-    if (p == null || p <= 0) return null;
-    final denominator = 23400.0 / (pow(p, 3) + 150.0 * p) + 1.0;
-    if (denominator <= 0) return null;
-    return _safe(100.0 / denominator);
-  }
-
-  double? get fTPercent {
-    final p = corrPaO2 ?? paO2;
-    if (p == null || p <= 0) return null;
-    return _safe(_fT(p) * 100.0);
-  }
-
-  double? get hco3 {
-    final co2c = corrPaCO2 ?? paCO2;
-    final phc  = corrPH    ?? pH;
-    if (co2c == null || phc == null) return null;
-    if (co2c <= 0) return null;
-    final result = 0.0307 * co2c * pow(10.0, phc - 6.105);
-    return _safe(result.toDouble());
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -82,7 +12,7 @@ class HypothermiaScreen extends StatefulWidget {
 }
 
 class _HypothermiaScreenState extends State<HypothermiaScreen> {
-  final _model = _BgaModel();
+  final _model = BgaModel();
   void _rebuild() => setState(() {});
 
   // Table data: [Level, Range, Circulatory arrest, O2 requirement]
