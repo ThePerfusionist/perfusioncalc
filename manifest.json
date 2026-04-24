@@ -1,12 +1,16 @@
 {
     "name": "PerfusionCalc",
     "short_name": "PerfusionCalc",
-    "start_url": ".",
+    "description": "Medical calculator for perfusionists. Educational use only.",
+    "id": "/perfusioncalc/",
+    "start_url": "./",
+    "scope": "./",
     "display": "standalone",
+    "orientation": "portrait-primary",
     "background_color": "#2C2C2C",
     "theme_color": "#FFA500",
-    "description": "Medical calculator for perfusionists. Educational use only.",
-    "orientation": "portrait-primary",
+    "lang": "en",
+    "categories": ["medical", "education", "utilities"],
     "prefer_related_applications": false,
     "icons": [
         {

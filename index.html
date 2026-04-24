@@ -27,27 +27,12 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()">
 
-  <!--
-    ═══ FAVICON – clean, standards-compliant setup ═══
-    Strategy:
-      • New filename suffix (v8) on a fresh filename (pcalc-icon-v8) completely
-        sidesteps Chrome's favicon.db, which caches by URL.
-      • Query string (?v=8) on the classic /favicon.* paths forces revalidation
-        for any user who already loaded the old ones.
-      • Higher resolutions (192, 180) help modern browsers / iOS home-screen.
-      • Order matters: list the icon you want the browser to PREFER last.
-  -->
-
-  <!-- Classic fallbacks (kept for legacy browsers / direct hits on /favicon.ico) -->
+  <!-- ═══ Favicon (v8) ═══ -->
   <link rel="icon" type="image/x-icon" href="favicon.ico?v=8">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=8">
-
-  <!-- Fresh filename: bypasses every existing cache on Chrome/Edge/Firefox -->
   <link rel="icon" type="image/x-icon" href="pcalc-icon-v8.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="pcalc-icon-v8.png">
   <link rel="icon" type="image/png" sizes="192x192" href="pcalc-icon-v8-192.png">
-
-  <!-- Apple touch icon (iOS home screen & Safari) -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=8">
 
   <!-- iOS meta tags -->
@@ -60,29 +45,47 @@
   <link rel="manifest" href="manifest.json?v=8">
 
   <!--
-    ═══ One-time cleanup script ═══
-    Unregisters any old service worker + clears Flutter caches from earlier
-    deployments. This ensures the browser re-fetches the icon files instead
-    of using a cached copy of the old (pre-fix) Flutter defaults.
-    Runs once per client; has no effect on subsequent visits.
+    ═══ Service Worker Registration (Offline-PWA) ═══
+    Registriert unseren eigenen sw.js. Damit ist die App:
+      - Offline nutzbar nach dem ersten Besuch
+      - Installierbar als PWA (Android: "Zum Startbildschirm hinzufuegen",
+        iOS Safari: Teilen-Knopf -> "Zum Home-Bildschirm", Desktop Chrome:
+        Install-Icon in der Adressleiste)
+
+    Hinweis zu Flutter's eigenem Service Worker:
+    Flutter's flutter_bootstrap.js registriert automatisch einen eigenen
+    Service Worker (flutter_service_worker.js), der allerdings deprecated
+    ist und sich selbst bei Aktivierung wieder abmeldet. Unser sw.js hat
+    einen anderen Dateinamen und Scope, stoert sich nicht daran.
   -->
   <script>
-    (function () {
-      try {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function (regs) {
-            regs.forEach(function (r) { r.unregister(); });
-          }).catch(function () {});
-        }
-        if (window.caches && caches.keys) {
-          caches.keys().then(function (names) {
-            names.forEach(function (n) {
-              if (n.indexOf('flutter') !== -1) caches.delete(n);
+    if ('serviceWorker' in navigator) {
+      // Warten bis die Seite fertig geladen ist, damit SW-Installation
+      // das initiale Laden nicht verlangsamt.
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js', { scope: './' })
+          .then(function (reg) {
+            // Optional: Auf Updates lauschen. Wenn ein neuer SW bereit ist,
+            // koennten wir hier ein "Update verfuegbar"-Banner zeigen.
+            // Fuer jetzt: automatisch uebernehmen.
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            reg.addEventListener('updatefound', function () {
+              var newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', function () {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
             });
-          }).catch(function () {});
-        }
-      } catch (e) { /* ignore */ }
-    })();
+          })
+          .catch(function (err) {
+            console.warn('Service Worker registration failed:', err);
+          });
+      });
+    }
   </script>
 </head>
 <body>
