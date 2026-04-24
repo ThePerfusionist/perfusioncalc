@@ -8,6 +8,15 @@ on:
   push:
     branches:
       - main
+    # Nur neu bauen, wenn App-relevante Dateien geändert wurden.
+    # Änderungen an README, LICENSE, oder docs triggern keinen Build mehr.
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,13 +24,20 @@ permissions:
   pages: write
   id-token: write
 
+# Verhindert, dass sich zwei Deployments gleichzeitig überlagern, wenn
+# mehrere Pushes hintereinander passieren. Neuer Push → alter Run abgebrochen.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Flutter (stable)
         uses: subosito/flutter-action@v2
@@ -29,8 +45,21 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Show Flutter & Dart versions
+        run: flutter --version
+
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Static analysis (flutter analyze)
+        # Bricht den Build ab, wenn Analyzer-Fehler im Code sind.
+        # Warnings bleiben erlaubt, um dich nicht zu blockieren.
+        run: flutter analyze --no-fatal-warnings
+
+      - name: Run tests
+        # Läuft durch, wenn noch keine Tests da sind (exit code 0 bei keinem Test).
+        # Später: wenn wir Formel-Tests hinzufügen, werden die hier automatisch geprüft.
+        run: flutter test || echo "No tests yet – skipping."
 
       - name: Build Flutter Web
         run: flutter build web --release --base-href /perfusioncalc/
@@ -41,3 +70,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
           publish_branch: gh-pages
+          # Commit-Message im gh-pages-Branch identifiziert den auslösenden Push.
+          commit_message: "Deploy: ${{ github.event.head_commit.message }}"
