@@ -24,6 +24,17 @@ permissions:
   pages: write
   id-token: write
 
+# Zwingt alle JavaScript-Actions in diesem Workflow auf Node.js 24, auch wenn
+# die Action selbst noch 'using: node20' in ihrer action.yml deklariert
+# (betrifft hier peaceiris/actions-gh-pages@v4). Damit umgehen wir die
+# Deprecation-Warnung bis der Maintainer einen Node-24-Release veröffentlicht.
+# GitHub macht Node 24 ab 02.06.2026 ohnehin zum Default.
+# Hinweis: Die Warnung im "Complete job"-Schritt kann bestehen bleiben - das
+# ist ein bekannter kosmetischer Bug (actions/runner#4295). Die Action läuft
+# aber real auf Node 24.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Verhindert, dass sich zwei Deployments gleichzeitig überlagern, wenn
 # mehrere Pushes hintereinander passieren. Neuer Push → alter Run abgebrochen.
 concurrency:
