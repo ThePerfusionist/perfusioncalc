@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pediatric Cannula Sizes – PerfusionCalc</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=8">
+<style>
+  /*
+    Eigenständige HTML-Seite für die Finck-Tabellen (V-A / V-V Kanülengrößen).
+    Browser-kompatibler Fallback für Flutter Web in Browsern ohne WebGL.
+   */
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #2C2C2C;
+    color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    line-height: 1.5;
+  }
+  body { padding: 16px; max-width: 920px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  header h1 { color: #FFA500; font-size: 22px; margin: 0; }
+
+  .lang-toggle { display: inline-flex; gap: 4px; margin-left: auto; }
+  .lang-toggle button {
+    background: #1a1a1a; color: #ccc; border: 1px solid transparent;
+    padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    font-size: 12px;
+  }
+  .lang-toggle button.active {
+    color: #FFA500; border-color: #FFA500; background: #FFA50022;
+  }
+
+  section { margin-bottom: 32px; }
+  h2 { color: #FFA500; font-size: 16px; margin: 0 0 10px 0; }
+  .image-card {
+    background: #1C1C1C; border: 1px solid #ffffff10;
+    border-radius: 12px; overflow: hidden;
+  }
+  .image-wrap {
+    max-height: 720px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; padding: 8px;
+  }
+  .image-wrap img { max-width: 100%; max-height: 720px; cursor: zoom-in; display: block; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+    padding: 20px; cursor: zoom-out;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; }
+  .lightbox .close-btn {
+    position: absolute; top: 16px; right: 16px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #2C2C2C; border: 1px solid #ffffff44;
+    color: #fff; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  footer {
+    color: #888; font-size: 11px;
+    padding: 16px 0; text-align: center; margin-top: 24px;
+    border-top: 1px solid #ffffff10;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="title">Pediatric Cannula Sizes</h1>
+    <div class="lang-toggle">
+      <button data-lang="en" class="active">🇬🇧 English</button>
+      <button data-lang="de">🇩🇪 Deutsch</button>
+    </div>
+  </header>
+
+  <section>
+    <h2 data-i18n="va">V-A cannula size (Finck 2020)</h2>
+    <div class="image-card">
+      <div class="image-wrap">
+        <img src="assets/assets/finck_va.jpg" alt="V-A cannula size table" onclick="openLightbox(this)">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-i18n="vv">V-V cannula size (Finck 2020)</h2>
+    <div class="image-card">
+      <div class="image-wrap">
+        <img src="assets/assets/finck_vv.jpg" alt="V-V cannula size table" onclick="openLightbox(this)">
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    PerfusionCalc · For educational use only · Source: Finck 2020
+  </footer>
+
+  <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+    <button class="close-btn" onclick="event.stopPropagation(); closeLightbox()">×</button>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+<script>
+  const i18n = {
+    en: {
+      title: 'Pediatric Cannula Sizes',
+      va:    'V-A cannula size (Finck 2020)',
+      vv:    'V-V cannula size (Finck 2020)',
+      footer:'PerfusionCalc · For educational use only · Source: Finck 2020',
+    },
+    de: {
+      title: 'Pädiatrische Kanülengrößen',
+      va:    'V-A Kanülengröße (Finck 2020)',
+      vv:    'V-V Kanülengröße (Finck 2020)',
+      footer:'PerfusionCalc · Nur zu Ausbildungszwecken · Quelle: Finck 2020',
+    },
+  };
+
+  function setLang(lang) {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (i18n[lang] && i18n[lang][key]) el.textContent = i18n[lang][key];
+    });
+    document.querySelectorAll('.lang-toggle button').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+    try { localStorage.setItem('cannula_lang', lang); } catch (e) {}
+    document.documentElement.lang = lang;
+    document.title = (lang === 'de' ? 'Pädiatrische Kanülengrößen' : 'Pediatric Cannula Sizes') + ' – PerfusionCalc';
+  }
+
+  document.querySelectorAll('.lang-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => setLang(btn.dataset.lang));
+  });
+
+  function initialLang() {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = params.get('lang');
+    if (fromUrl === 'de' || fromUrl === 'en') return fromUrl;
+    try {
+      const saved = localStorage.getItem('cannula_lang');
+      if (saved === 'de' || saved === 'en') return saved;
+    } catch (e) {}
+    return 'en';
+  }
+  setLang(initialLang());
+
+  function openLightbox(img) {
+    document.getElementById('lightbox-img').src = img.src;
+    document.getElementById('lightbox').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+</script>
+</body>
+</html>

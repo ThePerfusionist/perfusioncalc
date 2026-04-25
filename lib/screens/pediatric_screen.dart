@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
+import '../widgets/external_page_launcher.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
@@ -40,9 +42,42 @@ class PediatricScreen extends StatelessWidget {
             flexes: [2, 3],
           ),
           const SizedBox(height: 16),
-          ImageSectionCard(title: t('ped_title_va'), assetPath: 'assets/finck_va.jpg'),
-          const SizedBox(height: 8),
-          ImageSectionCard(title: t('ped_title_vv'), assetPath: 'assets/finck_vv.jpg'),
+          // Cannula sizes - opens an external HTML page with the Finck tables.
+          // Reason: in some privacy-focused browsers, Flutter's image rendering
+          // fails (no WebGL). The external HTML page works in any browser.
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            decoration: BoxDecoration(
+              color: kCardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kGold.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(t('ped_cannula_section_title'),
+                    style: const TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(t('ped_cannula_section_desc'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: kIsWeb
+                      ? () => openExternalPage('cannulas.html')
+                      : null,
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: Text(t('ped_cannula_open_button'),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kGold,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           _sectionTitle(t('ped_title_bv')),
           const SizedBox(height: 8),
