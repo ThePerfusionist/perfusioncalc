@@ -301,20 +301,30 @@ class GoldListCard extends StatelessWidget {
 
 // ── Browser-safe image loading ───────────────────────────────────────────────
 //
-// Flutter Web rendert Image.asset()-Bilder ueber CanvasKit (WebAssembly).
-// In manchen Browsern (z.B. Ungoogled Chromium mit strikten Privacy-Defaults)
-// schlaegt das fehl, weil entweder WASM-Image-Decoding eingeschraenkt ist
-// oder der AssetManifest nicht korrekt geparst wird.
+// Problem: Flutter Web rendert standardmaessig ALLE Bilder ueber CanvasKit
+// (WebGL). Das gilt auch fuer Image.network - der Bytes werden per fetch()
+// geladen und in CanvasKit gezeichnet, NICHT als natives <img>-Element.
+// In Browsern mit strikten Defaults (Privacy-Browser, Firefox mit
+// fingerprinting-protection, einige Chromium-Forks) bricht entweder das
+// WASM-Image-Decoding oder das CanvasKit-Pixelreading ab. Effekt: Bild
+// erscheint nicht oder als leere weisse Flaeche (besonders bei SVGs).
 //
-// Diese Widgets nutzen stattdessen Image.network() mit relativem Pfad. Damit
-// erzeugt Flutter im DOM ein natives <img>-Element, dessen Bildladen vom
-// Browser selbst uebernommen wird - unabhaengig vom Flutter-Renderer.
-// Funktioniert in jedem Browser, der HTML-Bilder zeigen kann.
+// Loesung: Flutter 3.27+ bietet den Parameter `webHtmlElementStrategy` von
+// Image.network. Wenn auf 'prefer' gesetzt, rendert Flutter das Bild als
+// nativen <img>-Tag im DOM via HtmlElementView. Der Browser laedt und
+// rendert dann selbst - unabhaengig von CanvasKit, unabhaengig vom
+// Renderer. Funktioniert auch mit SVGs, weil Browser SVGs in <img>
+// nativ unterstuetzen.
+//
+// Trade-offs (laut Flutter-Doku akzeptabel fuer unseren Use Case):
+//   - Suboptimale Performance (irrelevant bei wenigen statischen Bildern)
+//   - Kein Image.toByteData / OffsetLayer.toImage (nutzen wir nicht)
+//   - Einige Color/Blend-Effekte funktionieren nicht (nutzen wir nicht)
 //
 // Voraussetzung: Asset liegt unter assets/<filename> in pubspec.yaml.
-// Flutter packt es im Build unter build/web/assets/assets/<filename>, was
-// dank <base href="/<app>/"> als 'assets/assets/<filename>' relativ
-// adressierbar ist.
+// Flutter packt es im web-Build unter assets/assets/<filename>, was dank
+// <base href="/<app>/"> als 'assets/assets/<filename>' relativ adressierbar
+// ist.
 
 class BrowserSafeImage extends StatelessWidget {
   final String assetPath;        // wie in pubspec deklariert, z.B. 'assets/finck_va.jpg'
@@ -333,14 +343,19 @@ class BrowserSafeImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Flutter packt Assets in den web-Build unter assets/assets/<file>.
-    // Ein relativer Pfad respektiert das <base href> der Seite, damit
-    // funktioniert es auch unter /perfusioncalc/.
+    // Ein relativer Pfad respektiert das <base href> der Seite.
     final url = 'assets/$assetPath';
     return Image.network(
       url,
       fit: fit,
       width: width,
       height: height,
+      // KRITISCH: zwingt Flutter, einen nativen <img>-Tag im DOM zu nutzen
+      // statt das Bild ueber CanvasKit zu zeichnen. Bytes werden vom Browser
+      // geladen, nicht von Flutter. Loest:
+      //   - Bilder unsichtbar in Privacy-Browsern
+      //   - SVG erscheint als weisse Flaeche
+      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
       // Loading-Indikator waehrend des Bildladens
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
