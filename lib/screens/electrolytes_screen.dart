@@ -3,6 +3,7 @@ import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
+import '../utils/pdf_export.dart';
 
 class ElectrolytesScreen extends StatelessWidget {
   final PatientData patientData;
@@ -48,6 +49,29 @@ class ElectrolytesScreen extends StatelessWidget {
         ResultCard(label: 'NaBic 8,4%', unit: 'ml', value: patientData.nabic),
         ResultCard(label: 'TRIS 36,34%', unit: 'ml', value: patientData.tris),
         const SizedBox(height: 8),
+        PdfExportButton(
+          filename: 'electrolytes',
+          tabTitleKey: 'tab_electrolytes',
+          buildSections: () => [
+            PdfSection(title: t('pdf_inputs'), rows: [
+              PdfRow.numeric(label: t('bsa_body_weight'),       value: patientData.bodyWeightElec, unit: 'kg'),
+              PdfRow.numeric(label: t('elec_sodium_current'),   value: patientData.natriumIst,     unit: 'mmol'),
+              PdfRow.numeric(label: t('elec_sodium_target'),    value: patientData.natriumSoll,    unit: 'mmol'),
+              PdfRow.numeric(label: t('elec_potassium_current'),value: patientData.kaliumIst,      unit: 'mmol'),
+              PdfRow.numeric(label: t('elec_potassium_target'), value: patientData.kaliumSoll,     unit: 'mmol'),
+              PdfRow.numeric(label: t('elec_calcium_current'),  value: patientData.calziumIst,     unit: 'mmol'),
+              PdfRow.numeric(label: t('elec_calcium_target'),   value: patientData.calziumSoll,    unit: 'mmol'),
+              PdfRow.numeric(label: t('elec_base_excess'),      value: patientData.baseExcess,     unit: 'mmol/L'),
+            ]),
+            PdfSection(title: t('pdf_results'), rows: [
+              PdfRow.numeric(label: t('elec_sodium_need'),    value: patientData.natriumBedarf, unit: 'ml NaCl 10%',     decimals: 1),
+              PdfRow.numeric(label: t('elec_potassium_need'), value: patientData.kaliumBedarf,  unit: 'ml KCl 7,45%',    decimals: 1),
+              PdfRow.numeric(label: t('elec_calcium_need'),   value: patientData.calziumBedarf, unit: 'ml Ca.gluc. 10%', decimals: 1),
+              PdfRow.numeric(label: 'NaBic 8,4%',             value: patientData.nabic,         unit: 'ml',              decimals: 1),
+              PdfRow.numeric(label: 'TRIS 36,34%',            value: patientData.tris,          unit: 'ml',              decimals: 1),
+            ]),
+          ],
+        ),
         SourceButton(refs: [
           AppSources.larsen,
         ]),

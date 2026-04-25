@@ -14,7 +14,7 @@ import 'screens/heart_anatomy_screen.dart';
 import 'models/patient_data.dart';
 import 'i18n/app_strings.dart';
 
-const kAppVersion = '0.1.8';
+const kAppVersion = '0.1.9';
 const _kDark = Color(0xFF1C1C1C);
 const _kGold = Color(0xFFFFA500);
 

@@ -3,6 +3,7 @@ import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
+import '../utils/pdf_export.dart';
 
 class PediatricScreen extends StatelessWidget {
   final PatientData patientData;
@@ -63,6 +64,20 @@ class PediatricScreen extends StatelessWidget {
           ResultCard(label: t('ped_transfusion_vol'), unit: 'ml', value: patientData.transfusionVolume,
               rangeHint: t('ped_hct_in_ek'), decimals: 0),
           const SizedBox(height: 8),
+          PdfExportButton(
+            filename: 'pediatric',
+            tabTitleKey: 'tab_pediatric',
+            buildSections: () => [
+              PdfSection(title: t('pdf_inputs'), rows: [
+                PdfRow.numeric(label: t('bsa_body_weight'), value: patientData.pediatricWeight,    unit: 'kg'),
+                PdfRow.numeric(label: t('ped_desired_hb'),  value: patientData.desiredHbIncrease, unit: 'g/dl', decimals: 1),
+              ]),
+              PdfSection(title: t('pdf_results'), rows: [
+                PdfRow.numeric(label: t('ped_transfusion_vol'), value: patientData.transfusionVolume, unit: 'ml', decimals: 0,
+                    note: t('ped_hct_in_ek')),
+              ]),
+            ],
+          ),
           SourceButton(refs: [
             AppSources.darling,
             AppSources.tschaut,

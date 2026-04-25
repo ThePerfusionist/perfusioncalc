@@ -3,7 +3,7 @@ description: PerfusionCalc - Medical calculator for perfusionists
 
 publish_to: 'none'
 
-version: 0.1.8+1
+version: 0.1.9+1
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -12,6 +12,10 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.3.0
+  # PDF-Export: erzeugt PDF-Dokumente direkt im Browser, native Dart-Lib.
+  pdf: ^3.11.1
+  # Native DOM-API fuer File-Download im Web (window.HTMLAnchorElement).
+  web: any
 
 dev_dependencies:
   flutter_test:

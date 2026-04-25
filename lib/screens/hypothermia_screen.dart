@@ -3,6 +3,7 @@ import '../models/bga_model.dart';
 import '../widgets/common.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
+import '../utils/pdf_export.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -219,6 +220,28 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
         SectionHeader(t('hypo_section_thumb')),
         _thumbRuleTable(),
       ],
+
+      // ── PDF Export Button (immer sichtbar) ─────────────────────────────
+      const SizedBox(height: 8),
+      PdfExportButton(
+        filename: 'hypothermia',
+        tabTitleKey: 'tab_hypothermia',
+        buildSections: () => [
+          PdfSection(title: t('pdf_inputs'), rows: [
+            PdfRow.numeric(label: t('hypo_temp'),  value: _model.temp,  unit: '°C',   decimals: 1),
+            PdfRow.numeric(label: t('hypo_pao2'),  value: _model.paO2,  unit: 'mmHg', decimals: 0),
+            PdfRow.numeric(label: t('hypo_paco2'), value: _model.paCO2, unit: 'mmHg', decimals: 0),
+            PdfRow.numeric(label: t('hypo_ph'),    value: _model.pH,    unit: '',     decimals: 2),
+          ]),
+          PdfSection(title: t('pdf_results'), rows: [
+            PdfRow.numeric(label: t('hypo_corr_pao2'),  value: _model.corrPaO2,  unit: 'mmHg',  decimals: 1),
+            PdfRow.numeric(label: t('hypo_corr_paco2'), value: _model.corrPaCO2, unit: 'mmHg',  decimals: 1),
+            PdfRow.numeric(label: t('hypo_corr_ph'),    value: _model.corrPH,    unit: '',      decimals: 3),
+            PdfRow.numeric(label: t('hypo_hco3'),       value: _model.hco3,      unit: 'mmol/L',decimals: 1),
+            PdfRow.numeric(label: t('hypo_sat'),        value: _model.satFromPaO2, unit: '%',  decimals: 1),
+          ]),
+        ],
+      ),
     ]);
   }
 

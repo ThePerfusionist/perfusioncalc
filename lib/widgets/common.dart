@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
+import '../utils/pdf_export.dart';
 
 const kCardColor  = Color(0xFF1C1C1C);
 const kGold       = Color(0xFFFFA500);
@@ -472,6 +473,86 @@ class ImageSectionCard extends StatelessWidget {
               ),
             ),
           ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── PDF Export button ─────────────────────────────────────────────────────────
+//
+// Wiederverwendbarer Button am Ende eines Tabs zum Export der aktuellen
+// Eingaben/Ergebnisse als PDF. Auf Web wird der Browser-Download getriggert,
+// auf Mobile wuerde man path_provider + share_plus nutzen (nicht implementiert).
+//
+// Der Tab uebergibt eine Funktion, die die Sections aktuell zusammenstellt -
+// damit werden immer die aktuellsten Werte exportiert, nicht ein Snapshot
+// vom Zeitpunkt des Tab-Aufbaus.
+//
+// Beispiel:
+//   PdfExportButton(
+//     filename: 'bsa',
+//     tabTitleKey: 'tab_bsa',
+//     buildSections: () => [
+//       PdfSection(title: t('pdf_inputs'), rows: [...]),
+//       PdfSection(title: t('pdf_results'), rows: [...]),
+//     ],
+//   )
+
+class PdfExportButton extends StatelessWidget {
+  /// Dateinamenstamm, z.B. 'bsa' -> "perfusioncalc_bsa_20260425_1630.pdf"
+  final String filename;
+
+  /// i18n-Key fuer den Tab-Titel im PDF-Header (z.B. 'tab_bsa').
+  final String tabTitleKey;
+
+  /// Callback der aktuellen Sections - wird erst beim Klick aufgerufen,
+  /// damit immer die neuesten Werte erfasst werden.
+  final List<PdfSection> Function() buildSections;
+
+  // ignore: prefer_const_constructors_in_immutables
+  PdfExportButton({
+    super.key,
+    required this.filename,
+    required this.tabTitleKey,
+    required this.buildSections,
+  });
+
+  Future<void> _onPressed(BuildContext context) async {
+    try {
+      await exportTabAsPdf(
+        context: context,
+        tabTitle: t(tabTitleKey),
+        filename: filename,
+        sections: buildSections(),
+      );
+    } catch (e) {
+      // Falls etwas schiefgeht (Browser blockiert Download, Speicher voll, etc.)
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('pdf_export_failed')),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _onPressed(context),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        width: double.infinity,
+        decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text(t('pdf_export_button'),
+              style: const TextStyle(color: Colors.white, fontSize: 15)),
+          const SizedBox(width: 8),
+          const Icon(Icons.picture_as_pdf, color: kGold, size: 20),
         ]),
       ),
     );

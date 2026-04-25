@@ -3,6 +3,7 @@ import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
+import '../utils/pdf_export.dart';
 
 class ZollChairreScreen extends StatelessWidget {
   final PatientData patientData;
@@ -67,6 +68,20 @@ class ZollChairreScreen extends StatelessWidget {
               onChanged: (v) { patientData.mmInput = v; onChanged(); }),
           ResultCard(label: t('zoll_result_ch'), unit: 'Ch', value: patientData.mmToCh, decimals: 1),
           const SizedBox(height: 16),
+          PdfExportButton(
+            filename: 'zoll_charriere',
+            tabTitleKey: 'tab_zoll',
+            buildSections: () => [
+              PdfSection(title: t('pdf_inputs'), rows: [
+                PdfRow.numeric(label: t('zoll_ch_to_mm'), value: patientData.chInput, unit: 'Ch', decimals: 1),
+                PdfRow.numeric(label: t('zoll_mm_to_ch'), value: patientData.mmInput, unit: 'mm', decimals: 2),
+              ]),
+              PdfSection(title: t('pdf_results'), rows: [
+                PdfRow.numeric(label: t('zoll_result_mm'), value: patientData.chToMm, unit: 'mm', decimals: 4),
+                PdfRow.numeric(label: t('zoll_result_ch'), value: patientData.mmToCh, unit: 'Ch', decimals: 1),
+              ]),
+            ],
+          ),
           SourceButton(refs: [AppSources.tschaut]),
           const SizedBox(height: 8),
         ]),

@@ -91,6 +91,15 @@ class Strings {
     'language':               {AppLocale.en: 'Language', AppLocale.de: 'Sprache'},
     'source':                 {AppLocale.en: 'Source',  AppLocale.de: 'Quelle'},
     'sources':                {AppLocale.en: 'Sources', AppLocale.de: 'Quellen'},
+    // ── PDF Export ────────────────────────────────────────────────────────
+    'pdf_export_button':      {AppLocale.en: 'Export as PDF',
+                               AppLocale.de: 'Als PDF exportieren'},
+    'pdf_inputs':             {AppLocale.en: 'Inputs',
+                               AppLocale.de: 'Eingaben'},
+    'pdf_results':            {AppLocale.en: 'Results',
+                               AppLocale.de: 'Ergebnisse'},
+    'pdf_export_failed':      {AppLocale.en: 'PDF export failed',
+                               AppLocale.de: 'PDF-Export fehlgeschlagen'},
 
     // ── Tabs ──────────────────────────────────────────────────────────────
     'tab_bsa':                {AppLocale.en: 'BSA/CO/Hb/Hct',
