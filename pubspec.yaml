@@ -29,7 +29,7 @@ flutter:
     - assets/o2_chart.png
     - assets/finck_va.jpg
     - assets/finck_vv.jpg
-    - assets/heart_anterior.png
-    - assets/heart_posterior.png
-    - assets/heart_cross_section.png
+    - assets/heart_anterior.jpg
+    - assets/heart_posterior.jpg
+    - assets/heart_cross_section.jpg
     - assets/coronary_arteries.svg

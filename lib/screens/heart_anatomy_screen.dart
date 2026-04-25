@@ -19,7 +19,7 @@ class HeartAnatomyScreen extends StatelessWidget {
           _sectionTitle(t('anat_coronary_ant')),
           const SizedBox(height: 8),
           _imageCard(
-            assetPath: 'assets/heart_anterior.png',
+            assetPath: 'assets/heart_anterior.jpg',
             caption: t('anat_desc_ant'),
             isSvg: false,
           ),
@@ -30,7 +30,7 @@ class HeartAnatomyScreen extends StatelessWidget {
           _sectionTitle(t('anat_coronary_post')),
           const SizedBox(height: 8),
           _imageCard(
-            assetPath: 'assets/heart_posterior.png',
+            assetPath: 'assets/heart_posterior.jpg',
             caption: t('anat_desc_post'),
             isSvg: false,
           ),
@@ -41,7 +41,7 @@ class HeartAnatomyScreen extends StatelessWidget {
           _sectionTitle(t('anat_cross_section')),
           const SizedBox(height: 8),
           _imageCard(
-            assetPath: 'assets/heart_cross_section.png',
+            assetPath: 'assets/heart_cross_section.jpg',
             caption: t('anat_desc_cross'),
             isSvg: false,
             whiteBg: true,
