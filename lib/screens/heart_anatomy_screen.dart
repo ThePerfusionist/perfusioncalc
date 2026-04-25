@@ -123,10 +123,10 @@ class HeartAnatomyScreen extends StatelessWidget {
                   style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.5),
                 ),
                 const SizedBox(height: 6),
-                Row(children: const [
-                  Icon(Icons.zoom_in, color: Colors.white24, size: 14),
-                  SizedBox(width: 4),
-                  Text('Tap to zoom', style: TextStyle(color: Colors.white24, fontSize: 11)),
+                Row(children: [
+                  const Icon(Icons.zoom_in, color: Colors.white24, size: 14),
+                  const SizedBox(width: 4),
+                  Text(t('anat_tap_zoom'), style: const TextStyle(color: Colors.white24, fontSize: 11)),
                 ]),
               ]),
             ),

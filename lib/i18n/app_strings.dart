@@ -372,22 +372,8 @@ class Strings {
                                AppLocale.de: 'Schematisches Diagramm der Koronararterien mit Hauptstamm, RIVA (LAD), Ramus circumflexus und rechter Koronararterie samt ihren Hauptästen.'},
     'anat_pinch_zoom':        {AppLocale.en: 'Pinch to zoom · Drag to pan',
                                AppLocale.de: 'Zoom durch Pinch · Verschieben durch Ziehen'},
-    // ── Heart Anatomy launcher (external HTML page) ───────────────────────
-    'anat_open_description':  {AppLocale.en: 'View the heart anatomy diagrams in a separate page for the best experience and full browser compatibility.',
-                               AppLocale.de: 'Die Herzanatomie-Diagramme in einer separaten Seite ansehen – für beste Darstellung und volle Browser-Kompatibilität.'},
-    'anat_open_button':       {AppLocale.en: 'Open Heart Anatomy',
-                               AppLocale.de: 'Herzanatomie öffnen'},
-    'anat_compatibility_note':{AppLocale.en: 'Anatomy diagrams are shown on a dedicated page so they display reliably in every browser, including privacy-focused browsers without WebGL.',
-                               AppLocale.de: 'Die Anatomie-Diagramme werden auf einer eigenen Seite angezeigt, damit sie in jedem Browser zuverlässig dargestellt werden – auch in Privacy-Browsern ohne WebGL.'},
-    'anat_web_only_hint':     {AppLocale.en: 'Available in web version only',
-                               AppLocale.de: 'Nur in der Web-Version verfügbar'},
-    // ── Pediatric cannula sizes launcher ──────────────────────────────────
-    'ped_cannula_section_title':{AppLocale.en: 'V-A & V-V cannula size tables (Finck 2020)',
-                                 AppLocale.de: 'V-A & V-V Kanülengröße-Tabellen (Finck 2020)'},
-    'ped_cannula_section_desc':{AppLocale.en: 'Detailed tables for selecting V-A and V-V cannula sizes by patient weight.',
-                                AppLocale.de: 'Detaillierte Tabellen zur Auswahl von V-A und V-V Kanülengrößen nach Patientengewicht.'},
-    'ped_cannula_open_button':{AppLocale.en: 'Open cannula size tables',
-                               AppLocale.de: 'Kanülengröße-Tabellen öffnen'},
+    'anat_tap_zoom':          {AppLocale.en: 'Tap to zoom',
+                               AppLocale.de: 'Zum Vergrößern tippen'},
   };
 
   /// Übersetze einen Key. Fällt auf EN zurück, wenn DE-Übersetzung fehlt;
