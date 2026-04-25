@@ -1,7 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
+// Conditional import: auf Web ueber dart:ui_web Platform-Views registrieren,
+// auf Mobile/Desktop einen Stub, der nichts tut (BrowserSafeImage faellt
+// dort ohnehin auf Image.asset zurueck und ruft die Factory nie auf).
+import 'browser_image_stub.dart'
+    if (dart.library.js_interop) 'browser_image_web.dart';
 
 const kCardColor  = Color(0xFF1C1C1C);
 const kGold       = Color(0xFFFFA500);
@@ -302,30 +308,29 @@ class GoldListCard extends StatelessWidget {
 
 // ── Browser-safe image loading ───────────────────────────────────────────────
 //
-// Problem: Flutter Web rendert standardmaessig ALLE Bilder ueber CanvasKit
-// (WebGL). Das gilt auch fuer Image.network - der Bytes werden per fetch()
-// geladen und in CanvasKit gezeichnet, NICHT als natives <img>-Element.
-// In Browsern mit strikten Defaults (Privacy-Browser, Firefox mit
-// fingerprinting-protection, einige Chromium-Forks) bricht entweder das
-// WASM-Image-Decoding oder das CanvasKit-Pixelreading ab. Effekt: Bild
-// erscheint nicht oder als leere weisse Flaeche (besonders bei SVGs).
+// PROBLEM: Flutter Web rendert Bilder ueber CanvasKit (WebGL).
+// In Browsern ohne WebGL (z.B. Ungoogled Chromium mit Anti-Fingerprinting,
+// Tor Browser, Brave Shields auf "Aggressive") sehen wir im Console:
 //
-// Loesung: Flutter 3.27+ bietet den Parameter `webHtmlElementStrategy` von
-// Image.network. Wenn auf 'prefer' gesetzt, rendert Flutter das Bild als
-// nativen <img>-Tag im DOM via HtmlElementView. Der Browser laedt und
-// rendert dann selbst - unabhaengig von CanvasKit, unabhaengig vom
-// Renderer. Funktioniert auch mit SVGs, weil Browser SVGs in <img>
-// nativ unterstuetzen.
+//   WARNING: Falling back to CPU-only rendering. Reason: webGLVersion is -1
 //
-// Trade-offs (laut Flutter-Doku akzeptabel fuer unseren Use Case):
-//   - Suboptimale Performance (irrelevant bei wenigen statischen Bildern)
-//   - Kein Image.toByteData / OffsetLayer.toImage (nutzen wir nicht)
-//   - Einige Color/Blend-Effekte funktionieren nicht (nutzen wir nicht)
+// In diesem CPU-Fallback funktionieren Layout/Text/Buttons, aber Bilder
+// werden nicht dekodiert/gezeichnet (zu langsam fuer Software-Rendering).
+// Effekt: leere Container an den Bildstellen.
 //
-// Voraussetzung: Asset liegt unter assets/<filename> in pubspec.yaml.
-// Flutter packt es im web-Build unter assets/assets/<filename>, was dank
-// <base href="/<app>/"> als 'assets/assets/<filename>' relativ adressierbar
-// ist.
+// LOESUNG: HtmlElementView.fromTagName erstellt einen echten <img>-Tag
+// direkt im DOM, vollstaendig ausserhalb von Flutters Renderer. Der
+// Browser laedt UND zeichnet das Bild selbst - mit seinem nativen
+// Bildlader, der auch ohne WebGL funktioniert.
+//
+// Die offizielle Flutter-Doku empfiehlt diesen Ansatz explizit als
+// Workaround fuer "images that need to be displayed in any browser".
+//
+// Trade-offs:
+//   - Funktioniert nur im Web (auf Mobile/Desktop Fallback auf Image.asset)
+//   - <img> liegt in einer Platform-View, kann nicht via Flutter geclippt
+//     oder mit Effekten ueberlagert werden - ist hier aber irrelevant
+//   - Das Bild ist nicht in Flutter-Screenshots enthalten - irrelevant
 
 class BrowserSafeImage extends StatelessWidget {
   final String assetPath;        // wie in pubspec deklariert, z.B. 'assets/finck_va.jpg'
@@ -343,56 +348,98 @@ class BrowserSafeImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Flutter packt Assets in den web-Build unter assets/assets/<file>.
-    // Ein relativer Pfad respektiert das <base href> der Seite.
-    final url = 'assets/$assetPath';
-    return Image.network(
-      url,
+    // Auf Web: nativen <img>-Tag via HtmlElementView nutzen (umgeht CanvasKit
+    // komplett - funktioniert auch in Browsern ohne WebGL).
+    // Auf Mobile/Desktop: normales Image.asset (CanvasKit gibt es da nicht).
+    if (kIsWeb) {
+      return _BrowserNativeImg(
+        assetPath: assetPath,
+        fit: fit,
+        width: width,
+        height: height,
+      );
+    }
+    return Image.asset(
+      assetPath,
       fit: fit,
       width: width,
       height: height,
-      // KRITISCH: zwingt Flutter, einen nativen <img>-Tag im DOM zu nutzen
-      // statt das Bild ueber CanvasKit zu zeichnen. Bytes werden vom Browser
-      // geladen, nicht von Flutter. Loest:
-      //   - Bilder unsichtbar in Privacy-Browsern
-      //   - SVG erscheint als weisse Flaeche
-      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-      // Loading-Indikator waehrend des Bildladens
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          padding: const EdgeInsets.all(40),
-          alignment: Alignment.center,
-          child: CircularProgressIndicator(
-            value: progress.expectedTotalBytes != null
-                ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                : null,
-            color: kGold,
-            strokeWidth: 2,
-          ),
-        );
-      },
-      // Fallback bei Fehler: Image.asset versuchen (z.B. fuer Mobile-Build,
-      // wo es kein HTTP-Asset-Hosting gibt).
-      errorBuilder: (context, error, stack) {
-        return Image.asset(
-          assetPath,
-          fit: fit,
-          width: width,
-          height: height,
-          errorBuilder: (c, e, s) => Container(
-            padding: const EdgeInsets.all(20),
-            alignment: Alignment.center,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.broken_image, color: Colors.white24, size: 48),
-              const SizedBox(height: 8),
-              Text('Image unavailable: $assetPath',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
-            ]),
-          ),
-        );
-      },
+      errorBuilder: (c, e, s) => _imageError(assetPath),
+    );
+  }
+
+  static Widget _imageError(String path) => Container(
+    padding: const EdgeInsets.all(20),
+    alignment: Alignment.center,
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.broken_image, color: Colors.white24, size: 48),
+      const SizedBox(height: 8),
+      Text('Image unavailable: $path',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white38, fontSize: 11)),
+    ]),
+  );
+}
+
+// ── Web-spezifische Implementierung mit nativem <img>-Tag ────────────────────
+class _BrowserNativeImg extends StatefulWidget {
+  final String assetPath;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+
+  const _BrowserNativeImg({
+    required this.assetPath,
+    required this.fit,
+    this.width,
+    this.height,
+  });
+
+  @override
+  State<_BrowserNativeImg> createState() => _BrowserNativeImgState();
+}
+
+class _BrowserNativeImgState extends State<_BrowserNativeImg> {
+  late final String _viewType;
+  static int _idCounter = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Eindeutiger viewType pro Instanz - sonst wuerden mehrere Bilder
+    // sich denselben Cache teilen.
+    _viewType = 'browser-safe-img-${_idCounter++}';
+    _registerFactory();
+  }
+
+  void _registerFactory() {
+    // Flutter packt Assets unter assets/<file> ins web-Build, aber accessible
+    // unter dem <base href> als "assets/<file>". Relative URL respektiert
+    // automatisch das base-href der Seite.
+    final url = 'assets/${widget.assetPath}';
+
+    // CSS object-fit-Wert aus Flutter BoxFit ableiten.
+    final objectFit = switch (widget.fit) {
+      BoxFit.contain => 'contain',
+      BoxFit.cover => 'cover',
+      BoxFit.fill => 'fill',
+      BoxFit.fitWidth => 'contain', // Naeherung
+      BoxFit.fitHeight => 'contain',
+      _ => 'contain',
+    };
+
+    // platformViewRegistry.registerViewFactory ist in dart:ui_web definiert.
+    // Wir rufen es ueber die wrapper-Funktion in browser_image_io.dart bzw.
+    // browser_image_web.dart (conditional import).
+    registerImageFactory(_viewType, url, objectFit);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.width,
+      height: widget.height,
+      child: HtmlElementView(viewType: _viewType),
     );
   }
 }

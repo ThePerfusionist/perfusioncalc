@@ -13,6 +13,11 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.3.0
   flutter_svg: ^2.0.10+1
+  # Erforderlich fuer HtmlElementView mit nativen DOM-Bildern
+  # (Web-Image-Workaround fuer Browser ohne WebGL).
+  # Version-Constraint bewusst weit gefasst, damit Flutter SDK die
+  # passende Version waehlt (sie ist via flutter SDK pinned).
+  web: any
 
 dev_dependencies:
   flutter_test:
