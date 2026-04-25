@@ -88423,7 +88423,7 @@ return A.bz(s,A.ck(A.b([l.Pl(k.i(q,0),!0,B.N,2),l.Pk(k.i(q,1),3),l.Pk(k.i(q,2),3
 $S:55}
 A.LO.prototype={
 M(a){var s=this,r=null,q=$.co()
-return A.hV(new A.aP(B.eW,A.bZ(A.b([B.R,A.as(A.T("anat_coronary_ant",q.a),r,r,r,r,B.c0,r,r),B.R,s.QC("assets/heart_anterior.png",A.T("anat_desc_ant",q.a),!1),B.iL,A.as(A.T("anat_coronary_post",q.a),r,r,r,r,B.c0,r,r),B.R,s.QC("assets/heart_posterior.png",A.T("anat_desc_post",q.a),!1),B.iL,A.as(A.T("anat_cross_section",q.a),r,r,r,r,B.c0,r,r),B.R,s.F9("assets/heart_cross_section.png",A.T("anat_desc_cross",q.a),!1,!0),B.iL,A.as(A.T("anat_coronary_arteries",q.a),r,r,r,r,B.c0,r,r),B.R,s.F9("assets/coronary_arteries.svg",A.T("anat_desc_schema",q.a),!0,!0),B.b1,new A.hg(A.b([B.XR,B.XU],t.xj),r),B.R],t.p),B.T,B.t,B.v),r),r,B.E,r,r,B.a5)},
+return A.hV(new A.aP(B.eW,A.bZ(A.b([B.R,A.as(A.T("anat_coronary_ant",q.a),r,r,r,r,B.c0,r,r),B.R,s.QC("assets/heart_anterior.jpg",A.T("anat_desc_ant",q.a),!1),B.iL,A.as(A.T("anat_coronary_post",q.a),r,r,r,r,B.c0,r,r),B.R,s.QC("assets/heart_posterior.jpg",A.T("anat_desc_post",q.a),!1),B.iL,A.as(A.T("anat_cross_section",q.a),r,r,r,r,B.c0,r,r),B.R,s.F9("assets/heart_cross_section.jpg",A.T("anat_desc_cross",q.a),!1,!0),B.iL,A.as(A.T("anat_coronary_arteries",q.a),r,r,r,r,B.c0,r,r),B.R,s.F9("assets/coronary_arteries.svg",A.T("anat_desc_schema",q.a),!0,!0),B.b1,new A.hg(A.b([B.XR,B.XU],t.xj),r),B.R],t.p),B.T,B.t,B.v),r),r,B.E,r,r,B.a5)},
 F9(a,b,c,d){return new A.dL(new A.a6I(this,a,c,d,b),null)},
 QC(a,b,c){return this.F9(a,b,c,!1)},
 aj4(a,b,c,d){A.IQ(!0,new A.a6K(d,c,b),a,t.z)}}
