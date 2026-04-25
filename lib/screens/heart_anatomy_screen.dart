@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../i18n/app_strings.dart';
-import '../widgets/external_page_launcher.dart';
 
 class HeartAnatomyScreen extends StatelessWidget {
   const HeartAnatomyScreen({super.key});
@@ -11,87 +9,188 @@ class HeartAnatomyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 8),
+        padding: const EdgeInsets.all(10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-            // Hero section: a single, clear call-to-action card
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-              decoration: BoxDecoration(
-                color: kCardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: kGold.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Icon header
-                  Row(children: const [
-                    Icon(Icons.favorite_border, color: kGold, size: 28),
-                    SizedBox(width: 12),
-                    Text('Heart Anatomy', // English keeps "Heart Anatomy" - same in DE
-                        style: TextStyle(color: kGold, fontSize: 20, fontWeight: FontWeight.bold)),
-                  ]),
-                  const SizedBox(height: 14),
-                  Text(t('anat_open_description'),
-                      style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)),
-                  const SizedBox(height: 6),
-                  Text('• ${t('anat_coronary_ant')}',
-                      style: const TextStyle(color: Colors.white60, fontSize: 13)),
-                  Text('• ${t('anat_coronary_post')}',
-                      style: const TextStyle(color: Colors.white60, fontSize: 13)),
-                  Text('• ${t('anat_cross_section')}',
-                      style: const TextStyle(color: Colors.white60, fontSize: 13)),
-                  Text('• ${t('anat_coronary_arteries')}',
-                      style: const TextStyle(color: Colors.white60, fontSize: 13)),
-                  const SizedBox(height: 18),
+          const SizedBox(height: 8),
 
-                  // Primary action button
-                  SizedBox(
+          // ── 1. Anterior view ───────────────────────────────────────────────
+          _sectionTitle(t('anat_coronary_ant')),
+          const SizedBox(height: 8),
+          _imageCard(
+            assetPath: 'assets/heart_anterior.jpg',
+            caption: t('anat_desc_ant'),
+            isSvg: false,
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── 2. Posterior view ──────────────────────────────────────────────
+          _sectionTitle(t('anat_coronary_post')),
+          const SizedBox(height: 8),
+          _imageCard(
+            assetPath: 'assets/heart_posterior.jpg',
+            caption: t('anat_desc_post'),
+            isSvg: false,
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── 3. Cross-section ───────────────────────────────────────────────
+          _sectionTitle(t('anat_cross_section')),
+          const SizedBox(height: 8),
+          _imageCard(
+            assetPath: 'assets/heart_cross_section.jpg',
+            caption: t('anat_desc_cross'),
+            isSvg: false,
+            whiteBg: true,
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── 4. Coronary arteries schematic ───────────────────────────────
+          // Vorher als SVG, konvertiert zu JPG (1600x1029, 252 KB) wegen
+          // besserer Browser-Kompatibilitaet mit BrowserSafeImage.
+          _sectionTitle(t('anat_coronary_arteries')),
+          const SizedBox(height: 8),
+          _imageCard(
+            assetPath: 'assets/coronary_arteries.jpg',
+            caption: t('anat_desc_schema'),
+            isSvg: false,
+            whiteBg: true,
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Source ────────────────────────────────────────────────────────
+          SourceButton(refs: [
+            AppSources.heartAnatomyWikipedia,
+            AppSources.blausenMedical,
+          ]),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  // ── Section title identical to other tabs ─────────────────────────────────
+  Widget _sectionTitle(String title) => Text(
+    title,
+    style: const TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold),
+  );
+
+  // ── Image card with caption and zoom dialog ───────────────────────────────
+  Widget _imageCard({
+    required String assetPath,
+    required String caption,
+    required bool isSvg,
+    bool whiteBg = false,
+  }) {
+    return Builder(
+      builder: (context) => GestureDetector(
+        onTap: () => _showFullscreen(context, assetPath, isSvg, whiteBg: whiteBg),
+        child: Container(
+          decoration: BoxDecoration(
+            color: kCardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Image with max-height so it doesn't blow up on wide screens.
+            // Uses BrowserSafeImage which renders via webHtmlElementStrategy:
+            // prefer (a native <img> in the DOM), so it works in browsers
+            // without WebGL (privacy browsers, fingerprinting protection).
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 340),
+                child: Container(
+                  color: whiteBg ? Colors.white : null,
+                  child: BrowserSafeImage(
+                    assetPath: assetPath,
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: kIsWeb
-                          ? () => openExternalPage('anatomy.html')
-                          : null,
-                      icon: const Icon(Icons.open_in_new),
-                      label: Text(t('anat_open_button'),
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kGold,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
+                    fit: BoxFit.contain,
                   ),
-                  if (!kIsWeb) ...[
-                    const SizedBox(height: 8),
-                    Text(t('anat_web_only_hint'),
-                        style: const TextStyle(color: Colors.white38, fontSize: 11),
-                        textAlign: TextAlign.center),
-                  ],
-                ],
+                ),
               ),
             ),
-
-            const SizedBox(height: 16),
-            // Hint why this is a separate page
+            // Caption + zoom hint
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.info_outline, color: Colors.white38, size: 14),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(t('anat_compatibility_note'),
-                      style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.4)),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(
+                  caption,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.5),
                 ),
+                const SizedBox(height: 6),
+                Row(children: const [
+                  Icon(Icons.zoom_in, color: Colors.white24, size: 14),
+                  SizedBox(width: 4),
+                  Text('Tap to zoom', style: TextStyle(color: Colors.white24, fontSize: 11)),
+                ]),
               ]),
             ),
-          ],
+          ]),
         ),
+      ),
+    );
+  }
+
+  // ── Full-screen zoom dialog ───────────────────────────────────────────────
+  void _showFullscreen(BuildContext context, String assetPath, bool isSvg,
+      {bool whiteBg = false}) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: whiteBg ? Colors.white : const Color(0xFF0A0A0A),
+        insetPadding: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Stack(children: [
+          // Zoomable image
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 6.0,
+              child: Center(
+                child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.contain),
+              ),
+            ),
+          ),
+          // Close button
+          Positioned(
+            top: 8, right: 8,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: Container(
+                width: 34, height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2C2C2C),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+          // Zoom hint
+          Positioned(
+            bottom: 12, left: 0, right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  t('anat_pinch_zoom'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }

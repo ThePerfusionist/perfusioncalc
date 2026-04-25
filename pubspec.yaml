@@ -12,11 +12,6 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.3.0
-  # Erforderlich für window.open() im launcher_web.dart, um die externen
-  # HTML-Seiten (anatomy.html, cannulas.html) in einem neuen Tab zu öffnen.
-  # Version-Constraint bewusst weit gefasst, damit Flutter SDK passende
-  # Version wählt.
-  web: any
 
 dev_dependencies:
   flutter_test:
@@ -31,3 +26,9 @@ flutter:
   assets:
     - assets/icon.png
     - assets/o2_chart.png
+    - assets/finck_va.jpg
+    - assets/finck_vv.jpg
+    - assets/heart_anterior.jpg
+    - assets/heart_posterior.jpg
+    - assets/heart_cross_section.jpg
+    - assets/coronary_arteries.jpg
