@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/common.dart';
 import '../i18n/app_strings.dart';
 
@@ -61,7 +62,7 @@ class HeartAnatomyScreen extends StatelessWidget {
           const SizedBox(height: 16),
 
           // ── Source ────────────────────────────────────────────────────────
-          const SourceButton(refs: [
+          SourceButton(refs: [
             AppSources.heartAnatomyWikipedia,
             AppSources.blausenMedical,
           ]),
@@ -101,15 +102,17 @@ class HeartAnatomyScreen extends StatelessWidget {
                 constraints: const BoxConstraints(maxHeight: 340),
                 child: Container(
                   color: whiteBg ? Colors.white : null,
-                  // SVGs werden ueber BrowserSafeImage ebenso als <img>-Tag
-                  // im DOM gerendert - das funktioniert in jedem Browser
-                  // unabhaengig von Flutters CanvasKit/flutter_svg, die in
-                  // einigen Privacy-Browsern Probleme machen koennen.
-                  child: BrowserSafeImage(
-                    assetPath: assetPath,
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                  ),
+                  child: isSvg
+                      ? SvgPicture.asset(
+                          assetPath,
+                          fit: BoxFit.contain,
+                          colorFilter: null,
+                        )
+                      : Image.asset(
+                          assetPath,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                        ),
                 ),
               ),
             ),
@@ -152,7 +155,9 @@ class HeartAnatomyScreen extends StatelessWidget {
               minScale: 0.5,
               maxScale: 6.0,
               child: Center(
-                child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.contain),
+                child: isSvg
+                    ? SvgPicture.asset(assetPath, fit: BoxFit.contain)
+                    : Image.asset(assetPath, fit: BoxFit.contain),
               ),
             ),
           ),

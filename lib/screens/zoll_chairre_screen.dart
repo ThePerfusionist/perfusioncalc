@@ -67,7 +67,7 @@ class ZollChairreScreen extends StatelessWidget {
               onChanged: (v) { patientData.mmInput = v; onChanged(); }),
           ResultCard(label: t('zoll_result_ch'), unit: 'Ch', value: patientData.mmToCh, decimals: 1),
           const SizedBox(height: 16),
-          const SourceButton(refs: [AppSources.tschaut]),
+          SourceButton(refs: [AppSources.tschaut]),
           const SizedBox(height: 8),
         ]),
       ),

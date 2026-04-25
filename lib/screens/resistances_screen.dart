@@ -37,7 +37,7 @@ class ResistancesScreen extends StatelessWidget {
         ResultCard(label: 'PVR', unit: 'dyns/cm\u2075', value: patientData.pvr,
             rangeHint: '(150-300 dyns/cm\u2075)', decimals: 0),
         const SizedBox(height: 8),
-        const SourceButton(refs: [
+        SourceButton(refs: [
           AppSources.barrettBoyes,
           AppSources.skimming,
         ]),

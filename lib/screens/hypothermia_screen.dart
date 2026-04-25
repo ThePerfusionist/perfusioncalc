@@ -49,7 +49,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
 
           // ── Source ────────────────────────────────────────────────────────
           const SizedBox(height: 8),
-          const SourceButton(refs: [
+          SourceButton(refs: [
             AppSources.tschaut,
             AppSources.severinghaus1979,
             AppSources.bradleySeveringhaus1956,

@@ -89,6 +89,8 @@ class Strings {
     'app_title':              {AppLocale.en: 'PerfusionCalc', AppLocale.de: 'PerfusionCalc'},
     'navigation':             {AppLocale.en: 'Navigation', AppLocale.de: 'Navigation'},
     'language':               {AppLocale.en: 'Language', AppLocale.de: 'Sprache'},
+    'source':                 {AppLocale.en: 'Source',  AppLocale.de: 'Quelle'},
+    'sources':                {AppLocale.en: 'Sources', AppLocale.de: 'Quellen'},
 
     // ── Tabs ──────────────────────────────────────────────────────────────
     'tab_bsa':                {AppLocale.en: 'BSA/CO/Hb/Hct',

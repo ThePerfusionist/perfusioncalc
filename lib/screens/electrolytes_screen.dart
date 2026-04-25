@@ -48,7 +48,7 @@ class ElectrolytesScreen extends StatelessWidget {
         ResultCard(label: 'NaBic 8,4%', unit: 'ml', value: patientData.nabic),
         ResultCard(label: 'TRIS 36,34%', unit: 'ml', value: patientData.tris),
         const SizedBox(height: 8),
-        const SourceButton(refs: [
+        SourceButton(refs: [
           AppSources.larsen,
         ]),
         const SizedBox(height: 16),

@@ -85,7 +85,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
             ]),
           ),
         ),
-        const SourceButton(refs: [
+        SourceButton(refs: [
           AppSources.deSomer,
           AppSources.newland2019,
           AppSources.newland2017,

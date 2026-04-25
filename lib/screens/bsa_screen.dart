@@ -86,7 +86,7 @@ class _BSAScreenState extends State<BSAScreen> {
         ResultCard(label: t('bsa_expected_hct_m'), unit: '%',    value: pd.expectedHctMale),
         ResultCard(label: t('bsa_expected_hct_f'), unit: '%',    value: pd.expectedHctFemale),
         const SizedBox(height: 8),
-        const SourceButton(refs: [
+        SourceButton(refs: [
           AppSources.dubois,
           AppSources.silbernagl,
           AppSources.nadler,

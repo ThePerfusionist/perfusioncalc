@@ -63,7 +63,7 @@ class PediatricScreen extends StatelessWidget {
           ResultCard(label: t('ped_transfusion_vol'), unit: 'ml', value: patientData.transfusionVolume,
               rangeHint: t('ped_hct_in_ek'), decimals: 0),
           const SizedBox(height: 8),
-          const SourceButton(refs: [
+          SourceButton(refs: [
             AppSources.darling,
             AppSources.tschaut,
             AppSources.finck,

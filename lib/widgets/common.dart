@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/ranges.dart';
+import '../i18n/app_strings.dart';
 
 const kCardColor  = Color(0xFF1C1C1C);
 const kGold       = Color(0xFFFFA500);
@@ -481,7 +482,11 @@ class ImageSectionCard extends StatelessWidget {
 class SourceButton extends StatelessWidget {
   final List<SourceRef> refs;
 
-  const SourceButton({super.key, required this.refs});
+  // Nicht const, weil build() den globalen t()-Helfer aufruft, der sich bei
+  // Sprachwechsel aendert. Mit const wuerde Flutter das Widget cachen und
+  // den Sprachwechsel nicht mitbekommen.
+  // ignore: prefer_const_constructors_in_immutables
+  SourceButton({super.key, required this.refs});
 
   @override
   Widget build(BuildContext context) {
@@ -492,10 +497,10 @@ class SourceButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         width: double.infinity,
         decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
-          Text('Source', style: TextStyle(color: Colors.white, fontSize: 15)),
-          SizedBox(width: 8),
-          Icon(Icons.info_outline, color: Colors.redAccent, size: 20),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text(t('source'), style: const TextStyle(color: Colors.white, fontSize: 15)),
+          const SizedBox(width: 8),
+          const Icon(Icons.info_outline, color: Colors.redAccent, size: 20),
         ]),
       ),
     );
@@ -507,8 +512,8 @@ class SourceButton extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: kCardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Sources',
-            style: TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 17)),
+        title: Text(t('sources'),
+            style: const TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 17)),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -518,7 +523,7 @@ class SourceButton extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: kGold, fontWeight: FontWeight.bold)),
+            child: Text(t('close'), style: const TextStyle(color: kGold, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

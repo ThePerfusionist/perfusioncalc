@@ -86,7 +86,7 @@ class ReferencePressureScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             ..._sections().map((s) => _sectionCard(s)),
-            const SourceButton(refs: [
+            SourceButton(refs: [
               AppSources.barrettBoyes,
               AppSources.skimming,
             ]),
