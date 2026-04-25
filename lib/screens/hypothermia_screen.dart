@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/bga_model.dart';
 import '../widgets/common.dart';
 import '../models/ranges.dart';
+import '../i18n/app_strings.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -17,11 +18,12 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
   void _rebuild() => setState(() {});
 
   // Table data: [Level, Range, Circulatory arrest, O2 requirement]
-  static const _hypoRows = [
-    ['Light (mild)', '36 – 32 °C', '32 °C = 3–9 min',  '37 °C = 100%'],
-    ['Moderate',     '32 – 28 °C', '28 °C = 9–15 min', '30 °C = 50%'],
-    ['Deep',         '28 – 18 °C', '18 °C = 45 min',   '25 °C = 25%'],
-    ['Profound',     '18 – 4 °C',  '15 °C = 60 min',   '15 °C = 10%'],
+  // Dynamisch, damit Sprachwechsel die Level-Bezeichnungen aktualisiert.
+  List<List<String>> _hypoRows() => [
+    [t('hypo_lvl_light'),    '36 – 32 °C', '32 °C = 3–9 min',  '37 °C = 100%'],
+    [t('hypo_lvl_moderate'), '32 – 28 °C', '28 °C = 9–15 min', '30 °C = 50%'],
+    [t('hypo_lvl_deep'),     '28 – 18 °C', '18 °C = 45 min',   '25 °C = 25%'],
+    [t('hypo_lvl_profound'), '18 – 4 °C',  '15 °C = 60 min',   '15 °C = 10%'],
   ];
 
   @override
@@ -33,15 +35,15 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
 
           // ── Hypothermia levels table ──────────────────────────────────────
           const SizedBox(height: 8),
-          const Text('Hypothermia Levels',
-              style: TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(t('hypo_title_levels'),
+              style: const TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           _hypoTable(),
 
           // ── BGA temperature correction ────────────────────────────────────
           const SizedBox(height: 16),
-          const Text('BGA Temperature Correction',
-              style: TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(t('hypo_title_bga'),
+              style: const TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           _bgaSection(),
 
@@ -76,17 +78,17 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: Row(children: [
-            _hCell('Level',             flex: 3),
-            _hCell('Range',             flex: 3),
-            _hCell('Circ. arrest',      flex: 3),
-            _hCell('O\u2082 req.',      flex: 3),
+            _hCell(t('hypo_col_level'),  flex: 3),
+            _hCell(t('hypo_col_range'),  flex: 3),
+            _hCell(t('hypo_col_arrest'), flex: 3),
+            _hCell(t('hypo_col_o2req'),  flex: 3),
           ]),
         ),
         // Data rows
-        ..._hypoRows.asMap().entries.map((e) {
+        ..._hypoRows().asMap().entries.map((e) {
           final i = e.key;
           final r = e.value;
-          final isLast = i == _hypoRows.length - 1;
+          final isLast = i == _hypoRows().length - 1;
           return Container(
             decoration: BoxDecoration(
               color: i.isOdd ? const Color(0xFF222222) : const Color(0xFF1A1A1A),
@@ -120,25 +122,25 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
 
       // ── Inputs ─────────────────────────────────────────────────────────────
       InputCard(
-        label: 'Patient temperature', unit: '°C',
+        label: t('hypo_temp'), unit: '°C',
         value: _model.temp, step: 0.1,
         range: Ranges.temperature,
         onChanged: (v) { _model.temp = v; _rebuild(); },
       ),
       InputCard(
-        label: 'PaO\u2082 (measured at 37 °C)', unit: 'mmHg',
+        label: t('hypo_pao2'), unit: 'mmHg',
         value: _model.paO2, step: 1.0,
         range: Ranges.paO2,
         onChanged: (v) { _model.paO2 = v; _rebuild(); },
       ),
       InputCard(
-        label: 'PaCO\u2082 (measured at 37 °C)', unit: 'mmHg',
+        label: t('hypo_paco2'), unit: 'mmHg',
         value: _model.paCO2, step: 1.0,
         range: const Range(10, 100, 'mmHg', note: 'Normal 35–45'),
         onChanged: (v) { _model.paCO2 = v; _rebuild(); },
       ),
       InputCard(
-        label: 'pH (measured at 37 °C)', unit: '',
+        label: t('hypo_ph'), unit: '',
         value: _model.pH, step: 0.01,
         range: Ranges.pH,
         onChanged: (v) { _model.pH = v; _rebuild(); },
@@ -148,23 +150,23 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       if (!anyResult)
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-          child: Row(children: const [
-            Icon(Icons.info_outline, color: Colors.white24, size: 14),
-            SizedBox(width: 6),
+          child: Row(children: [
+            const Icon(Icons.info_outline, color: Colors.white24, size: 14),
+            const SizedBox(width: 6),
             Text(
-              'Enter patient temperature and at least one BGA value',
-              style: TextStyle(color: Colors.white38, fontSize: 12),
+              t('hypo_hint_enter'),
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
             ),
           ]),
         ),
 
       // ── Results ────────────────────────────────────────────────────────────
       if (anyResult) ...[
-        const SectionHeader('Corrected values at patient temperature'),
+        SectionHeader(t('hypo_section_corrected')),
 
         if (hasCorrPaO2) ...[
           ResultCard(
-            label: 'PaO\u2082 (T-corrected)',
+            label: t('hypo_corr_pao2'),
             unit: 'mmHg',
             value: _model.corrPaO2!,
             decimals: 1,
@@ -172,14 +174,14 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
           ),
           if (_model.fTPercent != null)
             _formulaHintCard(
-              'Temperaturkoeffizient f\u1d40 = ${_model.fTPercent!.toStringAsFixed(2)} %/°C',
-              'Variiert: ~7.4 %/°C bei niedriger, ~1.3 %/°C bei hoher Sättigung',
+              '${t('hypo_temp_coeff')} f\u1d40 = ${_model.fTPercent!.toStringAsFixed(2)} %/°C',
+              t('hypo_temp_coeff_note'),
             ),
         ],
 
         if (hasCorrCO2)
           ResultCard(
-            label: 'PaCO\u2082 (T-corrected)',
+            label: t('hypo_corr_paco2'),
             unit: 'mmHg',
             value: _model.corrPaCO2!,
             decimals: 1,
@@ -188,7 +190,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
 
         if (hasCorrPH)
           ResultCard(
-            label: 'pH (T-corrected)',
+            label: t('hypo_corr_ph'),
             unit: '',
             value: _model.corrPH!,
             decimals: 3,
@@ -197,7 +199,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
 
         if (_model.hco3 != null)
           ResultCard(
-            label: 'HCO\u2083\u207b (Henderson-Hasselbalch)',
+            label: t('hypo_hco3'),
             unit: 'mmol/L',
             value: _model.hco3!,
             decimals: 1,
@@ -206,7 +208,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
 
         if (_model.satFromPaO2 != null)
           ResultCard(
-            label: 'SaO\u2082 (O\u2082-Dissoziationskurve)',
+            label: t('hypo_sat'),
             unit: '%',
             value: _model.satFromPaO2!,
             decimals: 1,
@@ -214,7 +216,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
           ),
 
         // Clinical thumb rules
-        const SectionHeader('Clinical thumb rules (per 1 °C below 37 °C)'),
+        SectionHeader(t('hypo_section_thumb')),
         _thumbRuleTable(),
       ],
     ]);
@@ -249,10 +251,10 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: Row(children: [
-            _hCell('Parameter', flex: 2),
-            _hCell('Rule',      flex: 3),
-            _hCell('\u0394 total', flex: 2),
-            _hCell('Unit',      flex: 2),
+            _hCell(t('hypo_col_param'),  flex: 2),
+            _hCell(t('hypo_col_rule'),   flex: 3),
+            _hCell(t('hypo_col_dtotal'), flex: 2),
+            _hCell(t('hypo_col_unit'),   flex: 2),
           ]),
         ),
         ...rows.asMap().entries.map((e) {

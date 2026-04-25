@@ -14,7 +14,7 @@ import 'screens/heart_anatomy_screen.dart';
 import 'models/patient_data.dart';
 import 'i18n/app_strings.dart';
 
-const kAppVersion = '0.1.7';
+const kAppVersion = '0.1.8';
 const _kDark = Color(0xFF1C1C1C);
 const _kGold = Color(0xFFFFA500);
 
@@ -186,8 +186,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: _kDark,
-      child: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // AnimatedBuilder lauscht direkt am LocaleNotifier. Ohne diesen Wrapper
+      // würde der Drawer beim Sprachwechsel nicht neu rendern, weil er als
+      // Overlay über der App liegt - der globale Rebuild der MaterialApp
+      // erreicht den Drawer-Inhalt nicht, solange er offen ist.
+      child: AnimatedBuilder(
+        animation: LocaleNotifier.instance,
+        builder: (context, _) => SafeArea(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
             child: Text('PerfusionCalc',
@@ -294,13 +300,20 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           ),
         ]),
       ),
+      ),
     );
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // AnimatedBuilder lauscht direkt am LocaleNotifier. Damit baut sich der
+    // gesamte MainScreen (inkl. TabBar, AppBar, TabBarView und allen
+    // eingebetteten Screens) bei jedem Sprachwechsel sofort neu auf - ohne
+    // dass der Nutzer erst einen Tab antippen muss.
+    return AnimatedBuilder(
+      animation: LocaleNotifier.instance,
+      builder: (context, _) => Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(),
       appBar: AppBar(
@@ -366,6 +379,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             const HeartAnatomyScreen(),
           ],
         ),
+      ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
+import '../i18n/app_strings.dart';
 
 class ResistancesScreen extends StatelessWidget {
   final PatientData patientData;
@@ -19,7 +20,7 @@ class ResistancesScreen extends StatelessWidget {
         InputCard(label: 'CVP', unit: 'mmHg', value: patientData.cvp,
             range: Ranges.cvp,
             onChanged: (v) { patientData.cvp = v; onChanged(); }),
-        InputCard(label: 'Cardiac output (for SVR)', unit: 'l/min', value: patientData.hzvRes,
+        InputCard(label: t('res_co_for_svr'), unit: 'l/min', value: patientData.hzvRes,
             range: Ranges.co,
             onChanged: (v) { patientData.hzvRes = v; onChanged(); }),
         ResultCard(label: 'SVR', unit: 'dyns/cm\u2075', value: patientData.svr,
@@ -30,7 +31,7 @@ class ResistancesScreen extends StatelessWidget {
         InputCard(label: 'LAP', unit: 'mmHg', value: patientData.lap,
             range: Ranges.lap,
             onChanged: (v) { patientData.lap = v; onChanged(); }),
-        InputCard(label: 'Cardiac output (for PVR)', unit: 'l/min', value: patientData.hzvPvr,
+        InputCard(label: t('res_co_for_pvr'), unit: 'l/min', value: patientData.hzvPvr,
             range: Ranges.co,
             onChanged: (v) { patientData.hzvPvr = v; onChanged(); }),
         ResultCard(label: 'PVR', unit: 'dyns/cm\u2075', value: patientData.pvr,

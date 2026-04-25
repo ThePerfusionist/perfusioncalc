@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
+import '../i18n/app_strings.dart';
 
 class FlowDrainageScreen extends StatelessWidget {
   const FlowDrainageScreen({super.key});
@@ -18,15 +19,19 @@ class FlowDrainageScreen extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(height: 8),
-          const Text('Flow / Drainage Rate',
-              style: TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(t('flow_title'),
+              style: const TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
             child: Column(children: [
               Container(
                 decoration: const BoxDecoration(color: Color(0xFF2A2A2A), borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
-                child: Row(children: [_hCell('Tube', flex: 2), _hCell('Max. Flow', flex: 3), _hCell('Max. Drainage', flex: 3)]),
+                child: Row(children: [
+                  _hCell(t('flow_col_tube'),         flex: 2),
+                  _hCell(t('flow_col_max_flow'),     flex: 3),
+                  _hCell(t('flow_col_max_drainage'), flex: 3),
+                ]),
               ),
               ..._rows.asMap().entries.map((e) {
                 final i = e.key; final r = e.value; final isLast = i == _rows.length - 1;

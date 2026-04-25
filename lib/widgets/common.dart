@@ -299,6 +299,88 @@ class GoldListCard extends StatelessWidget {
   }
 }
 
+// ── Browser-safe image loading ───────────────────────────────────────────────
+//
+// Flutter Web rendert Image.asset()-Bilder ueber CanvasKit (WebAssembly).
+// In manchen Browsern (z.B. Ungoogled Chromium mit strikten Privacy-Defaults)
+// schlaegt das fehl, weil entweder WASM-Image-Decoding eingeschraenkt ist
+// oder der AssetManifest nicht korrekt geparst wird.
+//
+// Diese Widgets nutzen stattdessen Image.network() mit relativem Pfad. Damit
+// erzeugt Flutter im DOM ein natives <img>-Element, dessen Bildladen vom
+// Browser selbst uebernommen wird - unabhaengig vom Flutter-Renderer.
+// Funktioniert in jedem Browser, der HTML-Bilder zeigen kann.
+//
+// Voraussetzung: Asset liegt unter assets/<filename> in pubspec.yaml.
+// Flutter packt es im Build unter build/web/assets/assets/<filename>, was
+// dank <base href="/<app>/"> als 'assets/assets/<filename>' relativ
+// adressierbar ist.
+
+class BrowserSafeImage extends StatelessWidget {
+  final String assetPath;        // wie in pubspec deklariert, z.B. 'assets/finck_va.jpg'
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+
+  const BrowserSafeImage({
+    super.key,
+    required this.assetPath,
+    this.fit = BoxFit.contain,
+    this.width,
+    this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Flutter packt Assets in den web-Build unter assets/assets/<file>.
+    // Ein relativer Pfad respektiert das <base href> der Seite, damit
+    // funktioniert es auch unter /perfusioncalc/.
+    final url = 'assets/$assetPath';
+    return Image.network(
+      url,
+      fit: fit,
+      width: width,
+      height: height,
+      // Loading-Indikator waehrend des Bildladens
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          padding: const EdgeInsets.all(40),
+          alignment: Alignment.center,
+          child: CircularProgressIndicator(
+            value: progress.expectedTotalBytes != null
+                ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                : null,
+            color: kGold,
+            strokeWidth: 2,
+          ),
+        );
+      },
+      // Fallback bei Fehler: Image.asset versuchen (z.B. fuer Mobile-Build,
+      // wo es kein HTTP-Asset-Hosting gibt).
+      errorBuilder: (context, error, stack) {
+        return Image.asset(
+          assetPath,
+          fit: fit,
+          width: width,
+          height: height,
+          errorBuilder: (c, e, s) => Container(
+            padding: const EdgeInsets.all(20),
+            alignment: Alignment.center,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.broken_image, color: Colors.white24, size: 48),
+              const SizedBox(height: 8),
+              Text('Image unavailable: $assetPath',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class ImageSectionCard extends StatelessWidget {
   final String title;
   final String assetPath;
@@ -321,7 +403,7 @@ class ImageSectionCard extends StatelessWidget {
           child: ClipRRect(
             borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-            child: Image.asset(assetPath, fit: BoxFit.fitWidth),
+            child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.fitWidth),
           ),
         ),
       ]),
@@ -334,15 +416,46 @@ class ImageSectionCard extends StatelessWidget {
       builder: (ctx) => Dialog(
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(8),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(title, textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+        // Stack-Layout: Bild fuellt den Dialog und nutzt InteractiveViewer
+        // fuer Pinch-Zoom; der Close-Button schwebt darueber. So bleibt der
+        // Close-Button immer erreichbar, auch wenn das Bild sehr hoch ist
+        // (z.B. die portrait-format Finck-Tabellen).
+        child: Stack(children: [
+          // Title at top
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(48, 12, 48, 12),
+              color: Colors.black54,
+              child: Text(title, textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
           ),
-          InteractiveViewer(minScale: 0.5, maxScale: 5.0, child: Image.asset(assetPath)),
-          TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close', style: TextStyle(color: Colors.redAccent))),
+          // Zoomable image fills the entire dialog
+          Padding(
+            padding: const EdgeInsets.only(top: 48, bottom: 8),
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 5.0,
+              child: Center(child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.contain)),
+            ),
+          ),
+          // Close button — top right, always reachable
+          Positioned(
+            top: 8, right: 8,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: Container(
+                width: 34, height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2C2C2C),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
         ]),
       ),
     );

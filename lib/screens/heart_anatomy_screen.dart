@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/common.dart';
+import '../i18n/app_strings.dart';
 
 class HeartAnatomyScreen extends StatelessWidget {
   const HeartAnatomyScreen({super.key});
@@ -15,41 +15,33 @@ class HeartAnatomyScreen extends StatelessWidget {
           const SizedBox(height: 8),
 
           // ── 1. Anterior view ───────────────────────────────────────────────
-          _sectionTitle('Coronary Circulation (Anterior)'),
+          _sectionTitle(t('anat_coronary_ant')),
           const SizedBox(height: 8),
           _imageCard(
             assetPath: 'assets/heart_anterior.png',
-            caption:
-                'Anterior view of the coronary circulation showing left and right '
-                'coronary arteries, circumflex artery, anterior interventricular artery, '
-                'marginal artery, and cardiac veins.',
+            caption: t('anat_desc_ant'),
             isSvg: false,
           ),
 
           const SizedBox(height: 20),
 
           // ── 2. Posterior view ──────────────────────────────────────────────
-          _sectionTitle('Coronary Circulation (Posterior)'),
+          _sectionTitle(t('anat_coronary_post')),
           const SizedBox(height: 8),
           _imageCard(
             assetPath: 'assets/heart_posterior.png',
-            caption:
-                'Posterior view showing the right coronary artery, posterior '
-                'interventricular artery, coronary sinus, and cardiac veins.',
+            caption: t('anat_desc_post'),
             isSvg: false,
           ),
 
           const SizedBox(height: 20),
 
           // ── 3. Cross-section ───────────────────────────────────────────────
-          _sectionTitle('Heart Cross-Section'),
+          _sectionTitle(t('anat_cross_section')),
           const SizedBox(height: 8),
           _imageCard(
             assetPath: 'assets/heart_cross_section.png',
-            caption:
-                'Cross-sectional view of the heart showing the four chambers '
-                '(right/left atrium, right/left ventricle), four valves '
-                '(tricuspid, pulmonary, mitral, aortic), and the great vessels.',
+            caption: t('anat_desc_cross'),
             isSvg: false,
             whiteBg: true,
           ),
@@ -57,13 +49,11 @@ class HeartAnatomyScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           // ── 4. Coronary arteries schematic (SVG) ──────────────────────────
-          _sectionTitle('Coronary Arteries – Schematic'),
+          _sectionTitle(t('anat_coronary_arteries')),
           const SizedBox(height: 8),
           _imageCard(
             assetPath: 'assets/coronary_arteries.svg',
-            caption:
-                'Schematic diagram of the coronary arteries including left main, '
-                'LAD, circumflex, and right coronary artery with their main branches.',
+            caption: t('anat_desc_schema'),
             isSvg: true,
             whiteBg: true,
           ),
@@ -111,17 +101,15 @@ class HeartAnatomyScreen extends StatelessWidget {
                 constraints: const BoxConstraints(maxHeight: 340),
                 child: Container(
                   color: whiteBg ? Colors.white : null,
-                  child: isSvg
-                      ? SvgPicture.asset(
-                          assetPath,
-                          fit: BoxFit.contain,
-                          colorFilter: null,
-                        )
-                      : Image.asset(
-                          assetPath,
-                          width: double.infinity,
-                          fit: BoxFit.contain,
-                        ),
+                  // SVGs werden ueber BrowserSafeImage ebenso als <img>-Tag
+                  // im DOM gerendert - das funktioniert in jedem Browser
+                  // unabhaengig von Flutters CanvasKit/flutter_svg, die in
+                  // einigen Privacy-Browsern Probleme machen koennen.
+                  child: BrowserSafeImage(
+                    assetPath: assetPath,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
@@ -164,9 +152,7 @@ class HeartAnatomyScreen extends StatelessWidget {
               minScale: 0.5,
               maxScale: 6.0,
               child: Center(
-                child: isSvg
-                    ? SvgPicture.asset(assetPath, fit: BoxFit.contain)
-                    : Image.asset(assetPath, fit: BoxFit.contain),
+                child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.contain),
               ),
             ),
           ),
@@ -196,9 +182,9 @@ class HeartAnatomyScreen extends StatelessWidget {
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Pinch to zoom · Drag to pan',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                child: Text(
+                  t('anat_pinch_zoom'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ),
             ),

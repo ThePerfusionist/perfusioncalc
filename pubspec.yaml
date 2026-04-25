@@ -3,7 +3,7 @@ description: PerfusionCalc - Medical calculator for perfusionists
 
 publish_to: 'none'
 
-version: 0.1.7+1
+version: 0.1.8+1
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

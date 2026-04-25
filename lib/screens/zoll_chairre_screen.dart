@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
+import '../i18n/app_strings.dart';
 
 class ZollChairreScreen extends StatelessWidget {
   final PatientData patientData;
@@ -22,15 +23,19 @@ class ZollChairreScreen extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(height: 8),
-          const Text('Tube Diameter Reference',
-              style: TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(t('zoll_title_diameter'),
+              style: const TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
             child: Column(children: [
               Container(
                 decoration: const BoxDecoration(color: Color(0xFF2A2A2A), borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
-                child: Row(children: [_hCell('Size', flex: 2), _hCell('Diameter', flex: 3), _hCell('Charriere', flex: 3)]),
+                child: Row(children: [
+                  _hCell(t('zoll_col_size'),      flex: 2),
+                  _hCell(t('zoll_col_diameter'),  flex: 3),
+                  _hCell(t('zoll_col_charriere'), flex: 3),
+                ]),
               ),
               ..._rows.asMap().entries.map((e) {
                 final i = e.key; final r = e.value; final isLast = i == _rows.length - 1;
@@ -50,17 +55,17 @@ class ZollChairreScreen extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: 20),
-          const Text('Charriere Converter',
-              style: TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(t('zoll_converter_title'),
+              style: const TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          InputCard(label: 'Charriere to millimeter', unit: 'Ch', value: patientData.chInput,
+          InputCard(label: t('zoll_ch_to_mm'), unit: 'Ch', value: patientData.chInput,
               range: Ranges.ch,
               onChanged: (v) { patientData.chInput = v; onChanged(); }),
-          ResultCard(label: 'Millimeter', unit: 'mm', value: patientData.chToMm, decimals: 4),
-          InputCard(label: 'Millimeter to Charriere', unit: 'mm', value: patientData.mmInput,
+          ResultCard(label: t('zoll_result_mm'), unit: 'mm', value: patientData.chToMm, decimals: 4),
+          InputCard(label: t('zoll_mm_to_ch'), unit: 'mm', value: patientData.mmInput,
               range: Ranges.mm,
               onChanged: (v) { patientData.mmInput = v; onChanged(); }),
-          ResultCard(label: 'Charriere', unit: 'Ch', value: patientData.mmToCh, decimals: 1),
+          ResultCard(label: t('zoll_result_ch'), unit: 'Ch', value: patientData.mmToCh, decimals: 1),
           const SizedBox(height: 16),
           const SourceButton(refs: [AppSources.tschaut]),
           const SizedBox(height: 8),
@@ -69,12 +74,13 @@ class ZollChairreScreen extends StatelessWidget {
     );
   }
 
-  Widget _hCell(String t, {int flex = 1}) => Expanded(flex: flex,
+  // Renamed parameter from "t" to "text" to avoid shadowing the global t() helper.
+  Widget _hCell(String text, {int flex = 1}) => Expanded(flex: flex,
     child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Text(t, style: const TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 13))));
+      child: Text(text, style: const TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 13))));
 
-  Widget _cell(String t, {int flex = 1, Color color = Colors.white, bool bold = false}) =>
+  Widget _cell(String text, {int flex = 1, Color color = Colors.white, bool bold = false}) =>
     Expanded(flex: flex,
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        child: Text(t, style: TextStyle(color: color, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14))));
+        child: Text(text, style: TextStyle(color: color, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14))));
 }

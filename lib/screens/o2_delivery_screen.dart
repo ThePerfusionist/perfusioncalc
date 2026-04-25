@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
+import '../i18n/app_strings.dart';
 
 class O2DeliveryScreen extends StatefulWidget {
   final PatientData patientData;
@@ -37,7 +38,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
           onCoChanged: (v) { pd.hzv = v; pd.cardiacIndex = null; widget.onChanged(); },
           onCiChanged: (v) { pd.cardiacIndex = v; pd.hzv = null; widget.onChanged(); },
         ),
-        InputCard(label: 'BSA', unit: 'm\u00b2', value: pd.kof, step: 0.01,
+        InputCard(label: t('o2_bsa'), unit: 'm\u00b2', value: pd.kof, step: 0.01,
             range: Ranges.bsa,
             onChanged: (v) { pd.kof = v; widget.onChanged(); }),
         InputCard(label: 'PaO\u2082', unit: 'mmHg', value: pd.paO2,
@@ -46,7 +47,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         InputCard(label: 'SaO\u2082', unit: '%', value: pd.saO2,
             range: Ranges.saO2,
             onChanged: (v) { pd.saO2 = v; widget.onChanged(); }),
-        InputCard(label: 'art. Hb', unit: 'g/dl', value: pd.artHb,
+        InputCard(label: t('o2_art_hb'), unit: 'g/dl', value: pd.artHb,
             range: Ranges.hb,
             onChanged: (v) { pd.artHb = v; widget.onChanged(); }),
         InputCard(label: 'PvO\u2082', unit: 'mmHg', value: pd.pvO2,
@@ -55,7 +56,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         InputCard(label: 'SvO\u2082', unit: '%', value: pd.svO2,
             range: Ranges.svO2,
             onChanged: (v) { pd.svO2 = v; widget.onChanged(); }),
-        InputCard(label: 'ven. Hb', unit: 'g/dl', value: pd.venHb,
+        InputCard(label: t('o2_ven_hb'), unit: 'g/dl', value: pd.venHb,
             range: Ranges.hb,
             onChanged: (v) { pd.venHb = v; widget.onChanged(); }),
         ResultCard(label: 'CaO\u2082',    unit: 'ml/dl',          value: pd.caO2,  rangeHint: '(18-20 ml O\u2082/dl)'),
@@ -66,8 +67,8 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         ResultCard(label: 'VO\u2082',     unit: 'ml/min',          value: pd.vo2),
         ResultCard(label: 'VO\u2082i',    unit: 'ml/min/m\u00b2',  value: pd.vo2i,  rangeHint: '(120-160 ml/min/m\u00b2)'),
         ResultCard(label: 'O\u2082-ER',   unit: '%',               value: pd.o2er,  rangeHint: '(22-35%)'),
-        ResultCard(label: 'Min. cardiac output', unit: 'L/min', value: pd.minCardiacOutput, rangeHint: 'at 272 ml/min/m\u00b2 DO\u2082i'),
-        ResultCard(label: 'Min. Hb', unit: 'g/dl', value: pd.minHb, rangeHint: 'at 272 ml/min/m\u00b2 DO\u2082i'),
+        ResultCard(label: t('o2_min_co'), unit: 'L/min', value: pd.minCardiacOutput, rangeHint: t('o2_min_at')),
+        ResultCard(label: t('o2_min_hb'), unit: 'g/dl', value: pd.minHb, rangeHint: t('o2_min_at')),
         const SizedBox(height: 8),
         // Chart button
         GestureDetector(
@@ -77,10 +78,10 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
             padding: const EdgeInsets.symmetric(vertical: 14),
             width: double.infinity,
             decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
-              Text('Chart', style: TextStyle(color: Colors.white, fontSize: 15)),
-              SizedBox(width: 8),
-              Icon(Icons.bar_chart, color: Colors.white70, size: 20),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(t('o2_chart'), style: const TextStyle(color: Colors.white, fontSize: 15)),
+              const SizedBox(width: 8),
+              const Icon(Icons.bar_chart, color: Colors.white70, size: 20),
             ]),
           ),
         ),
@@ -106,15 +107,15 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         insetPadding: const EdgeInsets.all(12),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text('Oxygen Delivery Calculation Chart',
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(t('o2_chart_title'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
           ),
           InteractiveViewer(minScale: 0.5, maxScale: 4.0, child: Image.asset('assets/o2_chart.png')),
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close', style: TextStyle(color: Colors.redAccent))),
+              child: Text(t('close'), style: const TextStyle(color: Colors.redAccent))),
         ]),
       ),
     );
@@ -186,7 +187,7 @@ class _CoCiCardState extends State<_CoCiCard> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(isCo ? 'Cardiac output' : 'Cardiac index',
+            Text(isCo ? t('o2_co_label') : t('o2_ci_label'),
                 style: const TextStyle(color: Colors.white, fontSize: 14)),
             Container(
               decoration: const BoxDecoration(color: Color(0xFF2A2A2A), borderRadius: BorderRadius.all(Radius.circular(20))),
@@ -204,8 +205,8 @@ class _CoCiCardState extends State<_CoCiCard> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 22),
-              decoration: const InputDecoration(border: InputBorder.none, hintText: 'Enter value',
-                  hintStyle: TextStyle(color: Colors.white30, fontSize: 18)),
+              decoration: InputDecoration(border: InputBorder.none, hintText: t('o2_enter_value'),
+                  hintStyle: const TextStyle(color: Colors.white30, fontSize: 18)),
               onTap: () => setState(() => _editing = true),
               onChanged: (s) => _cb(double.tryParse(s.replaceAll(',', '.'))),
               onEditingComplete: () { setState(() => _editing = false); FocusScope.of(context).unfocus(); },

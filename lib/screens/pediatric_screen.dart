@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/ranges.dart';
+import '../i18n/app_strings.dart';
 
 class PediatricScreen extends StatelessWidget {
   final PatientData patientData;
@@ -15,10 +16,10 @@ class PediatricScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(height: 10),
-          _sectionTitle('Tube diameter (Darling et al. 2000)'),
+          _sectionTitle(t('ped_title_tube')),
           const SizedBox(height: 8),
           _fancyTable(
-            headers: ['Weight (kg)', 'Art. Line', 'Ven. Line'],
+            headers: [t('ped_col_weight'), t('ped_col_art_line'), t('ped_col_ven_line')],
             rows: const [
               ['0 \u2013 3', '3/16"', '3/16"'], ['3 \u2013 5', '3/16"', '1/4"'],
               ['6 \u2013 10', '1/4"', '1/4"'],  ['11 \u2013 30', '1/4"', '3/8"'],
@@ -27,10 +28,10 @@ class PediatricScreen extends StatelessWidget {
             flexes: [3, 2, 2],
           ),
           const SizedBox(height: 16),
-          _sectionTitle('Perfusion rate (Tschaut 2020)'),
+          _sectionTitle(t('ped_title_perfusion')),
           const SizedBox(height: 8),
           _fancyTable(
-            headers: ['Weight (kg)', 'Flow (ml/kg/min)'],
+            headers: [t('ped_col_weight'), t('ped_col_flow')],
             rows: const [
               ['0 \u2013 3', '120 \u2013 200'], ['3 \u2013 10', '125 \u2013 175'],
               ['10 \u2013 30', '120 \u2013 150'], ['30 \u2013 50', '75 \u2013 100'],
@@ -39,28 +40,28 @@ class PediatricScreen extends StatelessWidget {
             flexes: [2, 3],
           ),
           const SizedBox(height: 16),
-          ImageSectionCard(title: 'V-A cannula size (Finck 2020)', assetPath: 'assets/finck_va.jpg'),
+          ImageSectionCard(title: t('ped_title_va'), assetPath: 'assets/finck_va.jpg'),
           const SizedBox(height: 8),
-          ImageSectionCard(title: 'V-V cannula size (Finck 2020)', assetPath: 'assets/finck_vv.jpg'),
+          ImageSectionCard(title: t('ped_title_vv'), assetPath: 'assets/finck_vv.jpg'),
           const SizedBox(height: 16),
-          _sectionTitle('Pediatric blood volume'),
+          _sectionTitle(t('ped_title_bv')),
           const SizedBox(height: 8),
-          InputCard(label: 'Body weight', unit: 'kg', value: patientData.pediatricWeight,
+          InputCard(label: t('bsa_body_weight'), unit: 'kg', value: patientData.pediatricWeight,
               range: Ranges.pediatricWeight,
               onChanged: (v) { patientData.pediatricWeight = v; onChanged(); }),
-          _bvResult('Premature infants',    100),
-          _bvResult('Babies < 3 months',    85),
-          _bvResult('Children \u2265 3 months', 75),
-          _bvResult('Male adolescents',     70),
-          _bvResult('Female adolescents',   65),
+          _bvResult(t('ped_bv_premature'), 100),
+          _bvResult(t('ped_bv_babies'),     85),
+          _bvResult(t('ped_bv_children'),   75),
+          _bvResult(t('ped_bv_male'),       70),
+          _bvResult(t('ped_bv_female'),     65),
           const SizedBox(height: 16),
-          _sectionTitle('Transfusion volume'),
+          _sectionTitle(t('ped_title_transfusion')),
           const SizedBox(height: 8),
-          InputCard(label: 'Desired Hb increase', unit: 'g/dl', value: patientData.desiredHbIncrease,
+          InputCard(label: t('ped_desired_hb'), unit: 'g/dl', value: patientData.desiredHbIncrease,
               range: Ranges.desiredHbIncrease,
               onChanged: (v) { patientData.desiredHbIncrease = v; onChanged(); }),
-          ResultCard(label: 'Transfusion volume', unit: 'ml', value: patientData.transfusionVolume,
-              rangeHint: 'Hct in EK = 55%', decimals: 0),
+          ResultCard(label: t('ped_transfusion_vol'), unit: 'ml', value: patientData.transfusionVolume,
+              rangeHint: t('ped_hct_in_ek'), decimals: 0),
           const SizedBox(height: 8),
           const SourceButton(refs: [
             AppSources.darling,
@@ -76,8 +77,8 @@ class PediatricScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionTitle(String t) =>
-      Text(t, style: const TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.bold));
+  Widget _sectionTitle(String title) =>
+      Text(title, style: const TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.bold));
 
   Widget _bvResult(String label, double factor) {
     final w = patientData.pediatricWeight ?? 0;
