@@ -5,10 +5,10 @@
 import FlutterMacOS
 import Foundation
 
-import printing
+import file_picker
 import shared_preferences_foundation
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
-  PrintingPlugin.register(with: registry.registrar(forPlugin: "PrintingPlugin"))
+  FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
 }

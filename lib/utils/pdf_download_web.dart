@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 
-void downloadPdf(Uint8List bytes, String filename) {
+Future<void> downloadPdf(Uint8List bytes, String filename) async {
   // Bytes -> Blob mit MIME-Type application/pdf
   final blob = web.Blob(
     [bytes.toJS].toJS,

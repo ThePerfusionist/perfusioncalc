@@ -196,7 +196,7 @@ Future<void> exportTabAsPdf({
   final ts = '${now.year}${_pad(now.month)}${_pad(now.day)}_'
              '${_pad(now.hour)}${_pad(now.minute)}';
   final fullFilename = 'perfusioncalc_${filename}_$ts.pdf';
-  downloadPdf(bytes, fullFilename);
+  await downloadPdf(bytes, fullFilename);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

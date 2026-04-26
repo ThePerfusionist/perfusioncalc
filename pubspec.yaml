@@ -16,9 +16,10 @@ dependencies:
   pdf: ^3.11.1
   # Native DOM-API fuer File-Download im Web (window.HTMLAnchorElement).
   web: any
-  # Cross-Platform PDF-Sharing/Printing - auf Android/iOS oeffnet das
-  # System-Share-Sheet, damit der Nutzer das PDF speichern oder teilen kann.
-  printing: ^5.13.4
+  # Cross-Platform Save-Dialog: oeffnet auf Android das Storage Access
+  # Framework, auf iOS die Files-App, und schreibt das PDF an den vom
+  # Nutzer gewaehlten Speicherort. Selbe API, plattform-uebergreifend.
+  file_picker: ^8.1.4
 
 dev_dependencies:
   flutter_test:
