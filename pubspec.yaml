@@ -1,5 +1,11 @@
 name: perfusion_calc
-description: PerfusionCalc - Medical calculator for perfusionists
+description: >-
+  PerfusionCalc - Bilingual (EN/DE) educational medical calculator for
+  perfusionists, cardiac surgery students and clinical perfusion teams.
+  Covers BSA, oxygen delivery, resistances, electrolytes, tube volumes,
+  pediatric perfusion, Severinghaus BGA correction, and more. PDF export
+  on every tab, offline-capable PWA, fully tested formulas with primary
+  source citations. Not for clinical use.
 
 publish_to: 'none'
 

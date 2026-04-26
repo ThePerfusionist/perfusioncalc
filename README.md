@@ -4,11 +4,14 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.1.7-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.1.9-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://theperfusionist.github.io/perfusioncalc/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.4-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
 [![WebApp](https://img.shields.io/badge/WebApp-live-success?style=flat-square)](https://theperfusionist.github.io/perfusioncalc/)
+[![Languages](https://img.shields.io/badge/i18n-EN%20%2F%20DE-blueviolet?style=flat-square)](#-internationalization)
+[![Tests](https://img.shields.io/badge/tests-83%20passing-brightgreen?style=flat-square)](test/)
+[![PWA](https://img.shields.io/badge/PWA-offline%20capable-5A0FC8?style=flat-square)](#-progressive-web-app)
 
 </div>
 
@@ -29,10 +32,14 @@ PerfusionCalc is a free, open-source mobile and web application designed to supp
 quick reference calculations during education and training.
 
 All implemented formulas are derived from **peer-reviewed primary literature** —
-every formula is traceable to its original publication via the in-app **Source** button.
-The app covers the full spectrum of perfusion calculations: from basic BSA and oxygen
-delivery to goal-directed perfusion thresholds, Severinghaus blood gas temperature
-correction, pediatric perfusion parameters, and anatomical heart references.
+every formula is traceable to its original publication via the in-app **Source / Quelle**
+button. The app covers the full spectrum of perfusion calculations: from basic BSA
+and oxygen delivery to goal-directed perfusion thresholds, Severinghaus blood gas
+temperature correction, pediatric perfusion parameters, and anatomical heart references.
+
+The app is bilingual (English / German), works fully offline as a Progressive Web App,
+runs in any modern browser including privacy-focused browsers without WebGL, and exports
+calculation snapshots as PDF for documentation or sharing during training sessions.
 
 ---
 
@@ -51,6 +58,70 @@ correction, pediatric perfusion parameters, and anatomical heart references.
 | 👶 **Pediatric** | Tube sizes (Darling) · Perfusion rates (Tschaut) · VA/VV cannula sizes (Finck) · Blood volume · Transfusion volume |
 | 📊 **Reference Values Pressure** | Haemodynamic pressure reference values with normal ranges |
 | ❤️ **Heart Anatomy** | Coronary circulation anterior/posterior · Heart cross-section · Coronary arteries schematic — tap to zoom |
+
+---
+
+## 🌟 Cross-Cutting Features
+
+### 🌐 Internationalization
+
+The entire app — labels, hints, dialogs, source citations, PDF exports — is available
+in **English** and **German**. The language is selected via the burger menu and
+persists across sessions. All texts switch live without app restart.
+
+Scientific source references (e.g. "DuBois 1916", "Severinghaus 1979") remain in
+the original English to follow international convention.
+
+### 📄 PDF Export
+
+Each calculation tab has an **Export as PDF / Als PDF exportieren** button that
+generates a professional, branded PDF snapshot:
+
+- **Header:** PerfusionCalc logo (gold), tab title, export timestamp
+- **Inputs section:** all entered patient/clinical values
+- **Results section:** all computed values
+- **Footer:** disclaimer, version, page numbers
+
+PDF language follows the app language. On the **web**, the PDF is downloaded
+directly. On **Android/iOS**, a system save dialog opens (Storage Access Framework
+on Android, Files app on iOS) — the user picks the destination. No storage
+permissions required.
+
+### ✅ Plausibility Ranges
+
+All input fields validate values against medically reasonable ranges. Out-of-range
+values are highlighted with a soft orange border and warning icon, but the
+calculation continues — useful for teaching scenarios (e.g. discussing extreme
+cases in trauma or congenital defects).
+
+### 📱 Progressive Web App
+
+The web version is a fully-featured PWA:
+- **Offline capable:** custom service worker caches all assets after first load
+- **Installable:** add to home screen on iOS, install button in Chrome/Edge on desktop
+- **App-like:** runs in standalone window, no browser chrome
+
+### 🔬 Browser Compatibility
+
+Tested in privacy-focused browsers (Ungoogled Chromium, Brave on Aggressive Shields,
+LibreWolf) with WebGL disabled. Images use `Image.network` with
+`webHtmlElementStrategy: prefer` to render via native `<img>` tags in the DOM,
+working in any browser regardless of CanvasKit availability.
+
+### 🧪 Test Coverage
+
+**83 unit tests** verify all medical formulas against published reference values:
+- BSA (DuBois), CO, blood volume (Silbernagl/Nadler)
+- CaO₂/CvO₂/DO₂i/VO₂/O₂-ER (Hüfner/Ranucci) with goal-directed perfusion threshold
+- Electrolyte and buffer corrections (Larsen)
+- Severinghaus 1979 temperature correction, Henderson-Hasselbalch
+- Pediatric transfusion volume (Davies/Howie)
+- NaN/Infinity input safety, plausibility ranges, full i18n key coverage
+
+Run tests with:
+```bash
+flutter test
+```
 
 ---
 
@@ -78,92 +149,63 @@ correction, pediatric perfusion parameters, and anatomical heart references.
 | VO₂ | `Ca-vDO₂ × CO × 10` | Fick principle |
 | O₂-ER | `VO₂ / DO₂ × 100` | |
 | Min. cardiac output | `272 × BSA / (CaO₂ × 10)` | Ranucci et al., 2005 |
-| Min. Hb | `(272×BSA − 10×CO×0.0031×PaO₂) / (10×CO×1.34×SaO₂/100)` | |
 
-### Vascular Resistances
+### Resistances
 
-| Parameter | Formula | Source |
-|-----------|---------|--------|
-| SVR | `(MAP − CVP) / CO × 80` [dyn·s·cm⁻⁵] | Barratt-Boyes & Wood, 1958 |
-| PVR | `(PAP − LAP) / CO × 80` [dyn·s·cm⁻⁵] | Skimming et al., 1997 |
-
-### Electrolytes & Buffer
-
-| Parameter | Formula | Source |
-|-----------|---------|--------|
-| Sodium need | `(Na_target − Na_actual) × BW × 0.2 / 1.71` ml NaCl 10% | Larsen, 2018 |
-| Potassium need | `(K_target − K_actual) × BW × 0.2 / 1.0` ml KCl 7.45% | Larsen, 2018 |
-| Calcium need | `(Ca_target − Ca_actual) × BW × 0.2 / 0.225` ml Ca.gluc. 10% | Larsen, 2018 |
-| NaBic 8.4% | `BE × BW × 3 / (−10)` ml | Larsen, 2018 |
-| TRIS 36.34% | `BE × BW / (−10)` ml | Larsen, 2018 |
-
-### Tube Volumes
-
-| Size | Factor (ml/cm) | Source |
-|------|---------------|--------|
-| 1/2" | × 1.2668 | Tschaut, 2020 |
-| 3/8" | × 0.7126 | Tschaut, 2020 |
-| 1/4" | × 0.3167 | Tschaut, 2020 |
-| 3/16" | × 0.1781 | Tschaut, 2020 |
-
-### Pediatric Blood Volume
-
-| Age group | Factor | Source |
-|-----------|--------|--------|
-| Premature infants | 100 ml/kg | Hazinski, 2012 |
-| < 3 months | 85 ml/kg | Hazinski, 2012 |
-| ≥ 3 months | 75 ml/kg | Hazinski, 2012 |
-| Male adolescents | 70 ml/kg | Hazinski, 2012 |
-| Female adolescents | 65 ml/kg | Hazinski, 2012 |
-| Transfusion volume | `BW × ΔHb × 3 / (HctEK × 0.01)` | Davies et al., 2007 |
-
-### Severinghaus Blood Gas Temperature Correction
-
-| Parameter | Formula | Source |
-|-----------|---------|--------|
-| PO₂ correction | `PO₂(T) = PO₂(37) × e^(fT × ΔT)` · `fT = 0.058 × (0.243 × (PO₂/100)^3.88 + 1)^−1 + 0.013` | Severinghaus, 1979, Eq. 3 |
-| PCO₂ correction | `PCO₂(T) = PCO₂(37) × 10^(0.0185 × ΔT)` | Bradley, Stupfel & Severinghaus, 1956 |
-| pH correction | `pH(T) = pH(37) − 0.0147 × ΔT` | Severinghaus & Bradley, 1956 |
-| O₂ saturation (ODC) | `S = ((23400 × (PO₂³ + 150×PO₂)^−1) + 1)^−1` | Severinghaus, 1979, Eq. 1 |
-| HCO₃⁻ | `0.0307 × PCO₂ × 10^(pH − 6.105)` | Severinghaus, 1966 |
-
-### Charriere Converter
-
-| Direction | Formula |
+| Parameter | Formula |
 |-----------|---------|
-| Ch → mm | `Ch / 3` |
-| mm → Ch | `mm × 3` |
+| SVR | `(MAP − CVP) × 80 / CO` |
+| PVR | `(PAP − LAP) × 80 / CO` |
+
+### Hypothermia / BGA Correction (Severinghaus 1979)
+
+| Parameter | Formula |
+|-----------|---------|
+| PO₂(T) | `PO₂(37) × e^(fᵀ × ΔT)` |
+| PCO₂(T) | `PCO₂(37) × 10^(0.0185 × ΔT)` |
+| pH(T) | `pH(37) − 0.0147 × ΔT` |
+| HCO₃⁻ | `0.0307 × PCO₂ × 10^(pH−6.105)` |
+| SaO₂ from PaO₂ | `(23400 × (PO₂³+150 × PO₂)⁻¹ + 1)⁻¹` |
+
+### Pediatric
+
+| Parameter | Source |
+|-----------|--------|
+| Tube sizes by weight | Darling et al., 2000 |
+| Perfusion rate | Tschaut, 2020 |
+| VA/VV cannula sizes | Finck, 2020 |
+| Blood volume (premature, infant, child, adolescent) | Hazinski 2013 / Howie 2008 |
+| Transfusion volume | `Δ Hb × BV × 3 / Hct(EK 55%)` (Davies 2007) |
 
 ---
 
-## 📚 References
+## 📚 Sources
+
+All formulas are traceable via the in-app **Source / Quelle** buttons. The complete
+source list is available in [`lib/widgets/common.dart`](lib/widgets/common.dart) under `AppSources`.
+
+Selected primary references:
 
 | # | Reference |
 |---|-----------|
-| [1] | Du Bois D, Du Bois EF. A formula to estimate the approximate surface area if height and weight be known. *Arch Intern Med.* 1916;17(6):863–871. |
-| [2] | Silbernagl S, Despopoulos A. *Taschenatlas Physiologie.* 9th ed. Stuttgart: Thieme; 2019. |
-| [3] | Nadler SB, Hidalgo JU, Bloch T. Prediction of blood volume in normal human adults. *Surgery.* 1962;51(2):224–232. |
-| [4] | de Somer F et al. O₂ delivery and CO₂ production during cardiopulmonary bypass as determinants of acute kidney injury. *Crit Care.* 2011;15(4):R192. doi:10.1186/cc10349 |
-| [5] | Newland RF et al. Predictive Capacity of Oxygen Delivery During Cardiopulmonary Bypass on Acute Kidney Injury. *Ann Thorac Surg.* 2019;108(6). |
-| [6] | Newland RF, Baker RA. Low Oxygen Delivery as a Predictor of Acute Kidney Injury during CPB. *J Extra Corpor Technol.* 2017;49(4):224–230. PMID:29302112 |
-| [7] | Ranucci M et al. Oxygen delivery during cardiopulmonary bypass and acute renal failure after coronary operations. *Ann Thorac Surg.* 2005;80(6):2213–2220. |
-| [8] | Ranucci M et al. Goal-directed perfusion and DO₂i threshold. *J Thorac Cardiovasc Surg.* 2018. |
-| [9] | Hüfner G. Über das Gesetz der Dissociation des Oxyhämoglobins. *Arch Anat Physiol.* 1884. |
-| [10] | Barratt-Boyes BG, Wood EH. Cardiac output and related measurements. *J Lab Clin Med.* 1958;51(1):72–90. |
-| [11] | Skimming JW, Cassin S, Nichols WW. Calculating Vascular Resistances. *Clin Cardiol.* 1997;20(9):805–808. |
-| [12] | Gorlin R, Gorlin SG. Hydraulic formula for calculation of cardiac valve areas. *Am Heart J.* 1951;41(1):1–29. |
-| [13] | Hazinski MF. *Nursing Care of the Critically Ill Child.* 3rd ed. Elsevier; 2012. |
-| [14] | Howie SR. Blood sample volumes in child health research: review of safe limits. *Bull WHO.* 2011;89(1):46–53. |
-| [15] | Davies P et al. Calculating the required transfusion volume in children. *Transfusion.* 2007;47(1):212–216. |
-| [16] | Darling E et al. Oxygenator choice guidelines in paediatric perfusion. *Proc AMSECT Annual Meeting.* 2000. |
-| [17] | Tschaut RJ (ed.). *Extrakorporale Zirkulation in Theorie und Praxis.* Pabst Science Publishers; 2020. |
-| [18] | Larsen R. *Anästhesie.* 11th ed. Urban & Fischer; 2018. |
-| [19] | Finck C. General Guideline to VA/VV Cannulation. Clinical Guideline; 2020. |
-| [20] | Severinghaus JW. Simple, accurate equations for human blood O₂ dissociation computations. *J Appl Physiol.* 1979;46(3):599–602. |
-| [21] | Bradley AF, Stupfel M, Severinghaus JW. Effect of temperature on PCO₂ and PO₂ of blood in vitro. *J Appl Physiol.* 1956;9(2):201–204. |
-| [22] | Severinghaus JW. Blood gas calculator. *J Appl Physiol.* 1966;21(3):1108–1116. |
-| [23] | Ashwood ER, Kost G, Kenny M. Temperature correction of blood-gas and pH measurements. *Clin Chem.* 1983;29(11):1877–1885. |
-| [24] | Wikipedia contributors. Coronary arteries. *Wikipedia, The Free Encyclopedia.* Images: Blausen Medical (CC BY 3.0) |
+| [1] | Du Bois D, Du Bois EF. A formula to estimate the approximate surface area if height and weight be known. *Arch Intern Med.* 1916;17:863–871. |
+| [2] | Nadler SB, Hidalgo JU, Bloch T. Prediction of blood volume in normal human adults. *Surgery.* 1962;51(2):224–232. |
+| [3] | Silbernagl S, Despopoulos A. *Color Atlas of Physiology.* Thieme. |
+| [4] | Hüfner G. Neue Versuche zur Bestimmung der Sauerstoffcapacität des Blutfarbstoffs. *Arch Anat Physiol.* 1894:130–176. |
+| [5] | Gorlin R, Gorlin SG. Hydraulic formula for calculation of the area of the stenotic mitral valve. *Am Heart J.* 1951;41(1):1–29. |
+| [6] | de Somer F et al. O2 delivery and CO2 production during cardiopulmonary bypass. *Crit Care.* 2011;15(4):R192. |
+| [7] | Ranucci M et al. Oxygen delivery during cardiopulmonary bypass and acute renal failure. *Ann Thorac Surg.* 2005;80(6):2213–2220. |
+| [8] | Newland RF et al. Goal-directed perfusion in cardiac surgery. *J Extra Corpor Technol.* 2017;49(2):88–93. |
+| [9] | Larsen R. *Anästhesie und Intensivmedizin in Herz-, Thorax- und Gefäßchirurgie.* Springer. |
+| [10] | Tschaut RJ. *Extracorporeal Circulation in Theory and Practice.* 2nd ed. Pabst Science Publishers. |
+| [11] | Darling EM et al. Use of dilatational percutaneous tracheostomy in pediatric patients. *Pediatr Crit Care Med.* 2000;1(1):66–69. |
+| [12] | Hazinski MF. *Nursing Care of the Critically Ill Child.* 3rd ed. Mosby. |
+| [13] | Howie SR. Blood sample volumes in child health research. *Bull World Health Organ.* 2011;89(1):46–53. |
+| [14] | Davies P et al. Reference ranges for the haemoglobin concentration of red cell concentrates. *Vox Sang.* 2007;92(2):195–198. |
+| [15] | Finck C. General Guideline to VA/VV Cannulation. Clinical Guideline; 2020. |
+| [16] | Severinghaus JW. Simple, accurate equations for human blood O₂ dissociation computations. *J Appl Physiol.* 1979;46(3):599–602. |
+| [17] | Bradley AF, Stupfel M, Severinghaus JW. Effect of temperature on PCO₂ and PO₂ of blood in vitro. *J Appl Physiol.* 1956;9(2):201–204. |
+| [18] | Severinghaus JW. Blood gas calculator. *J Appl Physiol.* 1966;21(3):1108–1116. |
 
 ---
 
@@ -177,11 +219,14 @@ Open directly in any browser — works on iPhone, Android, and desktop:
 
 On iPhone/iPad: tap **Share → Add to Home Screen** to install as an app icon.
 
+The PWA service worker caches all assets on first visit, so subsequent loads
+work fully offline.
+
 ---
 
 ### 🤖 Android – APK
 
-#### Build from source
+Build from source
 
 **Requirements:**
 
@@ -258,9 +303,13 @@ flutter build web --release --base-href /perfusioncalc/
 
 ```
 lib/
-├── main.dart                      # App entry, navigation, drawer, dialogs
+├── main.dart                       # App entry, navigation, drawer, language switcher
+├── i18n/
+│   └── app_strings.dart            # All EN/DE translations + LocaleNotifier
 ├── models/
-│   └── patient_data.dart          # All calculation formulas (single source of truth)
+│   ├── patient_data.dart           # All calculation formulas (single source of truth)
+│   ├── bga_model.dart              # Severinghaus BGA temperature correction
+│   └── ranges.dart                 # Plausibility ranges for input validation
 ├── screens/
 │   ├── bsa_screen.dart
 │   ├── o2_delivery_screen.dart
@@ -269,12 +318,29 @@ lib/
 │   ├── tube_volume_screen.dart
 │   ├── flow_drainage_screen.dart
 │   ├── zoll_chairre_screen.dart
-│   ├── hypothermia_screen.dart    # Includes Severinghaus BGA correction
+│   ├── hypothermia_screen.dart     # Includes Severinghaus BGA correction
 │   ├── pediatric_screen.dart
 │   ├── reference_pressure_screen.dart
 │   └── heart_anatomy_screen.dart
+├── utils/
+│   ├── pdf_export.dart             # Central PDF generator (Roboto-based)
+│   ├── pdf_download_web.dart       # Browser download via Blob + <a download>
+│   └── pdf_download_stub.dart      # Mobile/desktop save dialog (file_picker)
 └── widgets/
-    └── common.dart                # InputCard, ResultCard, SourceButton, AppSources
+    └── common.dart                 # InputCard, ResultCard, SourceButton, PdfExportButton, BrowserSafeImage
+
+test/
+├── patient_data_test.dart          # BSA, CO, BV, Hb, DO₂, electrolytes, etc.
+├── bga_model_test.dart             # Severinghaus temperature correction
+├── ranges_test.dart                # Plausibility range validation
+└── i18n_test.dart                  # Translation key coverage
+
+assets/
+├── fonts/                          # Roboto Regular/Bold/Italic for PDF export
+├── icon.png, o2_chart.png
+├── finck_va.jpg, finck_vv.jpg      # Pediatric cannula tables
+├── heart_anterior.jpg, heart_posterior.jpg, heart_cross_section.jpg
+└── coronary_arteries.jpg
 ```
 
 ---
@@ -282,8 +348,19 @@ lib/
 ## 🛠️ Built With
 
 - [Flutter](https://flutter.dev) ≥ 3.4.0 — cross-platform framework
-- [shared_preferences](https://pub.dev/packages/shared_preferences) — persistent local storage
-- [flutter_svg](https://pub.dev/packages/flutter_svg) — SVG rendering
+- [shared_preferences](https://pub.dev/packages/shared_preferences) — locale & settings persistence
+- [pdf](https://pub.dev/packages/pdf) — PDF generation
+- [file_picker](https://pub.dev/packages/file_picker) — native save dialog on Android/iOS
+- [web](https://pub.dev/packages/web) — DOM access for browser PDF download
+
+---
+
+## 🤝 Contributing
+
+Contributions, suggestions, and bug reports welcome. Please open an issue or pull request on GitHub.
+
+When proposing new formulas, please include the **primary peer-reviewed source**.
+PerfusionCalc only accepts calculations with verifiable, citable origins.
 
 ---
 
