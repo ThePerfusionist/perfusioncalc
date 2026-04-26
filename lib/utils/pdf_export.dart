@@ -15,7 +15,6 @@
 //
 // Nutzung pro Tab:
 //   await exportTabAsPdf(
-//     context: context,
 //     tabTitle: t('tab_bsa'),
 //     filename: 'bsa',
 //     sections: [
@@ -24,7 +23,6 @@
 //     ],
 //   );
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -101,9 +99,9 @@ Future<pw.ThemeData> _loadTheme() async {
 // ════════════════════════════════════════════════════════════════════════════
 
 /// Exportiert die uebergebenen Sections als PDF und triggert den Download
-/// (im Web) bzw. zeigt die Datei (auf Mobile, hier nur Stub).
+/// (im Web) bzw. zeigt das Share-Sheet (auf Android/iOS) bzw. ist no-op
+/// (auf Desktop ohne Printing-Support).
 Future<void> exportTabAsPdf({
-  required BuildContext context,
   required String tabTitle,
   required String filename,
   required List<PdfSection> sections,
@@ -171,7 +169,7 @@ Future<void> exportTabAsPdf({
           ),
         ),
         child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-          pw.Text(disclaimerText, style: const pw.TextStyle(
+          pw.Text(disclaimerText, style: pw.TextStyle(
             color: PdfColors.grey600,
             fontSize: 7.5,
             fontStyle: pw.FontStyle.italic,

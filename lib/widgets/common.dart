@@ -521,7 +521,6 @@ class PdfExportButton extends StatelessWidget {
   Future<void> _onPressed(BuildContext context) async {
     try {
       await exportTabAsPdf(
-        context: context,
         tabTitle: t(tabTitleKey),
         filename: filename,
         sections: buildSections(),
@@ -529,10 +528,8 @@ class PdfExportButton extends StatelessWidget {
     } catch (e, stack) {
       // Fehler in Browser-Console loggen, damit wir bei Problemen
       // den genauen Grund sehen koennen (statt stillem Versagen).
-      // ignore: avoid_print
-      print('[PdfExportButton] export failed: $e');
-      // ignore: avoid_print
-      print(stack);
+      debugPrint('[PdfExportButton] export failed: $e');
+      debugPrint('$stack');
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
