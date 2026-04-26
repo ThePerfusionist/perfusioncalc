@@ -152,11 +152,11 @@ class _InputCardState extends State<InputCard> {
                   // Allow only digits, single decimal separator (. or ,), optional leading minus
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
                 ],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   counterText: '', // hide the "x/10" counter
                   border: InputBorder.none,
-                  hintText: 'Enter value',
-                  hintStyle: TextStyle(color: Colors.white30, fontSize: 18),
+                  hintText: t('enter_value'),
+                  hintStyle: const TextStyle(color: Colors.white30, fontSize: 18),
                 ),
                 onTap: () => setState(() => _editing = true),
                 onChanged: (s) => widget.onChanged(_safeParse(s)),
