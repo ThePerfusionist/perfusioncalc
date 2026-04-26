@@ -526,14 +526,19 @@ class PdfExportButton extends StatelessWidget {
         filename: filename,
         sections: buildSections(),
       );
-    } catch (e) {
-      // Falls etwas schiefgeht (Browser blockiert Download, Speicher voll, etc.)
+    } catch (e, stack) {
+      // Fehler in Browser-Console loggen, damit wir bei Problemen
+      // den genauen Grund sehen koennen (statt stillem Versagen).
+      // ignore: avoid_print
+      print('[PdfExportButton] export failed: $e');
+      // ignore: avoid_print
+      print(stack);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(t('pdf_export_failed')),
+          content: Text('${t('pdf_export_failed')}: $e'),
           backgroundColor: Colors.redAccent,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 6),
         ),
       );
     }

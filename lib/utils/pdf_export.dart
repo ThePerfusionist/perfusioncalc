@@ -7,6 +7,12 @@
 //   - Ergebnis-Sektion: berechnete Werte
 //   - Footer: App-Version, Disclaimer (kompakt), Seitenzahl
 //
+// WICHTIG: Diese App nutzt Sonderzeichen wie m², °C, ·, —, Subskripte usw.
+// Die Standard-PDF-Schriften (Helvetica) unterstuetzen davon nur einen
+// Bruchteil. Daher laden wir Roboto-TTF-Schriften aus assets/fonts/ und
+// setzen sie als Default-Theme. Roboto deckt das gesamte Latin-Extended-
+// und Mathematische-Zeichensatz ab.
+//
 // Nutzung pro Tab:
 //   await exportTabAsPdf(
 //     context: context,
@@ -19,6 +25,7 @@
 //   );
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -69,6 +76,27 @@ class PdfRow {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// Font-Loading (Roboto unterstützt Unicode)
+// ════════════════════════════════════════════════════════════════════════════
+
+// Lazy-loaded und gecached - werden nur einmal geladen, dann in jedem Export
+// wiederverwendet. Spart Performance bei wiederholten Exports.
+pw.Font? _cachedRegular;
+pw.Font? _cachedBold;
+pw.Font? _cachedItalic;
+
+Future<pw.ThemeData> _loadTheme() async {
+  _cachedRegular ??= pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Regular.ttf'));
+  _cachedBold    ??= pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Bold.ttf'));
+  _cachedItalic  ??= pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Italic.ttf'));
+  return pw.ThemeData.withFont(
+    base: _cachedRegular!,
+    bold: _cachedBold!,
+    italic: _cachedItalic!,
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // Hauptfunktion
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -81,7 +109,8 @@ Future<void> exportTabAsPdf({
   required List<PdfSection> sections,
 }) async {
   final locale = LocaleNotifier.instance.current;
-  final pdf = pw.Document();
+  final theme = await _loadTheme();
+  final pdf = pw.Document(theme: theme);
 
   // Aktuelles Datum/Zeit fuer den Header
   final now = DateTime.now();
