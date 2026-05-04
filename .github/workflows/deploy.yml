@@ -1,6 +1,6 @@
 # PerfusionCalc – Automatisches WebApp Deployment zu GitHub Pages
 # Trigger: jeder Push zu main | manuell über Actions-Tab
-# URL: https://theperfusionist.github.io/perfusioncalc/
+# URL: https://perfusioncalc.de/
 
 name: Deploy WebApp to GitHub Pages
 
@@ -73,7 +73,7 @@ jobs:
         run: flutter test || echo "No tests yet – skipping."
 
       - name: Build Flutter Web
-        run: flutter build web --release --base-href /perfusioncalc/
+        run: flutter build web --release --base-href /
 
       - name: Deploy to GitHub Pages (gh-pages branch)
         uses: peaceiris/actions-gh-pages@v4
