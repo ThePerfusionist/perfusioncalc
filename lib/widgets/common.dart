@@ -731,8 +731,8 @@ class AppSources {
   static const huefner = SourceRef(
     num: 9,
     authors: 'Hüfner G.',
-    title: 'Über das Gesetz der Dissociation des Oxyhämoglobins (Hüfner-Konstante 1.34 ml O₂/g Hb).',
-    journal: 'Arch Anat Physiol. 1884;1–27.',
+    title: 'Neue Versuche zur Bestimmung der Sauerstoffkapazität des Blutfarbstoffes (Hüfner-Konstante 1.34 ml O₂/g Hb).',
+    journal: 'Arch Anat Physiol (Physiol Abt). 1894;130–176.',
     doi: 'Historische Originalquelle der Hämoglobin-O₂-Bindungskapazität.',
   );
 
@@ -752,12 +752,12 @@ class AppSources {
     doi: 'doi: 10.1002/clc.4960200913 · PMID: 9294672',
   );
 
-  static const gorlin = SourceRef(
+  static const eactsKunst2024 = SourceRef(
     num: 12,
-    authors: 'Gorlin R, Gorlin SG.',
-    title: 'Hydraulic formula for calculation of the area of the stenotic mitral valve, other cardiac valves, and central circulatory shunts.',
-    journal: 'American Heart Journal. 1951;41(1):1–29.',
-    doi: 'doi: 10.1016/0002-8703(51)90002-6 · PMID: 14799435',
+    authors: 'Kunst G, Gerber V, Milojevic M, et al; ESAIC Guidelines Task Force; EACTS, EACTAIC, EBCP Guidelines Committees.',
+    title: '2024 EACTS/EACTAIC/EBCP Guidelines on cardiopulmonary bypass in adult cardiac surgery.',
+    journal: 'British Journal of Anaesthesia. 2025;134(4):917–1008.',
+    doi: 'doi: 10.1016/j.bja.2024.10.018  ·  Standardwert Cardiac Index 2,4 l/min/m² (adulte CPB).',
   );
 
   static const hazinski = SourceRef(
@@ -780,45 +780,37 @@ class AppSources {
     num: 15,
     authors: 'Davies P, Robertson S, Hegde S, Greenwood R, Massey E, Davis P.',
     title: 'Calculating the required transfusion volume in children.',
-    journal: 'Transfusion. 2007;47(1):212–216.',
-    doi: 'doi: 10.1111/j.1537-2995.2007.01090.x · PMID: 17207228',
-  );
-
-  static const darling = SourceRef(
-    num: 16,
-    authors: 'Darling E, Searles B, Nasrallah F, Darling M.',
-    title: 'Oxygenator choice guidelines in paediatric perfusion.',
-    journal: 'Proceedings of the AMSECT Annual Meeting. 2000.',
-    doi: 'Schlauchgrößen-Empfehlung nach Körpergewicht.',
+    journal: 'Transfusion. 2007;47(2):212–216.',
+    doi: 'doi: 10.1111/j.1537-2995.2007.01091.x · PMID: 17302766',
   );
 
   static const tschaut = SourceRef(
-    num: 17,
+    num: 16,
     authors: 'Tschaut RJ (Hrsg.).',
     title: 'Extrakorporale Zirkulation in Theorie und Praxis.',
-    journal: 'Lengerich: Pabst Science Publishers; 2020.',
-    doi: 'Standardlehrbuch der Perfusionstechnik (Perfusionsraten Kinder).',
+    journal: '2. Auflage. Lengerich: Pabst Science Publishers; 2005. ISBN: 978-3-933151-29-2',
+    doi: 'Standardlehrbuch der Perfusionstechnik (Schlauchgrößen, Hypothermie-Stufentabelle, Perfusionsraten Kinder).',
   );
 
   static const larsen = SourceRef(
-    num: 18,
+    num: 17,
     authors: 'Larsen R.',
-    title: 'Anästhesie. 11. Auflage.',
-    journal: 'München: Urban & Fischer; 2018. ISBN: 978-3-437-22400-8',
+    title: 'Anästhesie. 12. Auflage.',
+    journal: 'München: Urban & Fischer; 2022. ISBN: 978-3-437-22512-3',
     doi: 'Elektrolyt- und Pufferberechnung (Natrium, Kalium, Calcium, NaBic, TRIS).',
   );
 
   static const finck = SourceRef(
-    num: 19,
-    authors: 'Finck C.',
-    title: 'General Guideline to VA/VV Cannulation. Pediatric ECMO Cannula Size Reference.',
-    journal: '2020. Clinical guideline.',
-    doi: 'VA/VV Kanülengrößen für pädiatrische ECMO.',
+    num: 18,
+    authors: 'Finck C, et al.',
+    title: 'Extracorporeal Life Support.',
+    journal: 'Pediatric Surgery NaT, American Pediatric Surgical Association, 2025. Pediatric Surgery Library.',
+    doi: 'www.pedsurglibrary.com/apsa/view/Pediatric-Surgery-NaT/829025/all/Extracorporeal_Life_Support  ·  VA/VV-Kanülengrößen für pädiatrische ECMO.',
   );
 
   // ── Severinghaus – BGA temperature correction ─────────────────────────────
   static const severinghaus1979 = SourceRef(
-    num: 20,
+    num: 19,
     authors: 'Severinghaus JW.',
     title: 'Simple, accurate equations for human blood O₂ dissociation computations.',
     journal: 'Journal of Applied Physiology. 1979;46(3):599–602.',
@@ -826,15 +818,15 @@ class AppSources {
   );
 
   static const bradleySeveringhaus1956 = SourceRef(
-    num: 21,
-    authors: 'Bradley AF, Stupfel M, Severinghaus JW.',
+    num: 20,
+    authors: 'Bradley AF, Severinghaus JW, Stupfel M.',
     title: 'Effect of temperature on PCO₂ and PO₂ of blood in vitro.',
     journal: 'Journal of Applied Physiology. 1956;9(2):201–204.',
     doi: 'doi: 10.1152/jappl.1956.9.2.201  ·  PMID: 13376428  ·  PCO₂- und PO₂-Korrekturfaktoren (f_CO₂ = 0.0185, f_O₂ = 0.0247)',
   );
 
   static const severinghaus1966 = SourceRef(
-    num: 22,
+    num: 21,
     authors: 'Severinghaus JW.',
     title: 'Blood gas calculator.',
     journal: 'Journal of Applied Physiology. 1966;21(3):1108–1116.',
@@ -842,7 +834,7 @@ class AppSources {
   );
 
   static const ashwood1983 = SourceRef(
-    num: 23,
+    num: 22,
     authors: 'Ashwood ER, Kost G, Kenny M.',
     title: 'Temperature correction of blood-gas and pH measurements.',
     journal: 'Clinical Chemistry. 1983;29(11):1877–1885.',
@@ -851,18 +843,18 @@ class AppSources {
 
   // ── Heart Anatomy images ──────────────────────────────────────────────────
   static const heartAnatomyWikipedia = SourceRef(
-    num: 24,
-    authors: 'Wikipedia contributors.',
-    title: 'Coronary arteries. In: Wikipedia, The Free Encyclopedia.',
-    journal: 'Retrieved from https://en.wikipedia.org/wiki/Coronary_arteries',
-    doi: 'Images: Blausen Medical (CC BY 3.0)  ·  burlesonmatthew (CC0 1.0)',
+    num: 23,
+    authors: 'Wikimedia Commons contributors.',
+    title: 'Anatomy of the human heart (heart anterior, posterior and cross-section).',
+    journal: 'Wikimedia Commons. Licensed under CC BY 3.0 and CC0 1.0.',
+    doi: 'https://commons.wikimedia.org/wiki/Category:Anatomy_of_the_human_heart',
   );
 
   static const blausenMedical = SourceRef(
-    num: 25,
-    authors: 'Blausen Medical Communications, Inc.',
-    title: 'Coronary Vessels – Anterior & Posterior. Medical illustration.',
-    journal: 'Wikimedia Commons. Licensed under CC BY 3.0.',
-    doi: 'https://commons.wikimedia.org/wiki/File:Blausen_0260_CoronaryVessels_Anterior.png',
+    num: 24,
+    authors: 'Blausen.com staff.',
+    title: 'Medical gallery of Blausen Medical 2014.',
+    journal: 'WikiJournal of Medicine. 2014;1(2):10. Licensed under CC BY 3.0.',
+    doi: 'doi: 10.15347/wjm/2014.010  ·  Coronary Vessels (Anterior & Posterior).',
   );
 }

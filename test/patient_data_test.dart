@@ -61,7 +61,8 @@ void main() {
 
   group('Cardiac Output', () {
     // CO = BSA × CI    (Default CI = 2.4 l/min/m²)
-    // Quelle: Gorlin R, Gorlin SG. Am Heart J 1951; 41: 1-29.
+    // Quelle: 2024 EACTS/EACTAIC/EBCP Guidelines on cardiopulmonary bypass.
+    // Kunst G et al. Br J Anaesth. 2025;134(4):917–1008.
 
     test('CO = BSA × CI bei Default-CI 2.4', () {
       final pd = PatientData()..height = 175..weight = 70;
@@ -124,7 +125,7 @@ void main() {
   });
 
   // ════════════════════════════════════════════════════════════════════════
-  // Sauerstofftransport (Hüfner 1884, Ranucci 2005)
+  // Sauerstofftransport (Hüfner 1894, Ranucci 2005)
   // ════════════════════════════════════════════════════════════════════════
   group('CaO2 / CvO2 (Hüfner)', () {
     // CaO2 = Hb × 1.34 × SaO2/100 + PaO2 × 0.0031

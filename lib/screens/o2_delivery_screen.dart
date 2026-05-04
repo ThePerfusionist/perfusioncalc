@@ -122,7 +122,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
           AppSources.ranucci2018,
           AppSources.ranucci2005,
           AppSources.huefner,
-          AppSources.gorlin,
+          AppSources.eactsKunst2024,
         ]),
         const SizedBox(height: 16),
       ]),

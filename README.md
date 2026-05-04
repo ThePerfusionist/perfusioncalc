@@ -132,18 +132,18 @@ flutter test
 | Parameter | Formula | Source |
 |-----------|---------|--------|
 | BSA | `0.007184 × H^0.725 × W^0.425` | Du Bois & Du Bois, 1916 |
-| Cardiac output | `BSA × CI` (CI default 2.4 l/min/m²) | Gorlin & Gorlin, 1951 |
+| Cardiac output | `BSA × CI` (CI default 2.4 l/min/m²) | EACTS/EACTAIC/EBCP Guidelines 2024 |
 | Blood volume ♂ | `0.041 × kg + 1.53 L` | Silbernagl & Despopoulos |
 | Blood volume ♀ | `0.047 × kg + 0.86 L` | Silbernagl & Despopoulos |
 | Expected Hb | `Hb − (Hb × priming) / (BW × 100)` | |
-| Expected Hct ♂/♀ | `Hct × BV / (BV + priming)` | Nadler et al., 1962 |
+| Expected Hct ♂/♀ | `Hct × BV / (BV + priming)` | |
 
 ### Oxygen Delivery & Consumption
 
 | Parameter | Formula | Source |
 |-----------|---------|--------|
-| CaO₂ | `(Hb × 1.34 × SaO₂/100) + (PaO₂ × 0.0031)` | Hüfner, 1884 |
-| CvO₂ | `(Hb × 1.34 × SvO₂/100) + (PvO₂ × 0.0031)` | Hüfner, 1884 |
+| CaO₂ | `(Hb × 1.34 × SaO₂/100) + (PaO₂ × 0.0031)` | Hüfner, 1894 |
+| CvO₂ | `(Hb × 1.34 × SvO₂/100) + (PvO₂ × 0.0031)` | Hüfner, 1894 |
 | DO₂ | `CaO₂ × CO × 10` | de Somer et al., 2011 |
 | DO₂i | `CaO₂ × CI × 10` — threshold **> 272 ml/min/m²** | Ranucci et al., 2005 |
 | VO₂ | `Ca-vDO₂ × CO × 10` | Fick principle |
@@ -171,10 +171,10 @@ flutter test
 
 | Parameter | Source |
 |-----------|--------|
-| Tube sizes by weight | Darling et al., 2000 |
-| Perfusion rate | Tschaut, 2020 |
-| VA/VV cannula sizes | Finck, 2020 |
-| Blood volume (premature, infant, child, adolescent) | Hazinski 2013 / Howie 2008 |
+| Tube sizes by weight | Tschaut, 2005 |
+| Perfusion rate | Tschaut, 2005 |
+| VA/VV cannula sizes | Finck et al., APSA Pediatric Surgery NaT |
+| Blood volume (premature, infant, child, adolescent) | Hazinski 2012 / Howie 2011 |
 | Transfusion volume | `Δ Hb × BV × 3 / Hct(EK 55%)` (Davies 2007) |
 
 ---
@@ -182,30 +182,34 @@ flutter test
 ## 📚 Sources
 
 All formulas are traceable via the in-app **Source / Quelle** buttons. The complete
-source list is available in [`lib/widgets/common.dart`](lib/widgets/common.dart) under `AppSources`.
-
-Selected primary references:
+source list is available in [`lib/widgets/common.dart`](lib/widgets/common.dart) under `AppSources`. Numbering matches the in-app citation badges.
 
 | # | Reference |
 |---|-----------|
-| [1] | Du Bois D, Du Bois EF. A formula to estimate the approximate surface area if height and weight be known. *Arch Intern Med.* 1916;17:863–871. |
-| [2] | Nadler SB, Hidalgo JU, Bloch T. Prediction of blood volume in normal human adults. *Surgery.* 1962;51(2):224–232. |
-| [3] | Silbernagl S, Despopoulos A. *Color Atlas of Physiology.* Thieme. |
-| [4] | Hüfner G. Neue Versuche zur Bestimmung der Sauerstoffcapacität des Blutfarbstoffs. *Arch Anat Physiol.* 1894:130–176. |
-| [5] | Gorlin R, Gorlin SG. Hydraulic formula for calculation of the area of the stenotic mitral valve. *Am Heart J.* 1951;41(1):1–29. |
-| [6] | de Somer F et al. O2 delivery and CO2 production during cardiopulmonary bypass. *Crit Care.* 2011;15(4):R192. |
-| [7] | Ranucci M et al. Oxygen delivery during cardiopulmonary bypass and acute renal failure. *Ann Thorac Surg.* 2005;80(6):2213–2220. |
-| [8] | Newland RF et al. Goal-directed perfusion in cardiac surgery. *J Extra Corpor Technol.* 2017;49(2):88–93. |
-| [9] | Larsen R. *Anästhesie und Intensivmedizin in Herz-, Thorax- und Gefäßchirurgie.* Springer. |
-| [10] | Tschaut RJ. *Extracorporeal Circulation in Theory and Practice.* 2nd ed. Pabst Science Publishers. |
-| [11] | Darling EM et al. Use of dilatational percutaneous tracheostomy in pediatric patients. *Pediatr Crit Care Med.* 2000;1(1):66–69. |
-| [12] | Hazinski MF. *Nursing Care of the Critically Ill Child.* 3rd ed. Mosby. |
-| [13] | Howie SR. Blood sample volumes in child health research. *Bull World Health Organ.* 2011;89(1):46–53. |
-| [14] | Davies P et al. Reference ranges for the haemoglobin concentration of red cell concentrates. *Vox Sang.* 2007;92(2):195–198. |
-| [15] | Finck C. General Guideline to VA/VV Cannulation. Clinical Guideline; 2020. |
-| [16] | Severinghaus JW. Simple, accurate equations for human blood O₂ dissociation computations. *J Appl Physiol.* 1979;46(3):599–602. |
-| [17] | Bradley AF, Stupfel M, Severinghaus JW. Effect of temperature on PCO₂ and PO₂ of blood in vitro. *J Appl Physiol.* 1956;9(2):201–204. |
-| [18] | Severinghaus JW. Blood gas calculator. *J Appl Physiol.* 1966;21(3):1108–1116. |
+| [1]  | Du Bois D, Du Bois EF. A formula to estimate the approximate surface area if height and weight be known. *Arch Intern Med.* 1916;17(6):863–871. |
+| [2]  | Silbernagl S, Despopoulos A. *Taschenatlas Physiologie.* 9. Auflage. Stuttgart: Thieme; 2019. |
+| [3]  | Nadler SB, Hidalgo JH, Bloch T. Prediction of blood volume in normal human adults. *Surgery.* 1962;51(2):224–232. |
+| [4]  | de Somer F, Mulholland JW, Bryan MR, Aloisio T, Van Nooten GJ, Ranucci M. O₂ delivery and CO₂ production during cardiopulmonary bypass as determinants of acute kidney injury: time for a goal-directed perfusion management? *Crit Care.* 2011;15(4):R192. doi:10.1186/cc10349 |
+| [5]  | Newland RF, Baker RA, Woodman RJ, Barnes MB, Willcox TW; Australian and New Zealand Collaborative Perfusion Registry. Predictive Capacity of Oxygen Delivery During Cardiopulmonary Bypass on Acute Kidney Injury. *Ann Thorac Surg.* 2019;108(6):1807–1814. |
+| [6]  | Newland RF, Baker RA. Low Oxygen Delivery as a Predictor of Acute Kidney Injury during Cardiopulmonary Bypass. *J Extra Corpor Technol.* 2017;49(4):224–230. |
+| [7]  | Ranucci M, Johnson I, Willcox T, et al. Goal-directed perfusion to reduce acute kidney injury: a randomized trial. *J Thorac Cardiovasc Surg.* 2018;156(5):1918–1927. |
+| [8]  | Ranucci M, Romitti F, Isgrò G, et al. Oxygen delivery during cardiopulmonary bypass and acute renal failure after coronary operations. *Ann Thorac Surg.* 2005;80(6):2213–2220. |
+| [9]  | Hüfner G. Neue Versuche zur Bestimmung der Sauerstoffkapazität des Blutfarbstoffes. *Arch Anat Physiol (Physiol Abt).* 1894;130–176. |
+| [10] | Barratt-Boyes BG, Wood EH. Cardiac output and related measurements and pressure values in the right heart and associated vessels, together with an analysis of the hemodynamic response to the inhalation of high oxygen mixtures in healthy subjects. *J Lab Clin Med.* 1958;51(1):72–90. |
+| [11] | Skimming JW, Cassin S, Nichols WW. Calculating Vascular Resistances. *Clin Cardiol.* 1997;20(9):805–808. |
+| [12] | Kunst G, Gerber V, Milojevic M, et al; ESAIC Guidelines Task Force; EACTS, EACTAIC, EBCP Guidelines Committees. 2024 EACTS/EACTAIC/EBCP Guidelines on cardiopulmonary bypass in adult cardiac surgery. *Br J Anaesth.* 2025;134(4):917–1008. doi:10.1016/j.bja.2024.10.018 |
+| [13] | Hazinski MF. *Nursing Care of the Critically Ill Child.* 3rd ed. St. Louis: Elsevier; 2012. |
+| [14] | Howie SR. Blood sample volumes in child health research: review of safe limits. *Bull World Health Organ.* 2011;89(1):46–53. |
+| [15] | Davies P, Robertson S, Hegde S, Greenwood R, Massey E, Davis P. Calculating the required transfusion volume in children. *Transfusion.* 2007;47(2):212–216. doi:10.1111/j.1537-2995.2007.01091.x |
+| [16] | Tschaut RJ (Hrsg). *Extrakorporale Zirkulation in Theorie und Praxis.* 2. Auflage. Lengerich: Pabst Science Publishers; 2005. |
+| [17] | Larsen R. *Anästhesie.* 12. Auflage. München: Urban & Fischer; 2022. |
+| [18] | Finck C, et al. Extracorporeal Life Support. *Pediatric Surgery NaT*, American Pediatric Surgical Association, 2025. Pediatric Surgery Library. www.pedsurglibrary.com/apsa/view/Pediatric-Surgery-NaT/829025/all/Extracorporeal_Life_Support |
+| [19] | Severinghaus JW. Simple, accurate equations for human blood O₂ dissociation computations. *J Appl Physiol.* 1979;46(3):599–602. |
+| [20] | Bradley AF, Severinghaus JW, Stupfel M. Effect of temperature on PCO₂ and PO₂ of blood in vitro. *J Appl Physiol.* 1956;9(2):201–204. |
+| [21] | Severinghaus JW. Blood gas calculator. *J Appl Physiol.* 1966;21(3):1108–1116. |
+| [22] | Ashwood ER, Kost G, Kenny M. Temperature correction of blood-gas and pH measurements. *Clin Chem.* 1983;29(11):1877–1885. |
+| [23] | Wikimedia Commons contributors. Anatomy of the human heart (heart anterior, posterior, cross-section). Licensed under CC BY 3.0 / CC0 1.0. |
+| [24] | Blausen.com staff. Medical gallery of Blausen Medical 2014. *WikiJournal of Medicine.* 2014;1(2):10. doi:10.15347/wjm/2014.010 (CC BY 3.0). |
 
 ---
 
