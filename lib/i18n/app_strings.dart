@@ -8,7 +8,7 @@
 //     in SharedPreferences. Wird in main.dart oben in den Widget-Tree gestellt.
 //   - Strings: alle UI-Texte als statische Maps
 //   - t(): globaler Helfer, der den aktuellen Wert der LocaleNotifier nutzt
-//
+// test
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';

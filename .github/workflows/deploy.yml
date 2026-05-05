@@ -83,3 +83,4 @@ jobs:
           publish_branch: gh-pages
           # Commit-Message im gh-pages-Branch identifiziert den auslösenden Push.
           commit_message: "Deploy: ${{ github.event.head_commit.message }}"
+          cname: perfusioncalc.de
