@@ -228,33 +228,146 @@ work fully offline.
 
 ---
 
-### 🤖 Android – APK
+### 🤖 Android – Build APK from Source
 
-Build from source
+This guide walks you through building your own PerfusionCalc APK from source — no
+prior Flutter experience required. The process works on **Windows, macOS, and Linux**.
 
-**Requirements:**
+#### Requirements
 
-| Tool | Version |
-|------|---------|
-| Flutter SDK | ≥ 3.4.0 |
-| Java JDK | ≥ 17 (Temurin 17 recommended) |
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Flutter SDK](https://docs.flutter.dev/get-started/install) | ≥ 3.4.0 | Build framework |
+| [Java JDK](https://adoptium.net/temurin/releases/?version=17) | 17 (Temurin recommended) | Required by Gradle / Android build |
+| [Android SDK](https://developer.android.com/studio) | API 34+ (Android 14) | Provided via Android Studio or `cmdline-tools` |
+| [Git](https://git-scm.com/downloads) | any recent | Clone the repository |
+| Free disk space | ~ 15 GB | Flutter + Android SDK + build artifacts |
+
+> 💡 The simplest setup is to install **Android Studio**, which bundles the
+> Android SDK, platform-tools, and an emulator. Flutter and JDK 17 are installed
+> separately.
+
+#### Step 1 – Verify your toolchain
+
+After installing Flutter, run:
 
 ```bash
-# Clone repository
+flutter doctor -v
+```
+
+Resolve every red **✗** before proceeding. Typical fixes:
+
+- **Android licenses not accepted:** `flutter doctor --android-licenses` (accept all with `y`)
+- **JDK not found:** point Flutter to JDK 17 (see Step 3)
+- **cmdline-tools missing:** open Android Studio → *SDK Manager → SDK Tools* → check **Android SDK Command-line Tools (latest)** → Apply
+
+#### Step 2 – Clone the repository
+
+```bash
 git clone https://github.com/ThePerfusionist/perfusioncalc.git
 cd perfusioncalc
-
-# Install dependencies
 flutter pub get
+```
 
-# Set Java version if needed (Windows example)
-flutter config --jdk-dir "C:\Program Files\Eclipse Adoptium\jdk-17.x-hotspot"
+#### Step 3 – Configure JDK 17 (only if `flutter doctor` complains)
 
-# Build release APK
+PerfusionCalc's Gradle build requires **JDK 17**. If your system uses a different
+default JDK, point Flutter to JDK 17 explicitly:
+
+```bash
+# Windows (PowerShell / CMD)
+flutter config --jdk-dir "C:\Program Files\Eclipse Adoptium\jdk-17.0.x-hotspot"
+
+# macOS (Homebrew Temurin)
+flutter config --jdk-dir "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home"
+
+# Linux (Debian/Ubuntu via apt)
+flutter config --jdk-dir "/usr/lib/jvm/temurin-17-jdk-amd64"
+```
+
+Verify with `flutter doctor -v` — the *Android toolchain* section should report
+**Java version OpenJDK Runtime Environment Temurin-17.x.x**.
+
+#### Step 4 – Choose your build variant
+
+| Variant | Command | Use case |
+|---------|---------|----------|
+| **Debug APK** | `flutter build apk --debug` | Quick test on your own device, includes debug symbols |
+| **Release APK (universal)** | `flutter build apk --release` | One APK for all CPU architectures (~ 50 MB, easiest to share) |
+| **Release APK (split per ABI)** | `flutter build apk --release --split-per-abi` | Three smaller APKs (arm64-v8a / armeabi-v7a / x86_64), pick the one matching your device |
+| **App Bundle** *(Play Store only)* | `flutter build appbundle --release` | `.aab` file for Google Play upload — **do not use for sideloading** |
+
+For most users, the **universal release APK** is the right choice:
+
+```bash
 flutter build apk --release
 ```
 
-APK location: `build/app/outputs/flutter-apk/app-release.apk`
+The first build downloads Gradle and Android dependencies and may take **5–15 minutes**.
+Subsequent builds finish in under a minute.
+
+#### Step 5 – Locate your APK
+
+| Variant | Output path |
+|---------|-------------|
+| Debug | `build/app/outputs/flutter-apk/app-debug.apk` |
+| Release (universal) | `build/app/outputs/flutter-apk/app-release.apk` |
+| Release (split) | `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` *(and 2 more)* |
+| App Bundle | `build/app/outputs/bundle/release/app-release.aab` |
+
+> ℹ️ Without your own signing key, release APKs are signed with Flutter's **debug
+> key**. They install fine for personal use but cannot be published to the Play
+> Store. To sign with your own key, see the next section.
+
+#### Step 6 *(optional)* – Sign your release APK with your own key
+
+Required only if you want to publish or distribute the APK officially:
+
+```bash
+# Generate a keystore (one-time, keep the .jks file safe!)
+keytool -genkey -v -keystore ~/perfusioncalc-release.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias perfusioncalc
+```
+
+Create `android/key.properties` (do **not** commit this file):
+
+```properties
+storePassword=<your-password>
+keyPassword=<your-password>
+keyAlias=perfusioncalc
+storeFile=/absolute/path/to/perfusioncalc-release.jks
+```
+
+Then rebuild: `flutter build apk --release`. Verify the signature with
+`apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk`.
+
+#### Step 7 – Install the APK on your Android device
+
+**Option A — direct transfer:** Copy the `.apk` file via USB, cloud storage, or
+messenger to your phone, then tap it. You may need to enable
+*Settings → Apps → Special access → Install unknown apps* for your file manager.
+
+**Option B — via ADB (developer mode required):**
+
+```bash
+adb install build/app/outputs/flutter-apk/app-release.apk
+
+# Reinstall while keeping app data
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+#### Troubleshooting
+
+| Symptom | Solution |
+|---------|----------|
+| `Execution failed for task ':app:checkDebugAarMetadata'` | Update Flutter: `flutter upgrade` and run `flutter clean` |
+| `Unsupported class file major version 65` | JDK > 17 in use — switch to JDK 17 (Step 3) |
+| `SDK location not found` | Set `ANDROID_HOME` env var, or create `android/local.properties` with `sdk.dir=/path/to/Android/sdk` |
+| `App not installed` on device | Uninstall any previous PerfusionCalc version first — different signing keys conflict |
+| Build hangs at "Running Gradle task" | First build downloads ~ 1 GB; check your internet connection and wait |
+| `cmdline-tools component is missing` | Android Studio → SDK Manager → SDK Tools → install **Android SDK Command-line Tools (latest)** |
+
+After a failed build, always try `flutter clean && flutter pub get` before reporting an issue.
 
 ---
 
