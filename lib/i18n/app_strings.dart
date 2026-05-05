@@ -9,8 +9,6 @@
 //   - Strings: alle UI-Texte als statische Maps
 //   - t(): globaler Helfer, der den aktuellen Wert der LocaleNotifier nutzt
 //
-// Wissenschaftliche Quellenangaben (DuBois 1916, Severinghaus 1979 etc.)
-// werden bewusst NICHT übersetzt - das ist internationale Konvention.
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
