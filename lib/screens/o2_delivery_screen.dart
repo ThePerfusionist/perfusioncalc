@@ -60,16 +60,78 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         InputCard(label: t('o2_ven_hb'), unit: 'g/dl', value: pd.venHb,
             range: Ranges.hb,
             onChanged: (v) { pd.venHb = v; widget.onChanged(); }),
-        ResultCard(label: 'CaO\u2082',    unit: 'ml/dl',          value: pd.caO2,  rangeHint: '(18-20 ml O\u2082/dl)'),
-        ResultCard(label: 'CvO\u2082',    unit: 'ml/dl',          value: pd.cvO2,  rangeHint: '(14-15 ml O\u2082/dl)'),
-        ResultCard(label: 'Ca-vDO\u2082', unit: 'ml/dl',          value: pd.cavDO2, rangeHint: '(4-6 ml/dl)'),
-        ResultCard(label: 'DO\u2082',     unit: 'ml/min',          value: pd.do2),
-        ResultCard(label: 'DO\u2082i',    unit: 'ml/min/m\u00b2',  value: pd.do2i,  rangeHint: '(>272 ml/min/m\u00b2)'),
-        ResultCard(label: 'VO\u2082',     unit: 'ml/min',          value: pd.vo2),
-        ResultCard(label: 'VO\u2082i',    unit: 'ml/min/m\u00b2',  value: pd.vo2i,  rangeHint: '(120-160 ml/min/m\u00b2)'),
-        ResultCard(label: 'O\u2082-ER',   unit: '%',               value: pd.o2er,  rangeHint: '(22-35%)'),
-        ResultCard(label: t('o2_min_co'), unit: 'L/min', value: pd.minCardiacOutput, rangeHint: t('o2_min_at')),
-        ResultCard(label: t('o2_min_hb'), unit: 'g/dl', value: pd.minHb, rangeHint: t('o2_min_at')),
+        // ── Berechnete Ergebnisse ─────────────────────────────────────────
+        // CO/CI Handling: cardiacIndexEffective ist >0, wenn der Nutzer
+        // entweder CO+BSA oder CI direkt eingegeben hat (siehe _CoCiCard).
+        Builder(builder: (_) {
+          // Helper-Kurzschreibweisen fuer fehlende Pflichtfelder
+          List<String> missing(List<({Object? v, String label})> fields) =>
+              fields.where((f) => f.v == null).map((f) => f.label).toList();
+
+          // Fuer CO-abhaengige Ergebnisse: CO direkt ODER CI+BSA reicht
+          List<String> coDerivedMissing() {
+            if (pd.hzv != null) return [];
+            if (pd.cardiacIndex != null && pd.kof != null) return [];
+            final out = <String>[];
+            if (pd.hzv == null && pd.cardiacIndex == null) out.add(t('o2_co_label'));
+            if (pd.cardiacIndex != null && pd.kof == null) out.add(t('o2_bsa'));
+            return out;
+          }
+          // Fuer CI-abhaengige Ergebnisse: CI direkt ODER CO+BSA reicht
+          List<String> ciDerivedMissing() {
+            if (pd.cardiacIndex != null) return [];
+            if (pd.hzv != null && pd.kof != null) return [];
+            final out = <String>[];
+            if (pd.hzv == null && pd.cardiacIndex == null) out.add(t('o2_ci_label'));
+            if (pd.hzv != null && pd.kof == null) out.add(t('o2_bsa'));
+            return out;
+          }
+
+          final hPaO2  = (v: pd.paO2,  label: 'PaO\u2082');
+          final hSaO2  = (v: pd.saO2,  label: 'SaO\u2082');
+          final hArtHb = (v: pd.artHb, label: t('o2_art_hb'));
+          final hPvO2  = (v: pd.pvO2,  label: 'PvO\u2082');
+          final hSvO2  = (v: pd.svO2,  label: 'SvO\u2082');
+          final hVenHb = (v: pd.venHb, label: t('o2_ven_hb'));
+          final hBsa   = (v: pd.kof,   label: t('o2_bsa'));
+
+          final caO2Inputs = [hArtHb, hSaO2, hPaO2];
+          final cvO2Inputs = [hVenHb, hSvO2, hPvO2];
+          final cavInputs  = [...caO2Inputs, ...cvO2Inputs];
+
+          return Column(children: [
+            ResultCard(label: 'CaO\u2082',    unit: 'ml/dl',          value: pd.caO2,
+                rangeHint: '(18-20 ml O\u2082/dl)',
+                missingInputs: missing(caO2Inputs)),
+            ResultCard(label: 'CvO\u2082',    unit: 'ml/dl',          value: pd.cvO2,
+                rangeHint: '(14-15 ml O\u2082/dl)',
+                missingInputs: missing(cvO2Inputs)),
+            ResultCard(label: 'Ca-vDO\u2082', unit: 'ml/dl',          value: pd.cavDO2,
+                rangeHint: '(4-6 ml/dl)',
+                missingInputs: missing(cavInputs)),
+            ResultCard(label: 'DO\u2082',     unit: 'ml/min',         value: pd.do2,
+                missingInputs: [...missing(caO2Inputs), ...coDerivedMissing()]),
+            ResultCard(label: 'DO\u2082i',    unit: 'ml/min/m\u00b2', value: pd.do2i,
+                rangeHint: '(>272 ml/min/m\u00b2)',
+                missingInputs: [...missing(caO2Inputs), ...ciDerivedMissing()]),
+            ResultCard(label: 'VO\u2082',     unit: 'ml/min',         value: pd.vo2,
+                missingInputs: [...missing(cavInputs), ...coDerivedMissing()]),
+            ResultCard(label: 'VO\u2082i',    unit: 'ml/min/m\u00b2', value: pd.vo2i,
+                rangeHint: '(120-160 ml/min/m\u00b2)',
+                missingInputs: [...missing(cavInputs), ...ciDerivedMissing()]),
+            ResultCard(label: 'O\u2082-ER',   unit: '%',              value: pd.o2er,
+                rangeHint: '(22-35%)',
+                missingInputs: [...missing(cavInputs), ...coDerivedMissing()]),
+            ResultCard(label: t('o2_min_co'), unit: 'L/min',
+                value: pd.minCardiacOutput,
+                rangeHint: t('o2_min_at'),
+                missingInputs: missing([hArtHb, hSaO2, hPaO2, hBsa])),
+            ResultCard(label: t('o2_min_hb'), unit: 'g/dl',
+                value: pd.minHb,
+                rangeHint: t('o2_min_at'),
+                missingInputs: [...missing([hSaO2, hPaO2, hBsa]), ...coDerivedMissing()]),
+          ]);
+        }),
         const SizedBox(height: 8),
         // Chart button
         GestureDetector(

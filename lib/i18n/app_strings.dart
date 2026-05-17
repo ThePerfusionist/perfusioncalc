@@ -202,6 +202,8 @@ class Strings {
     'o2_ci_label':            {AppLocale.en: 'Cardiac index', AppLocale.de: 'Herzindex'},
     'o2_enter_value':         {AppLocale.en: 'Enter value', AppLocale.de: 'Wert eingeben'},
     'enter_value':            {AppLocale.en: 'Enter value', AppLocale.de: 'Wert eingeben'},
+    'missing_inputs_hint':    {AppLocale.en: 'Please enter: ',
+                               AppLocale.de: 'Bitte eingeben: '},
 
     // ── Resistances Screen ────────────────────────────────────────────────
     'res_co_for_svr':         {AppLocale.en: 'Cardiac output (for SVR)',

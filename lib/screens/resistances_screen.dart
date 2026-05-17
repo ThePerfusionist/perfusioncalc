@@ -12,6 +12,16 @@ class ResistancesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    List<String> missing(List<({Object? v, String label})> fields) =>
+        fields.where((f) => f.v == null).map((f) => f.label).toList();
+
+    final hMap     = (v: patientData.map,    label: 'MAP');
+    final hCvp     = (v: patientData.cvp,    label: 'CVP');
+    final hHzvRes  = (v: patientData.hzvRes, label: t('res_co_for_svr'));
+    final hPap     = (v: patientData.pap,    label: 'PAP');
+    final hLap     = (v: patientData.lap,    label: 'LAP');
+    final hHzvPvr  = (v: patientData.hzvPvr, label: t('res_co_for_pvr'));
+
     return SingleChildScrollView(
       child: Column(children: [
         const SizedBox(height: 8),
@@ -25,7 +35,8 @@ class ResistancesScreen extends StatelessWidget {
             range: Ranges.co,
             onChanged: (v) { patientData.hzvRes = v; onChanged(); }),
         ResultCard(label: 'SVR', unit: 'dyns/cm\u2075', value: patientData.svr,
-            rangeHint: '(900-1200 dyns/cm\u2075)', decimals: 0),
+            rangeHint: '(900-1200 dyns/cm\u2075)', decimals: 0,
+            missingInputs: missing([hMap, hCvp, hHzvRes])),
         InputCard(label: 'PAP', unit: 'mmHg', value: patientData.pap,
             range: Ranges.pap,
             onChanged: (v) { patientData.pap = v; onChanged(); }),
@@ -36,7 +47,8 @@ class ResistancesScreen extends StatelessWidget {
             range: Ranges.co,
             onChanged: (v) { patientData.hzvPvr = v; onChanged(); }),
         ResultCard(label: 'PVR', unit: 'dyns/cm\u2075', value: patientData.pvr,
-            rangeHint: '(150-300 dyns/cm\u2075)', decimals: 0),
+            rangeHint: '(150-300 dyns/cm\u2075)', decimals: 0,
+            missingInputs: missing([hPap, hLap, hHzvPvr])),
         const SizedBox(height: 8),
         PdfExportButton(
           filename: 'resistances',

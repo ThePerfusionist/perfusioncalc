@@ -19,10 +19,15 @@ class TubeVolumeScreen extends StatelessWidget {
             range: Ranges.tubeLength,
             step: 1, onChanged: (v) { patientData.tubeLength = v; onChanged(); }),
         SectionHeader(t('tube_section_fill')),
-        ResultCard(label: '1/2"',  unit: 'ml', value: patientData.tubeVol12,  decimals: 1),
-        ResultCard(label: '3/8"',  unit: 'ml', value: patientData.tubeVol38,  decimals: 1),
-        ResultCard(label: '1/4"',  unit: 'ml', value: patientData.tubeVol14,  decimals: 1),
-        ResultCard(label: '3/16"', unit: 'ml', value: patientData.tubeVol316, decimals: 1),
+        Builder(builder: (_) {
+          final missing = patientData.tubeLength == null ? [t('tube_length')] : const <String>[];
+          return Column(children: [
+            ResultCard(label: '1/2"',  unit: 'ml', value: patientData.tubeVol12,  decimals: 1, missingInputs: missing),
+            ResultCard(label: '3/8"',  unit: 'ml', value: patientData.tubeVol38,  decimals: 1, missingInputs: missing),
+            ResultCard(label: '1/4"',  unit: 'ml', value: patientData.tubeVol14,  decimals: 1, missingInputs: missing),
+            ResultCard(label: '3/16"', unit: 'ml', value: patientData.tubeVol316, decimals: 1, missingInputs: missing),
+          ]);
+        }),
         const SizedBox(height: 8),
         PdfExportButton(
           filename: 'tube_volume',

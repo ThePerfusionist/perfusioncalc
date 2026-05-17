@@ -195,6 +195,12 @@ class ResultCard extends StatelessWidget {
   final String? rangeHint;
   final int decimals;
 
+  /// Liste fehlender Eingaben (bereits uebersetzt). Wenn nicht-leer:
+  /// statt eines numerischen Wertes wird "—" angezeigt und darunter ein
+  /// Hinweis, welche Eingaben noch ausstehen. Verhindert, dass leer
+  /// gelassene Formeln als "0,00" missverstanden werden.
+  final List<String> missingInputs;
+
   const ResultCard({
     super.key,
     required this.label,
@@ -202,27 +208,47 @@ class ResultCard extends StatelessWidget {
     required this.value,
     this.rangeHint,
     this.decimals = 2,
+    this.missingInputs = const [],
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasMissing = missingInputs.isNotEmpty;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
-            if (rangeHint != null)
-              Text(rangeHint!, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-          ])),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(unit,  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            Text(value.toStringAsFixed(decimals),
-                style: const TextStyle(color: kGold, fontSize: 24, fontWeight: FontWeight.w500)),
-          ]),
-        ]),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+              if (rangeHint != null && !hasMissing)
+                Text(rangeHint!, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              if (hasMissing) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '${t('missing_inputs_hint')}${missingInputs.join(', ')}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ])),
+            const SizedBox(width: 12),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(unit,  style: TextStyle(color: hasMissing ? Colors.white24 : Colors.white70, fontSize: 12)),
+              Text(
+                hasMissing ? '—' : value.toStringAsFixed(decimals),
+                style: TextStyle(
+                  color: hasMissing ? Colors.white38 : kGold,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ]),
+          ],
+        ),
       ),
     );
   }

@@ -75,17 +75,65 @@ class _BSAScreenState extends State<BSAScreen> {
             }
           },
         ),
-        ResultCard(label: t('bsa_result_dubois'), unit: 'm\u00b2', value: pd.bsa),
-        ResultCard(
-          label: '${t('bsa_result_co')} (CI ${pd.bsaCardiacIndex.toStringAsFixed(1)})',
-          unit: 'l/min', value: pd.cardiacOutput,
-        ),
-        ResultCard(label: t('bsa_result_bv_male'),   unit: 'l', value: pd.bloodVolumeMale),
-        ResultCard(label: t('bsa_result_bv_female'), unit: 'l', value: pd.bloodVolumeFemale),
-        SectionHeader(t('bsa_section_expected')),
-        ResultCard(label: t('bsa_expected_hb'),    unit: 'g/dl', value: pd.expectedHb),
-        ResultCard(label: t('bsa_expected_hct_m'), unit: '%',    value: pd.expectedHctMale),
-        ResultCard(label: t('bsa_expected_hct_f'), unit: '%',    value: pd.expectedHctFemale),
+        // ── Berechnete Ergebnisse ─────────────────────────────────────────
+        // Helper-Listen: erfassen die Eingaben, die jede Formel braucht.
+        // Wenn auch nur eine fehlt, wird "—" statt einer Zahl angezeigt.
+        Builder(builder: (_) {
+          List<String> missing(List<({Object? v, String label})> fields) =>
+              fields.where((f) => f.v == null).map((f) => f.label).toList();
+
+          final hHeight = (v: pd.height, label: t('bsa_body_height'));
+          final hWeight = (v: pd.weight, label: t('bsa_body_weight'));
+          final hHb     = (v: pd.currentHb, label: t('bsa_current_hb'));
+          final hHct    = (v: pd.currentHct, label: t('bsa_current_hct'));
+          final hPrim   = (v: pd.primingVolume, label: t('bsa_priming_volume'));
+
+          return Column(children: [
+            ResultCard(
+              label: t('bsa_result_dubois'),
+              unit: 'm\u00b2',
+              value: pd.bsa,
+              missingInputs: missing([hHeight, hWeight]),
+            ),
+            ResultCard(
+              label: '${t('bsa_result_co')} (CI ${pd.bsaCardiacIndex.toStringAsFixed(1)})',
+              unit: 'l/min',
+              value: pd.cardiacOutput,
+              missingInputs: missing([hHeight, hWeight]),
+            ),
+            ResultCard(
+              label: t('bsa_result_bv_male'),
+              unit: 'l',
+              value: pd.bloodVolumeMale,
+              missingInputs: missing([hWeight]),
+            ),
+            ResultCard(
+              label: t('bsa_result_bv_female'),
+              unit: 'l',
+              value: pd.bloodVolumeFemale,
+              missingInputs: missing([hWeight]),
+            ),
+            SectionHeader(t('bsa_section_expected')),
+            ResultCard(
+              label: t('bsa_expected_hb'),
+              unit: 'g/dl',
+              value: pd.expectedHb,
+              missingInputs: missing([hWeight, hHb, hPrim]),
+            ),
+            ResultCard(
+              label: t('bsa_expected_hct_m'),
+              unit: '%',
+              value: pd.expectedHctMale,
+              missingInputs: missing([hWeight, hHct, hPrim]),
+            ),
+            ResultCard(
+              label: t('bsa_expected_hct_f'),
+              unit: '%',
+              value: pd.expectedHctFemale,
+              missingInputs: missing([hWeight, hHct, hPrim]),
+            ),
+          ]);
+        }),
         const SizedBox(height: 8),
         PdfExportButton(
           filename: 'bsa',

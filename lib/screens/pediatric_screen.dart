@@ -62,7 +62,11 @@ class PediatricScreen extends StatelessWidget {
               range: Ranges.desiredHbIncrease,
               onChanged: (v) { patientData.desiredHbIncrease = v; onChanged(); }),
           ResultCard(label: t('ped_transfusion_vol'), unit: 'ml', value: patientData.transfusionVolume,
-              rangeHint: t('ped_hct_in_ek'), decimals: 0),
+              rangeHint: t('ped_hct_in_ek'), decimals: 0,
+              missingInputs: [
+                if (patientData.pediatricWeight == null) t('bsa_body_weight'),
+                if (patientData.desiredHbIncrease == null) t('ped_desired_hb'),
+              ]),
           const SizedBox(height: 8),
           PdfExportButton(
             filename: 'pediatric',
@@ -96,7 +100,13 @@ class PediatricScreen extends StatelessWidget {
 
   Widget _bvResult(String label, double factor) {
     final w = patientData.pediatricWeight ?? 0;
-    return ResultCard(label: '$label (${factor.toInt()} ml/kg)', unit: 'ml', value: w * factor, decimals: 0);
+    return ResultCard(
+      label: '$label (${factor.toInt()} ml/kg)',
+      unit: 'ml',
+      value: w * factor,
+      decimals: 0,
+      missingInputs: patientData.pediatricWeight == null ? [t('bsa_body_weight')] : const [],
+    );
   }
 
   Widget _fancyTable({required List<String> headers, required List<List<String>> rows, required List<int> flexes}) {

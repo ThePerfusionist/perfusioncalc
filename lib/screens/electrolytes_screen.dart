@@ -12,6 +12,20 @@ class ElectrolytesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Helper-Listen pro Formel - sammeln die fehlenden Pflichteingaben.
+    // Wenn auch nur eine fehlt, wird "—" statt einer Zahl angezeigt.
+    List<String> missing(List<({Object? v, String label})> fields) =>
+        fields.where((f) => f.v == null).map((f) => f.label).toList();
+
+    final hWeight  = (v: patientData.bodyWeightElec, label: t('bsa_body_weight'));
+    final hNaIst   = (v: patientData.natriumIst,     label: t('elec_sodium_current'));
+    final hNaSoll  = (v: patientData.natriumSoll,    label: t('elec_sodium_target'));
+    final hKIst    = (v: patientData.kaliumIst,      label: t('elec_potassium_current'));
+    final hKSoll   = (v: patientData.kaliumSoll,     label: t('elec_potassium_target'));
+    final hCaIst   = (v: patientData.calziumIst,     label: t('elec_calcium_current'));
+    final hCaSoll  = (v: patientData.calziumSoll,    label: t('elec_calcium_target'));
+    final hBE      = (v: patientData.baseExcess,     label: t('elec_base_excess'));
+
     return SingleChildScrollView(
       child: Column(children: [
         const SizedBox(height: 8),
@@ -25,7 +39,8 @@ class ElectrolytesScreen extends StatelessWidget {
         InputCard(label: t('elec_sodium_target'), unit: 'mmol', value: patientData.natriumSoll,
             range: Ranges.natrium,
             onChanged: (v) { patientData.natriumSoll = v; onChanged(); }),
-        ResultCard(label: t('elec_sodium_need'), unit: 'ml NaCl 10%', value: patientData.natriumBedarf),
+        ResultCard(label: t('elec_sodium_need'), unit: 'ml NaCl 10%', value: patientData.natriumBedarf,
+            missingInputs: missing([hWeight, hNaIst, hNaSoll])),
         SectionHeader(t('elec_section_potassium')),
         InputCard(label: t('elec_potassium_current'), unit: 'mmol', value: patientData.kaliumIst,
             range: Ranges.kalium,
@@ -33,7 +48,8 @@ class ElectrolytesScreen extends StatelessWidget {
         InputCard(label: t('elec_potassium_target'), unit: 'mmol', value: patientData.kaliumSoll,
             range: Ranges.kalium,
             onChanged: (v) { patientData.kaliumSoll = v; onChanged(); }),
-        ResultCard(label: t('elec_potassium_need'), unit: 'ml KCl 7,45%', value: patientData.kaliumBedarf),
+        ResultCard(label: t('elec_potassium_need'), unit: 'ml KCl 7,45%', value: patientData.kaliumBedarf,
+            missingInputs: missing([hWeight, hKIst, hKSoll])),
         SectionHeader(t('elec_section_calcium')),
         InputCard(label: t('elec_calcium_current'), unit: 'mmol', value: patientData.calziumIst,
             range: Ranges.calzium,
@@ -41,13 +57,16 @@ class ElectrolytesScreen extends StatelessWidget {
         InputCard(label: t('elec_calcium_target'), unit: 'mmol', value: patientData.calziumSoll,
             range: Ranges.calzium,
             onChanged: (v) { patientData.calziumSoll = v; onChanged(); }),
-        ResultCard(label: t('elec_calcium_need'), unit: 'ml Ca.gluc. 10%', value: patientData.calziumBedarf),
+        ResultCard(label: t('elec_calcium_need'), unit: 'ml Ca.gluc. 10%', value: patientData.calziumBedarf,
+            missingInputs: missing([hWeight, hCaIst, hCaSoll])),
         SectionHeader(t('elec_section_buffer')),
         InputCard(label: t('elec_base_excess'), unit: 'mmol/L', value: patientData.baseExcess,
             range: Ranges.baseExcess,
             onChanged: (v) { patientData.baseExcess = v; onChanged(); }),
-        ResultCard(label: 'NaBic 8,4%', unit: 'ml', value: patientData.nabic),
-        ResultCard(label: 'TRIS 36,34%', unit: 'ml', value: patientData.tris),
+        ResultCard(label: 'NaBic 8,4%', unit: 'ml', value: patientData.nabic,
+            missingInputs: missing([hWeight, hBE])),
+        ResultCard(label: 'TRIS 36,34%', unit: 'ml', value: patientData.tris,
+            missingInputs: missing([hWeight, hBE])),
         const SizedBox(height: 8),
         PdfExportButton(
           filename: 'electrolytes',

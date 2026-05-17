@@ -65,16 +65,22 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   /// Tabs-Definition: icon ist statisch, label wird per t() bei jedem Build
   /// frisch übersetzt. Wenn die Sprache wechselt, ruft AnimatedBuilder oben
   /// einen Rebuild aus und _tabsList() wird neu evaluiert.
+  ///
+  /// Reihenfolge bewusst gewählt: BSA und O2 als zentrale Berechnungen zuerst,
+  /// dann Hypothermie (Severinghaus, didaktisch besonders wichtig), gefolgt
+  /// von Elektrolyten und Resistances (haemodynamische Folgegroessen). Danach
+  /// paediatrische und schlauchbezogene Berechnungen, zum Schluss die reinen
+  /// Referenz-/Anatomie-Tabs.
   List<Map<String, dynamic>> _tabsList() => [
     {'key': 'tab_bsa',          'icon': Icons.monitor_heart_outlined},
     {'key': 'tab_o2',           'icon': Icons.air},
-    {'key': 'tab_resistances',  'icon': Icons.compress},
-    {'key': 'tab_electrolytes', 'icon': Icons.science_outlined},
-    {'key': 'tab_tube_volume',  'icon': Icons.linear_scale},
-    {'key': 'tab_flow',         'icon': Icons.water_drop_outlined},
-    {'key': 'tab_zoll',         'icon': Icons.straighten},
     {'key': 'tab_hypothermia',  'icon': Icons.ac_unit},
+    {'key': 'tab_electrolytes', 'icon': Icons.science_outlined},
+    {'key': 'tab_resistances',  'icon': Icons.compress},
     {'key': 'tab_pediatric',    'icon': Icons.child_care_outlined},
+    {'key': 'tab_flow',         'icon': Icons.water_drop_outlined},
+    {'key': 'tab_tube_volume',  'icon': Icons.linear_scale},
+    {'key': 'tab_zoll',         'icon': Icons.straighten},
     {'key': 'tab_reference',    'icon': Icons.table_chart_outlined},
     {'key': 'tab_anatomy',      'icon': Icons.favorite_border},
   ];
@@ -368,13 +374,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           children: [
             BSAScreen(patientData: _patientData, onChanged: () => setState(() {})),
             O2DeliveryScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            ResistancesScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            ElectrolytesScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            TubeVolumeScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            FlowDrainageScreen(),
-            ZollChairreScreen(patientData: _patientData, onChanged: () => setState(() {})),
             HypothermiaScreen(),
+            ElectrolytesScreen(patientData: _patientData, onChanged: () => setState(() {})),
+            ResistancesScreen(patientData: _patientData, onChanged: () => setState(() {})),
             PediatricScreen(patientData: _patientData, onChanged: () => setState(() {})),
+            FlowDrainageScreen(),
+            TubeVolumeScreen(patientData: _patientData, onChanged: () => setState(() {})),
+            ZollChairreScreen(patientData: _patientData, onChanged: () => setState(() {})),
             ReferencePressureScreen(),
             HeartAnatomyScreen(),
           ],
