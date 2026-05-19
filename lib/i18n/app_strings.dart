@@ -303,10 +303,10 @@ class Strings {
     'hypo_col_unit':          {AppLocale.en: 'Unit',      AppLocale.de: 'Einheit'},
 
     // ── Pediatric Screen ──────────────────────────────────────────────────
-    'ped_title_tube':         {AppLocale.en: 'Tube diameter (Tschaut 2005)',
-                               AppLocale.de: 'Schlauchdurchmesser (Tschaut 2005)'},
-    'ped_title_perfusion':    {AppLocale.en: 'Perfusion rate (Tschaut 2005)',
-                               AppLocale.de: 'Perfusionsrate (Tschaut 2005)'},
+    'ped_title_tube':         {AppLocale.en: 'Tube diameter (Oldeen et al. 2020)',
+                               AppLocale.de: 'Schlauchdurchmesser (Oldeen et al. 2020)'},
+    'ped_title_perfusion':    {AppLocale.en: 'Perfusion rate (Ramakrishnan et al. 2023)',
+                               AppLocale.de: 'Perfusionsrate (Ramakrishnan et al. 2023)'},
     'ped_title_va':           {AppLocale.en: 'V-A cannula size (Finck 2025)',
                                AppLocale.de: 'V-A Kanülengröße (Finck 2025)'},
     'ped_title_vv':           {AppLocale.en: 'V-V cannula size (Finck 2025)',

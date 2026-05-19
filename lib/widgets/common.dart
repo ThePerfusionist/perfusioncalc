@@ -698,8 +698,16 @@ class AppSources {
     doi: 'PMID: 2520314',
   );
 
-  static const silbernagl = SourceRef(
+  static const eactsKunst2024 = SourceRef(
     num: 2,
+    authors: 'Kunst G, Gerber V, Milojevic M, et al; ESAIC Guidelines Task Force; EACTS, EACTAIC, EBCP Guidelines Committees.',
+    title: '2024 EACTS/EACTAIC/EBCP Guidelines on cardiopulmonary bypass in adult cardiac surgery.',
+    journal: 'British Journal of Anaesthesia. 2025;134(4):917–1008.',
+    doi: 'doi: 10.1016/j.bja.2024.10.018  ·  Standardwert Cardiac Index 2,4 l/min/m² (adulte CPB).',
+  );
+
+  static const silbernagl = SourceRef(
+    num: 3,
     authors: 'Silbernagl S, Despopoulos A.',
     title: 'Taschenatlas Physiologie. 9. Auflage.',
     journal: 'Stuttgart: Thieme; 2019. ISBN: 978-3-13-576909-8',
@@ -707,136 +715,120 @@ class AppSources {
   );
 
   static const nadler = SourceRef(
-    num: 3,
-    authors: 'Nadler SB, Hidalgo JU, Bloch T.',
+    num: 4,
+    authors: 'Nadler SB, Hidalgo JH, Bloch T.',
     title: 'Prediction of blood volume in normal human adults.',
     journal: 'Surgery. 1962;51(2):224–232.',
     doi: 'PMID: 21272930',
   );
 
-  static const deSomer = SourceRef(
-    num: 4,
-    authors: 'de Somer F, Mulholland JW, Bryan MR, Aloisio T, Van Nooten GJ, Ranucci M.',
-    title: 'O2 delivery and CO2 production during cardiopulmonary bypass as determinants of acute kidney injury: time for a goal-directed perfusion management?',
-    journal: 'Critical Care. 2011;15(4):R192.',
-    doi: 'doi: 10.1186/cc10349 · PMID: 21831302',
-  );
-
-  static const newland2019 = SourceRef(
-    num: 5,
-    authors: 'Newland RF, Baker RA, Woodman RJ, Barnes MB, Willcox TW.',
-    title: 'Predictive Capacity of Oxygen Delivery During Cardiopulmonary Bypass on Acute Kidney Injury.',
-    journal: 'Annals of Thoracic Surgery. 2019;108(6).',
-    doi: 'doi: 10.1016/j.athoracsur.2019.07.005',
-  );
-
-  static const newland2017 = SourceRef(
-    num: 6,
-    authors: 'Newland RF, Baker RA.',
-    title: 'Low Oxygen Delivery as a Predictor of Acute Kidney Injury during Cardiopulmonary Bypass.',
-    journal: 'Journal of Extra-Corporeal Technology. 2017;49(4):224–230.',
-    doi: 'PMID: 29302112 · PMCID: PMC5737422',
-  );
-
-  static const ranucci2018 = SourceRef(
-    num: 7,
-    authors: 'Ranucci M, Johnson I, Willcox T, et al.',
-    title: 'Goal-directed perfusion and DO₂i threshold.',
-    journal: 'Journal of Thoracic and Cardiovascular Surgery. 2018.',
-    doi: 'Referenziert in AMSECT O₂ Delivery Chart.',
-  );
-
   static const ranucci2005 = SourceRef(
-    num: 8,
+    num: 5,
     authors: 'Ranucci M, Romitti F, Isgro G, et al.',
     title: 'Oxygen delivery during cardiopulmonary bypass and acute renal failure after coronary operations.',
     journal: 'Annals of Thoracic Surgery. 2005;80(6):2213–2220.',
     doi: 'doi: 10.1016/j.athoracsur.2005.05.069 · PMID: 16305875',
   );
 
-  static const huefner = SourceRef(
+  static const deSomer = SourceRef(
+    num: 6,
+    authors: 'de Somer F, Mulholland JW, Bryan MR, Aloisio T, Van Nooten GJ, Ranucci M.',
+    title: 'O2 delivery and CO2 production during cardiopulmonary bypass as determinants of acute kidney injury: time for a goal-directed perfusion management?',
+    journal: 'Critical Care. 2011;15(4):R192.',
+    doi: 'doi: 10.1186/cc10349 · PMID: 21831302',
+  );
+
+  static const newland2017 = SourceRef(
+    num: 7,
+    authors: 'Newland RF, Baker RA.',
+    title: 'Low oxygen delivery as a predictor of acute kidney injury during cardiopulmonary bypass.',
+    journal: 'Journal of ExtraCorporeal Technology. 2017;49(4):224–230.',
+    doi: 'PMID: 29302115',
+  );
+
+  static const newland2019 = SourceRef(
+    num: 8,
+    authors: 'Newland RF, Baker RA, Woodman RJ, Barnes MB, Willcox TW; Australian and New Zealand Collaborative Perfusion Registry.',
+    title: 'Predictive Capacity of Oxygen Delivery During Cardiopulmonary Bypass on Acute Kidney Injury.',
+    journal: 'Annals of Thoracic Surgery. 2019;108(6):1807–1814.',
+    doi: 'doi: 10.1016/j.athoracsur.2019.04.115  ·  Multizentrische ANZCPR-Studie, n = 19 410',
+  );
+
+  static const ranucci2018 = SourceRef(
     num: 9,
+    authors: 'Ranucci M, Johnson I, Willcox T, et al.',
+    title: 'Goal-directed perfusion to reduce acute kidney injury: a randomized trial.',
+    journal: 'Journal of Thoracic and Cardiovascular Surgery. 2018;156(5):1918–1927.',
+    doi: 'doi: 10.1016/j.jtcvs.2018.04.045  ·  RCT zur GDP-Strategie.',
+  );
+
+  static const gao2023 = SourceRef(
+    num: 10,
+    authors: 'Gao P, Liu J, Zhang P, Bai L, Jin Y, Li Y.',
+    title: 'Goal-directed perfusion for reducing acute kidney injury in cardiac surgery: a systematic review and meta-analysis.',
+    journal: 'Perfusion. 2023;38(3):591–599.',
+    doi: 'doi: 10.1177/02676591211073783  ·  Metaanalyse, n = 777 aus 3 RCTs.',
+  );
+
+  static const huefner = SourceRef(
+    num: 11,
     authors: 'Hüfner G.',
-    title: 'Neue Versuche zur Bestimmung der Sauerstoffkapazität des Blutfarbstoffes (Hüfner-Konstante 1.34 ml O₂/g Hb).',
-    journal: 'Arch Anat Physiol (Physiol Abt). 1894;130–176.',
+    title: 'Neue Versuche zur Bestimmung der Sauerstoffcapacität des Blutfarbstoffs (Hüfner-Konstante 1.34 ml O₂/g Hb).',
+    journal: 'Arch Anat Physiol (Physiol Abt). 1894:130–176.',
     doi: 'Historische Originalquelle der Hämoglobin-O₂-Bindungskapazität.',
   );
 
+  static const dijkhuizen1977 = SourceRef(
+    num: 12,
+    authors: 'Dijkhuizen P, Buursma A, Fongers TM, Gerding AM, Oeseburg B, Zijlstra WG.',
+    title: 'The oxygen binding capacity of human haemoglobin.',
+    journal: 'Pflügers Archiv. 1977;369(3):223–231.',
+    doi: 'doi: 10.1007/BF00582188  ·  Moderne Validierung der Hüfner-Konstante (β = 1,368 ml/g, n = 36).',
+  );
+
   static const barrettBoyes = SourceRef(
-    num: 10,
+    num: 13,
     authors: 'Barratt-Boyes BG, Wood EH.',
-    title: 'Cardiac output and related measurements and pressure values in the right heart and associated vessels.',
+    title: 'Cardiac output and related measurements and pressure values in the right heart and associated vessels, together with an analysis of the hemodynamic response to the inhalation of high oxygen mixtures in healthy subjects.',
     journal: 'Journal of Laboratory and Clinical Medicine. 1958;51(1):72–90.',
-    doi: 'Originalreferenz für Konversionsfaktor ×80 (Wood → dyn·s·cm⁻⁵).',
+    doi: 'PMID: 13502983  ·  Faktor 80 für SVR/PVR-Umrechnung in dyn·s·cm⁻⁵',
   );
 
   static const skimming = SourceRef(
-    num: 11,
+    num: 14,
     authors: 'Skimming JW, Cassin S, Nichols WW.',
-    title: 'Calculating Vascular Resistances.',
+    title: 'Calculating vascular resistances.',
     journal: 'Clinical Cardiology. 1997;20(9):805–808.',
     doi: 'doi: 10.1002/clc.4960200913 · PMID: 9294672',
   );
 
-  static const eactsKunst2024 = SourceRef(
-    num: 12,
-    authors: 'Kunst G, Gerber V, Milojevic M, et al; ESAIC Guidelines Task Force; EACTS, EACTAIC, EBCP Guidelines Committees.',
-    title: '2024 EACTS/EACTAIC/EBCP Guidelines on cardiopulmonary bypass in adult cardiac surgery.',
-    journal: 'British Journal of Anaesthesia. 2025;134(4):917–1008.',
-    doi: 'doi: 10.1016/j.bja.2024.10.018  ·  Standardwert Cardiac Index 2,4 l/min/m² (adulte CPB).',
-  );
-
-  static const hazinski = SourceRef(
-    num: 13,
-    authors: 'Hazinski MF.',
-    title: 'Nursing Care of the Critically Ill Child. 3rd Edition.',
-    journal: 'St. Louis: Elsevier; 2012. ISBN: 978-0-323-02040-4',
-    doi: 'Pädiatrische Blutvolumenwerte (ml/kg nach Altersgruppe).',
-  );
-
-  static const howie = SourceRef(
-    num: 14,
-    authors: 'Howie SR.',
-    title: 'Blood sample volumes in child health research: review of safe limits.',
-    journal: 'Bulletin of the World Health Organization. 2011;89(1):46–53.',
-    doi: 'doi: 10.2471/BLT.10.080010 · PMID: 21346931',
-  );
-
-  static const davies = SourceRef(
+  static const mellemgaardAstrup1960 = SourceRef(
     num: 15,
-    authors: 'Davies P, Robertson S, Hegde S, Greenwood R, Massey E, Davis P.',
-    title: 'Calculating the required transfusion volume in children.',
-    journal: 'Transfusion. 2007;47(2):212–216.',
-    doi: 'doi: 10.1111/j.1537-2995.2007.01091.x · PMID: 17302766',
+    authors: 'Mellemgaard K, Astrup P.',
+    title: 'The quantitative determination of surplus amounts of acid or base in the human body.',
+    journal: 'Scandinavian Journal of Clinical and Laboratory Investigation. 1960;12(2):187–199.',
+    doi: 'doi: 10.3109/00365516009062420  ·  Base Excess (BE) Konzept und NaBic-Berechnungsformel.',
   );
 
-  static const tschaut = SourceRef(
+  static const nahas1959 = SourceRef(
     num: 16,
-    authors: 'Tschaut RJ (Hrsg.).',
-    title: 'Extrakorporale Zirkulation in Theorie und Praxis.',
-    journal: '2. Auflage. Lengerich: Pabst Science Publishers; 2005. ISBN: 978-3-933151-29-2',
-    doi: 'Standardlehrbuch der Perfusionstechnik (Schlauchgrößen, Hypothermie-Stufentabelle, Perfusionsraten Kinder).',
+    authors: 'Nahas GG.',
+    title: 'Use of an organic carbon dioxide buffer in vivo.',
+    journal: 'Science. 1959;129(3346):782–783.',
+    doi: 'doi: 10.1126/science.129.3346.782  ·  TRIS-Puffer (Tris-Hydroxymethyl-Aminomethan).',
   );
 
-  static const larsen = SourceRef(
+  static const adrogueMadias2000 = SourceRef(
     num: 17,
-    authors: 'Larsen R.',
-    title: 'Anästhesie. 12. Auflage.',
-    journal: 'München: Urban & Fischer; 2022. ISBN: 978-3-437-22512-3',
-    doi: 'Elektrolyt- und Pufferberechnung (Natrium, Kalium, Calcium, NaBic, TRIS).',
-  );
-
-  static const finck = SourceRef(
-    num: 18,
-    authors: 'Finck C, et al.',
-    title: 'Extracorporeal Life Support.',
-    journal: 'Pediatric Surgery NaT, American Pediatric Surgical Association, 2025. Pediatric Surgery Library.',
-    doi: 'www.pedsurglibrary.com/apsa/view/Pediatric-Surgery-NaT/829025/all/Extracorporeal_Life_Support  ·  VA/VV-Kanülengrößen für pädiatrische ECMO.',
+    authors: 'Adrogué HJ, Madias NE.',
+    title: 'Hyponatremia.',
+    journal: 'New England Journal of Medicine. 2000;342(21):1581–1589.',
+    doi: 'doi: 10.1056/NEJM200005253422107  ·  Natrium-Defizit-Berechnungsformel.',
   );
 
   // ── Severinghaus – BGA temperature correction ─────────────────────────────
   static const severinghaus1979 = SourceRef(
-    num: 19,
+    num: 18,
     authors: 'Severinghaus JW.',
     title: 'Simple, accurate equations for human blood O₂ dissociation computations.',
     journal: 'Journal of Applied Physiology. 1979;46(3):599–602.',
@@ -844,7 +836,7 @@ class AppSources {
   );
 
   static const bradleySeveringhaus1956 = SourceRef(
-    num: 20,
+    num: 19,
     authors: 'Bradley AF, Severinghaus JW, Stupfel M.',
     title: 'Effect of temperature on PCO₂ and PO₂ of blood in vitro.',
     journal: 'Journal of Applied Physiology. 1956;9(2):201–204.',
@@ -852,7 +844,7 @@ class AppSources {
   );
 
   static const severinghaus1966 = SourceRef(
-    num: 21,
+    num: 20,
     authors: 'Severinghaus JW.',
     title: 'Blood gas calculator.',
     journal: 'Journal of Applied Physiology. 1966;21(3):1108–1116.',
@@ -860,27 +852,74 @@ class AppSources {
   );
 
   static const ashwood1983 = SourceRef(
-    num: 22,
+    num: 21,
     authors: 'Ashwood ER, Kost G, Kenny M.',
     title: 'Temperature correction of blood-gas and pH measurements.',
     journal: 'Clinical Chemistry. 1983;29(11):1877–1885.',
     doi: 'PMID: 6354511  ·  Kritische Überprüfung aller Temperaturkorrektformeln für pH, PCO₂ und PO₂',
   );
 
-  // ── Heart Anatomy images ──────────────────────────────────────────────────
-  static const heartAnatomyWikipedia = SourceRef(
+  static const gocol2021 = SourceRef(
+    num: 22,
+    authors: 'Gocoł R, Hudziak D, Bis J, Mendrala K, Morkisz Ł, Podsiadło P, Kosiński S, Piątek J, Darocha T.',
+    title: 'The Role of Deep Hypothermia in Cardiac Surgery.',
+    journal: 'International Journal of Environmental Research and Public Health. 2021;18(13):7061.',
+    doi: 'doi: 10.3390/ijerph18137061  ·  Vierstufige CPB-Hypothermie-Klassifikation (mild/mittel/tief/sehr tief).',
+  );
+
+  static const linderkamp1977 = SourceRef(
     num: 23,
-    authors: 'Wikimedia Commons contributors.',
-    title: 'Anatomy of the human heart (heart anterior, posterior and cross-section).',
-    journal: 'Wikimedia Commons. Licensed under CC BY 3.0 and CC0 1.0.',
-    doi: 'https://commons.wikimedia.org/wiki/Category:Anatomy_of_the_human_heart',
+    authors: 'Linderkamp O, Versmold HT, Riegel KP, Betke K.',
+    title: 'Estimation and prediction of blood volume in infants and children.',
+    journal: 'European Journal of Pediatrics. 1977;125(4):227–234.',
+    doi: 'doi: 10.1007/BF00493567  ·  PMID: 891567  ·  Pädiatrische Blutvolumen-Regressionsgleichungen.',
+  );
+
+  static const howie = SourceRef(
+    num: 24,
+    authors: 'Howie SR.',
+    title: 'Blood sample volumes in child health research: review of safe limits.',
+    journal: 'Bulletin of the World Health Organization. 2011;89(1):46–53.',
+    doi: 'doi: 10.2471/BLT.10.080010 · PMID: 21346931',
+  );
+
+  static const davies = SourceRef(
+    num: 25,
+    authors: 'Davies P, Robertson S, Hegde S, Greenwood R, Massey E, Davis P.',
+    title: 'Calculating the required transfusion volume in children.',
+    journal: 'Transfusion. 2007;47(2):212–216.',
+    doi: 'doi: 10.1111/j.1537-2995.2007.01091.x · PMID: 17302766',
+  );
+
+  static const ramakrishnan2023 = SourceRef(
+    num: 26,
+    authors: 'Ramakrishnan KV, Zurakowski D, Pearson GD, Pourmoghadam KK, Jonas RA, Sinha P.',
+    title: 'Cardiopulmonary bypass in neonates and infants: advantages of high flow high hematocrit bypass strategy — clinical practice review.',
+    journal: 'Translational Pediatrics. 2023;12(7):1483–1495.',
+    doi: 'doi: 10.21037/tp-23-141  ·  Pädiatrische Perfusionsraten (high-flow/high-hematocrit).',
+  );
+
+  static const oldeen2020 = SourceRef(
+    num: 27,
+    authors: 'Oldeen ME, Angona RE, Hodge A, Klein T.',
+    title: 'American Society of ExtraCorporeal Technology: Development of Standards and Guidelines for Pediatric and Congenital Perfusion Practice (2019).',
+    journal: 'Journal of ExtraCorporeal Technology. 2020;52(4):319–326.',
+    doi: 'doi: 10.1051/ject/202052319  ·  AmSECT-Leitlinie für pädiatrische und kongenitale Perfusion.',
+  );
+
+  static const finck = SourceRef(
+    num: 28,
+    authors: 'Finck C, et al.',
+    title: 'Extracorporeal Life Support.',
+    journal: 'Pediatric Surgery NaT, American Pediatric Surgical Association, 2025. Pediatric Surgery Library.',
+    doi: 'www.pedsurglibrary.com/apsa/view/Pediatric-Surgery-NaT/829025/all/Extracorporeal_Life_Support  ·  VA/VV-Kanülengrößen für pädiatrische ECMO.',
   );
 
   static const blausenMedical = SourceRef(
-    num: 24,
+    num: 29,
     authors: 'Blausen.com staff.',
     title: 'Medical gallery of Blausen Medical 2014.',
     journal: 'WikiJournal of Medicine. 2014;1(2):10. Licensed under CC BY 3.0.',
-    doi: 'doi: 10.15347/wjm/2014.010  ·  Coronary Vessels (Anterior & Posterior).',
+    doi: 'doi: 10.15347/wjm/2014.010  ·  Coronary Vessels (Anterior & Posterior) und Herzanatomie-Abbildungen.',
   );
 }

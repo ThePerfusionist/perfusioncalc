@@ -92,7 +92,9 @@ class ElectrolytesScreen extends StatelessWidget {
           ],
         ),
         SourceButton(refs: [
-          AppSources.larsen,
+          AppSources.mellemgaardAstrup1960,
+          AppSources.nahas1959,
+          AppSources.adrogueMadias2000,
         ]),
         const SizedBox(height: 16),
       ]),

@@ -83,9 +83,10 @@ class PediatricScreen extends StatelessWidget {
             ],
           ),
           SourceButton(refs: [
-            AppSources.tschaut,
+            AppSources.oldeen2020,
+            AppSources.ramakrishnan2023,
             AppSources.finck,
-            AppSources.hazinski,
+            AppSources.linderkamp1977,
             AppSources.howie,
             AppSources.davies,
           ]),

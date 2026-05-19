@@ -64,7 +64,6 @@ class HeartAnatomyScreen extends StatelessWidget {
 
           // ── Source ────────────────────────────────────────────────────────
           SourceButton(refs: [
-            AppSources.heartAnatomyWikipedia,
             AppSources.blausenMedical,
           ]),
           const SizedBox(height: 8),
