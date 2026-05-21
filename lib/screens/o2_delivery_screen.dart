@@ -19,6 +19,12 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
   _CoMode _mode = _CoMode.co;
   PatientData get pd => widget.patientData;
 
+  /// Lokaler Rebuild dieses Screens statt globalem MainScreen-Rebuild.
+  void _recalc() {
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
+
   void _switchMode(_CoMode mode) {
     setState(() {
       _mode = mode;
@@ -36,30 +42,30 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         _CoCiCard(
           mode: _mode, coValue: pd.hzv, ciValue: pd.cardiacIndex, bsaValue: pd.kof,
           onModeChanged: _switchMode,
-          onCoChanged: (v) { pd.hzv = v; pd.cardiacIndex = null; widget.onChanged(); },
-          onCiChanged: (v) { pd.cardiacIndex = v; pd.hzv = null; widget.onChanged(); },
+          onCoChanged: (v) { pd.hzv = v; pd.cardiacIndex = null; _recalc(); },
+          onCiChanged: (v) { pd.cardiacIndex = v; pd.hzv = null; _recalc(); },
         ),
         InputCard(label: t('o2_bsa'), unit: 'm\u00b2', value: pd.kof, step: 0.01,
             range: Ranges.bsa,
-            onChanged: (v) { pd.kof = v; widget.onChanged(); }),
+            onChanged: (v) { pd.kof = v; _recalc(); }),
         InputCard(label: 'PaO\u2082', unit: 'mmHg', value: pd.paO2,
             range: Ranges.paO2,
-            onChanged: (v) { pd.paO2 = v; widget.onChanged(); }),
+            onChanged: (v) { pd.paO2 = v; _recalc(); }),
         InputCard(label: 'SaO\u2082', unit: '%', value: pd.saO2,
             range: Ranges.saO2,
-            onChanged: (v) { pd.saO2 = v; widget.onChanged(); }),
+            onChanged: (v) { pd.saO2 = v; _recalc(); }),
         InputCard(label: t('o2_art_hb'), unit: 'g/dl', value: pd.artHb,
             range: Ranges.hb,
-            onChanged: (v) { pd.artHb = v; widget.onChanged(); }),
+            onChanged: (v) { pd.artHb = v; _recalc(); }),
         InputCard(label: 'PvO\u2082', unit: 'mmHg', value: pd.pvO2,
             range: Ranges.pvO2,
-            onChanged: (v) { pd.pvO2 = v; widget.onChanged(); }),
+            onChanged: (v) { pd.pvO2 = v; _recalc(); }),
         InputCard(label: 'SvO\u2082', unit: '%', value: pd.svO2,
             range: Ranges.svO2,
-            onChanged: (v) { pd.svO2 = v; widget.onChanged(); }),
+            onChanged: (v) { pd.svO2 = v; _recalc(); }),
         InputCard(label: t('o2_ven_hb'), unit: 'g/dl', value: pd.venHb,
             range: Ranges.hb,
-            onChanged: (v) { pd.venHb = v; widget.onChanged(); }),
+            onChanged: (v) { pd.venHb = v; _recalc(); }),
         // ── Berechnete Ergebnisse ─────────────────────────────────────────
         // CO/CI Handling: cardiacIndexEffective ist >0, wenn der Nutzer
         // entweder CO+BSA oder CI direkt eingegeben hat (siehe _CoCiCard).

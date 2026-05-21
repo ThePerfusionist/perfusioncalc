@@ -5,10 +5,21 @@ import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
 import '../utils/pdf_export.dart';
 
-class ResistancesScreen extends StatelessWidget {
+class ResistancesScreen extends StatefulWidget {
   final PatientData patientData;
   final VoidCallback onChanged;
   const ResistancesScreen({super.key, required this.patientData, required this.onChanged});
+  @override
+  State<ResistancesScreen> createState() => _ResistancesScreenState();
+}
+
+class _ResistancesScreenState extends State<ResistancesScreen> {
+  PatientData get patientData => widget.patientData;
+
+  void onChanged() {
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
 
   @override
   Widget build(BuildContext context) {

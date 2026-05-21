@@ -5,10 +5,21 @@ import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
 import '../utils/pdf_export.dart';
 
-class ZollChairreScreen extends StatelessWidget {
+class ZollChairreScreen extends StatefulWidget {
   final PatientData patientData;
   final VoidCallback onChanged;
   const ZollChairreScreen({super.key, required this.patientData, required this.onChanged});
+  @override
+  State<ZollChairreScreen> createState() => _ZollChairreScreenState();
+}
+
+class _ZollChairreScreenState extends State<ZollChairreScreen> {
+  PatientData get patientData => widget.patientData;
+
+  void onChanged() {
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
 
   static const _rows = [
     ['3/16"', '4.7625 mm', '14.3 Ch'],

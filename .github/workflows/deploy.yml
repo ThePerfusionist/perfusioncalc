@@ -73,7 +73,10 @@ jobs:
         run: flutter test || echo "No tests yet – skipping."
 
       - name: Build Flutter Web
-        run: flutter build web --release --base-href /
+        # --release aktiviert Minification, Tree-Shaking und Dead-Code-Elimination.
+        # --pwa-strategy offline-first lässt den Service Worker Assets sofort aus
+        # dem Cache bedienen (schnellerer Re-Open der installierten PWA).
+        run: flutter build web --release --base-href / --pwa-strategy offline-first
 
       - name: Deploy to GitHub Pages (gh-pages branch)
         uses: peaceiris/actions-gh-pages@v4

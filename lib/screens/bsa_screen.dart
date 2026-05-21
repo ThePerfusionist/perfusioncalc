@@ -19,6 +19,12 @@ class BSAScreen extends StatefulWidget {
 class _BSAScreenState extends State<BSAScreen> {
   bool _loaded = false;
 
+  /// Lokaler Rebuild dieses Screens statt globalem MainScreen-Rebuild.
+  void _recalc() {
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
+
   @override
   void initState() { super.initState(); _loadCI(); }
 
@@ -52,26 +58,26 @@ class _BSAScreenState extends State<BSAScreen> {
         const SizedBox(height: 8),
         InputCard(label: t('bsa_body_height'), unit: 'cm', value: pd.height,
             range: Ranges.height,
-            onChanged: (v) { pd.height = v; widget.onChanged(); }),
+            onChanged: (v) { pd.height = v; _recalc(); }),
         InputCard(label: t('bsa_body_weight'), unit: 'kg', value: pd.weight,
             range: Ranges.weight,
-            onChanged: (v) { pd.weight = v; widget.onChanged(); }),
+            onChanged: (v) { pd.weight = v; _recalc(); }),
         InputCard(label: t('bsa_current_hb'), unit: 'g/dl', value: pd.currentHb,
             range: Ranges.hb,
-            onChanged: (v) { pd.currentHb = v; widget.onChanged(); }),
+            onChanged: (v) { pd.currentHb = v; _recalc(); }),
         InputCard(label: t('bsa_current_hct'), unit: '%', value: pd.currentHct,
             range: Ranges.hct,
-            onChanged: (v) { pd.currentHct = v; widget.onChanged(); }),
+            onChanged: (v) { pd.currentHct = v; _recalc(); }),
         InputCard(label: t('bsa_priming_volume'), unit: 'ml', value: pd.primingVolume,
             range: Ranges.primingVolume,
-            step: 1, onChanged: (v) { pd.primingVolume = v; widget.onChanged(); }),
+            step: 1, onChanged: (v) { pd.primingVolume = v; _recalc(); }),
         _CIInputCard(
           value: pd.bsaCardiacIndex,
           onChanged: (v) {
             if (v != null && v > 0) {
               pd.bsaCardiacIndex = v;
               _saveCI(v);
-              widget.onChanged();
+              _recalc();
             }
           },
         ),

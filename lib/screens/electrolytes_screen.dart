@@ -5,10 +5,23 @@ import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
 import '../utils/pdf_export.dart';
 
-class ElectrolytesScreen extends StatelessWidget {
+class ElectrolytesScreen extends StatefulWidget {
   final PatientData patientData;
   final VoidCallback onChanged;
   const ElectrolytesScreen({super.key, required this.patientData, required this.onChanged});
+  @override
+  State<ElectrolytesScreen> createState() => _ElectrolytesScreenState();
+}
+
+class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
+  PatientData get patientData => widget.patientData;
+
+  /// Lokaler Rebuild: aktualisiert nur diesen Screen, nicht den ganzen
+  /// MainScreen. Anschließend wird der (No-Op-)Parent-Callback informiert.
+  void onChanged() {
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
 
   @override
   Widget build(BuildContext context) {

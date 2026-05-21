@@ -14,7 +14,7 @@ import 'screens/heart_anatomy_screen.dart';
 import 'models/patient_data.dart';
 import 'i18n/app_strings.dart';
 
-const kAppVersion = '0.1.9';
+const kAppVersion = '0.2.1';
 const _kDark = Color(0xFF1C1C1C);
 const _kGold = Color(0xFFFFA500);
 
@@ -71,7 +71,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   /// von Elektrolyten und Resistances (haemodynamische Folgegroessen). Danach
   /// paediatrische und schlauchbezogene Berechnungen, zum Schluss die reinen
   /// Referenz-/Anatomie-Tabs.
-  List<Map<String, dynamic>> _tabsList() => [
+  static const List<Map<String, dynamic>> _kTabs = [
     {'key': 'tab_bsa',          'icon': Icons.monitor_heart_outlined},
     {'key': 'tab_o2',           'icon': Icons.air},
     {'key': 'tab_hypothermia',  'icon': Icons.ac_unit},
@@ -89,17 +89,37 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 11, vsync: this);
-    _tabController.addListener(() => setState(() {}));
+    // WICHTIG für Performance: Der Listener darf NICHT bei jedem
+    // Animationsframe setState auslösen, sonst wird der gesamte Widget-Tree
+    // (AppBar, TabBar, alle 11 TabBarView-Children) 60x/Sekunde neu gebaut.
+    // Wir rebuilden nur, wenn sich der Ziel-Index tatsächlich ändert - das
+    // ist ausschließlich für die aktive Markierung im Drawer nötig.
+    _tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _showDisclaimerDialog());
   }
 
+  int _lastTabIndex = 0;
+  void _onTabChanged() {
+    final idx = _tabController.index;
+    if (idx != _lastTabIndex) {
+      _lastTabIndex = idx;
+      // Nur ein leichter Rebuild für die Drawer-Markierung; die TabBar selbst
+      // aktualisiert sich intern über den gemeinsamen Controller.
+      if (mounted) setState(() {});
+    }
+  }
+
   @override
-  void dispose() { _tabController.dispose(); super.dispose(); }
+  void dispose() { _tabController.removeListener(_onTabChanged); _tabController.dispose(); super.dispose(); }
 
   void _goToTab(int index) {
     Navigator.pop(context); // close drawer
     _tabController.animateTo(index);
   }
+
+  /// Bewusst leer: Screens aktualisieren ihre Ergebnisse selbst (lokales
+  /// setState im jeweiligen Screen-State). Siehe Kommentar am TabBarView.
+  void _noop() {}
 
   // ── Dialogs ────────────────────────────────────────────────────────────────
   void _showDisclaimerDialog() {
@@ -215,7 +235,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             child: Builder(
               builder: (context) {
                 // tabs einmal pro Build holen, damit nicht 11x neu evaluiert.
-                final tabs = _tabsList();
+                final tabs = _kTabs;
                 return ListView.builder(
                   padding: EdgeInsets.zero,
                   itemCount: tabs.length,
@@ -360,7 +380,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               unselectedLabelColor: Colors.grey,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               unselectedLabelStyle: const TextStyle(fontSize: 13),
-              tabs: _tabsList()
+              tabs: _kTabs
                   .map((tab) => Tab(text: t(tab['key'] as String)))
                   .toList(),
             ),
@@ -372,15 +392,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           controller: _tabController,
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            BSAScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            O2DeliveryScreen(patientData: _patientData, onChanged: () => setState(() {})),
+            // onChanged ist bewusst ein No-Op: Jeder Screen aktualisiert seine
+            // eigenen Ergebnisse über ein lokales setState. Ein globaler Rebuild
+            // des MainScreen (und damit aller 11 Tabs) ist nicht nötig und war
+            // die Hauptursache für das ruckelige Tippverhalten.
+            BSAScreen(patientData: _patientData, onChanged: _noop),
+            O2DeliveryScreen(patientData: _patientData, onChanged: _noop),
             HypothermiaScreen(),
-            ElectrolytesScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            ResistancesScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            PediatricScreen(patientData: _patientData, onChanged: () => setState(() {})),
+            ElectrolytesScreen(patientData: _patientData, onChanged: _noop),
+            ResistancesScreen(patientData: _patientData, onChanged: _noop),
+            PediatricScreen(patientData: _patientData, onChanged: _noop),
             FlowDrainageScreen(),
-            TubeVolumeScreen(patientData: _patientData, onChanged: () => setState(() {})),
-            ZollChairreScreen(patientData: _patientData, onChanged: () => setState(() {})),
+            TubeVolumeScreen(patientData: _patientData, onChanged: _noop),
+            ZollChairreScreen(patientData: _patientData, onChanged: _noop),
             ReferencePressureScreen(),
             HeartAnatomyScreen(),
           ],
