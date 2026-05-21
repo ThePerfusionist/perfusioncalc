@@ -25,7 +25,9 @@
 // v2: Umstellung auf WASM-Build (skwasm-Renderer) - alte CanvasKit-Caches
 //     muessen vollstaendig verworfen werden, damit kein Mix aus altem und
 //     neuem Renderer-Assets entsteht.
-const VERSION = 'pcalc-v2';
+// v3: Neue PWA-Icons (maskable mit Safe-Zone) + korrigiertes Manifest.
+//     Alte Icon-Caches verwerfen, damit das richtige App-Icon erscheint.
+const VERSION = 'pcalc-v3';
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
 // Nur Same-Origin-Requests cachen. Alles von externen Hosts
@@ -44,8 +46,40 @@ const NEVER_CACHE = [
 // skipWaiting sorgt dafuer, dass der neue SW sofort aktiv wird, ohne dass der
 // Nutzer alle Tabs schliessen muss.
 // =============================================================================
+// =============================================================================
+// Install: App-Shell vorab cachen, damit der erste Re-Open der installierten
+// PWA sofort flüssig startet (kein Warten auf Runtime-Caching). Nur stabile,
+// vorhersehbare Kern-Dateien werden vorgeladen; die hash-benannten Flutter-
+// Assets kommen weiterhin per Runtime-Caching dazu.
+// skipWaiting sorgt dafuer, dass der neue SW sofort aktiv wird.
+// =============================================================================
+const APP_SHELL = [
+  './',
+  './index.html',
+  './flutter_bootstrap.js',
+  './manifest.json?v=9',
+  './favicon.ico?v=9',
+  './icons/Icon-192.png?v=9',
+  './icons/Icon-512.png?v=9',
+  './icons/Icon-maskable-192.png?v=9',
+  './icons/Icon-maskable-512.png?v=9',
+  './apple-touch-icon.png?v=9',
+];
+
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    // addAll schlägt fehl, wenn auch nur eine Datei nicht lädt - daher
+    // einzeln und fehlertolerant cachen, damit ein fehlendes Icon nicht
+    // die ganze Installation blockiert.
+    await Promise.all(APP_SHELL.map(async (url) => {
+      try {
+        const resp = await fetch(url, { cache: 'reload' });
+        if (resp && resp.ok) await cache.put(url, resp);
+      } catch (_) { /* einzelne Datei fehlt - ignorieren */ }
+    }));
+    self.skipWaiting();
+  })());
 });
 
 // =============================================================================
@@ -105,9 +139,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Alle anderen Ressourcen (JS/WASM/PNG/etc.): Cache-First.
-  // Wenn im Cache: direkt liefern (auch offline). Sonst: aus Netzwerk holen
-  // und fuer naechstes Mal in den Cache schreiben.
+  // Statische, unkritische Assets (Bilder, Fonts): stale-while-revalidate.
+  // Liefert sofort aus dem Cache (schnellste gefühlte Performance) und
+  // aktualisiert die Datei parallel im Hintergrund für den nächsten Aufruf.
+  const isStaticAsset = /\.(png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf)$/i
+      .test(url.pathname);
+  if (isStaticAsset) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(request);
+      const networkFetch = fetch(request).then((fresh) => {
+        if (fresh && fresh.ok) cache.put(request, fresh.clone());
+        return fresh;
+      }).catch(() => null);
+      // Sofort aus Cache liefern wenn vorhanden, sonst auf Netzwerk warten.
+      return cached || (await networkFetch) || Response.error();
+    })());
+    return;
+  }
+
+  // Alle anderen Ressourcen (JS/WASM/etc.): Cache-First.
+  // Bewusst Cache-First für Engine-Assets, damit nie eine inkonsistente
+  // Mischung aus alter und neuer Engine-/App-Version entsteht. Updates
+  // kommen über die SW-VERSION (oben) sauber als Ganzes.
   event.respondWith((async () => {
     const cached = await caches.match(request);
     if (cached) return cached;
