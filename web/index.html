@@ -9,6 +9,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- ═══ Security Headers ═══ -->
+  <!--
+    CSP-Hinweise für den WASM/skwasm-Build:
+      - 'wasm-unsafe-eval' ist zwingend, damit der Browser das WebAssembly-
+        Modul (skwasm bzw. CanvasKit-Fallback) kompilieren darf.
+      - worker-src 'self' blob: erlaubt den skwasm-Render-Worker.
+      - child-src spiegelt worker-src für Browser, die worker-src (noch) nicht
+        unterstützen (z. B. ältere Safari) und auf child-src zurückfallen.
+      - Assets werden lokal ausgeliefert (--no-web-resources-cdn), daher ist
+        gstatic.com nur noch als Fallback-Quelle für CanvasKit gelistet.
+  -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com;
@@ -17,6 +27,7 @@
     font-src 'self' data:;
     connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com;
     worker-src 'self' blob:;
+    child-src 'self' blob:;
     object-src 'none';
     base-uri 'self';
     form-action 'none';

@@ -22,7 +22,10 @@
 
 // Bei jedem groesseren Release hochzaehlen, damit Client-Caches
 // vollstaendig invalidiert werden.
-const VERSION = 'pcalc-v1';
+// v2: Umstellung auf WASM-Build (skwasm-Renderer) - alte CanvasKit-Caches
+//     muessen vollstaendig verworfen werden, damit kein Mix aus altem und
+//     neuem Renderer-Assets entsteht.
+const VERSION = 'pcalc-v2';
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
 // Nur Same-Origin-Requests cachen. Alles von externen Hosts

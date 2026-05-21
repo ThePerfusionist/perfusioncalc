@@ -72,11 +72,20 @@ jobs:
         # Später: wenn wir Formel-Tests hinzufügen, werden die hier automatisch geprüft.
         run: flutter test || echo "No tests yet – skipping."
 
-      - name: Build Flutter Web
-        # --release aktiviert Minification, Tree-Shaking und Dead-Code-Elimination.
-        # --pwa-strategy offline-first lässt den Service Worker Assets sofort aus
-        # dem Cache bedienen (schnellerer Re-Open der installierten PWA).
-        run: flutter build web --release --base-href / --pwa-strategy offline-first
+      - name: Build Flutter Web (WASM / skwasm renderer)
+        # --wasm aktiviert den WebAssembly-Build: zur Laufzeit wählt Flutter den
+        # skwasm-Renderer (schnellerer Start + flüssigeres Frame-Rendering als
+        # CanvasKit) und fällt auf CanvasKit zurück, wenn der Browser kein
+        # WasmGC unterstützt (z. B. ältere iOS-Safari-Versionen). Auf GitHub
+        # Pages laufen wir single-threaded (keine COOP/COEP-Header möglich) -
+        # skwasm ist aber auch single-threaded spürbar schneller als CanvasKit.
+        # --no-web-resources-cdn: skwasm/CanvasKit-Assets werden lokal vom
+        # eigenen Origin (perfusioncalc.de) ausgeliefert statt von gstatic.com.
+        # Das vermeidet einen externen Roundtrip beim Start, hält die App
+        # vollständig offline-fähig (PWA) und vermeidet CSP-Probleme mit dem CDN.
+        # --release: Minification, Tree-Shaking, Dead-Code-Elimination.
+        # --pwa-strategy offline-first: SW bedient Assets sofort aus dem Cache.
+        run: flutter build web --wasm --release --no-web-resources-cdn --base-href / --pwa-strategy offline-first
 
       - name: Deploy to GitHub Pages (gh-pages branch)
         uses: peaceiris/actions-gh-pages@v4
