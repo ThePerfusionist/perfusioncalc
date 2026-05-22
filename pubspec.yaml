@@ -38,7 +38,9 @@ flutter:
   # index.html) is automatically copied to build/web/ by `flutter build web`.
   # It must NOT be listed here — these are web assets, not Flutter runtime assets.
   assets:
-    - assets/icon.png
+    # icon.png ist NICHT gelistet: es wird zur Laufzeit nicht verwendet
+    # (nur Quelle fuer die Launcher-/PWA-Icons) und wuerde sonst unnoetig
+    # 451 KB ins Web-Bundle packen.
     - assets/o2_chart.png
     - assets/finck_va.jpg
     - assets/finck_vv.jpg
