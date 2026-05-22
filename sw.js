@@ -27,8 +27,42 @@
 //     neuem Renderer-Assets entsteht.
 // v3: Neue PWA-Icons (maskable mit Safe-Zone) + korrigiertes Manifest.
 //     Alte Icon-Caches verwerfen, damit das richtige App-Icon erscheint.
-const VERSION = 'pcalc-v3';
+// v4: CSS-Splash + entschlacktes Bundle (icon.png entfernt) + komprimierte
+//     Assets. Cache neu aufbauen, damit der Splash sofort greift.
+// v5: Cross-Origin-Isolation (COOP/COEP) wird vom Service Worker injiziert,
+//     damit SharedArrayBuffer verfügbar wird und der skwasm-Renderer
+//     MULTI-THREADED läuft (Rendering auf eigenem Worker-Thread -> deutlich
+//     flüssigere Interaktion). Auf GitHub Pages sind diese Header serverseitig
+//     nicht setzbar, daher der SW-Weg ("coi-serviceworker"-Prinzip, hier
+//     direkt in den bestehenden SW integriert statt als zweiter Worker).
+const VERSION = 'pcalc-v5';
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
+
+// =============================================================================
+// Cross-Origin-Isolation Header-Injektion
+// =============================================================================
+// Fügt jeder Response die Header hinzu, die der Browser braucht, um
+// SharedArrayBuffer (und damit multi-threaded WASM) freizuschalten:
+//   - Cross-Origin-Opener-Policy: same-origin
+//   - Cross-Origin-Embedder-Policy: credentialless
+// "credentialless" wird gegenüber "require-corp" bevorzugt, weil es keine
+// CORP-Header auf jeder einzelnen Subresource erzwingt - robuster, falls doch
+// mal eine Ressource ohne CORP geladen wird (z.B. CanvasKit-CDN-Fallback).
+function withCoiHeaders(response) {
+  // Opaque/fehlerhafte Responses unverändert durchreichen (sonst Exception).
+  if (!response || response.status === 0) return response;
+  const headers = new Headers(response.headers);
+  headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
+  // Eigene Ressourcen als same-origin markieren, damit sie unter COEP geladen
+  // werden dürfen.
+  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 // Nur Same-Origin-Requests cachen. Alles von externen Hosts
 // (z.B. gstatic.com fuer CanvasKit) direkt aus dem Netzwerk laden.
@@ -41,11 +75,6 @@ const NEVER_CACHE = [
   // '/api/',
 ];
 
-// =============================================================================
-// Install: nichts Spezielles. Wir nutzen Runtime-Caching, kein Pre-Cache.
-// skipWaiting sorgt dafuer, dass der neue SW sofort aktiv wird, ohne dass der
-// Nutzer alle Tabs schliessen muss.
-// =============================================================================
 // =============================================================================
 // Install: App-Shell vorab cachen, damit der erste Re-Open der installierten
 // PWA sofort flüssig startet (kein Warten auf Runtime-Caching). Nur stabile,
@@ -126,13 +155,14 @@ self.addEventListener('fetch', (event) => {
         const fresh = await fetch(request);
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, fresh.clone());
-        return fresh;
+        // COI-Header injizieren -> aktiviert SharedArrayBuffer auf der Seite.
+        return withCoiHeaders(fresh);
       } catch (e) {
         const cached = await caches.match(request);
-        if (cached) return cached;
+        if (cached) return withCoiHeaders(cached);
         // Letzter Fallback: index.html aus dem Cache.
         const indexFallback = await caches.match('./');
-        if (indexFallback) return indexFallback;
+        if (indexFallback) return withCoiHeaders(indexFallback);
         throw e;
       }
     })());
@@ -153,7 +183,8 @@ self.addEventListener('fetch', (event) => {
         return fresh;
       }).catch(() => null);
       // Sofort aus Cache liefern wenn vorhanden, sonst auf Netzwerk warten.
-      return cached || (await networkFetch) || Response.error();
+      const resp = cached || (await networkFetch);
+      return resp ? withCoiHeaders(resp) : Response.error();
     })());
     return;
   }
@@ -164,7 +195,7 @@ self.addEventListener('fetch', (event) => {
   // kommen über die SW-VERSION (oben) sauber als Ganzes.
   event.respondWith((async () => {
     const cached = await caches.match(request);
-    if (cached) return cached;
+    if (cached) return withCoiHeaders(cached);
 
     try {
       const fresh = await fetch(request);
@@ -174,7 +205,7 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, fresh.clone());
       }
-      return fresh;
+      return withCoiHeaders(fresh);
     } catch (e) {
       // Offline und nicht im Cache -> Netzwerk-Fehler zum Browser durchreichen.
       throw e;

@@ -10,14 +10,16 @@
 
   <!-- ═══ Security Headers ═══ -->
   <!--
-    CSP-Hinweise für den WASM/skwasm-Build:
+    CSP-Hinweise für den WASM/skwasm-Build mit Cross-Origin-Isolation:
       - 'wasm-unsafe-eval' ist zwingend, damit der Browser das WebAssembly-
         Modul (skwasm bzw. CanvasKit-Fallback) kompilieren darf.
-      - worker-src 'self' blob: erlaubt den skwasm-Render-Worker.
+      - worker-src 'self' blob: erlaubt den skwasm-Render-Worker (Multi-Thread).
       - child-src spiegelt worker-src für Browser, die worker-src (noch) nicht
         unterstützen (z. B. ältere Safari) und auf child-src zurückfallen.
-      - Assets werden lokal ausgeliefert (--no-web-resources-cdn), daher ist
-        gstatic.com nur noch als Fallback-Quelle für CanvasKit gelistet.
+      - Assets werden lokal ausgeliefert (--no-web-resources-cdn); gstatic.com
+        bleibt nur als Fallback-Quelle für CanvasKit gelistet. Unter COEP
+        'credentialless' (vom Service Worker gesetzt) werden solche Cross-
+        Origin-Ressourcen ohne Credentials geladen - das funktioniert.
   -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
@@ -53,51 +55,142 @@
   <title>PerfusionCalc</title>
   <link rel="manifest" href="manifest.json?v=9">
 
-  <!--
-    ═══ Service Worker Registration (Offline-PWA) ═══
-    Registriert unseren eigenen sw.js. Damit ist die App:
-      - Offline nutzbar nach dem ersten Besuch
-      - Installierbar als PWA (Android: "Zum Startbildschirm hinzufuegen",
-        iOS Safari: Teilen-Knopf -> "Zum Home-Bildschirm", Desktop Chrome:
-        Install-Icon in der Adressleiste)
+  <!-- Bootstrap früh laden lassen (Browser darf vorab fetchen) -->
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
 
-    Hinweis zu Flutter's eigenem Service Worker:
-    Flutter's flutter_bootstrap.js registriert automatisch einen eigenen
-    Service Worker (flutter_service_worker.js), der allerdings deprecated
-    ist und sich selbst bei Aktivierung wieder abmeldet. Unser sw.js hat
-    einen anderen Dateinamen und Scope, stoert sich nicht daran.
+  <!--
+    ═══ Leichtgewichtiger CSS-Splash ═══
+    Reines HTML/CSS (kein JS, kein Bild-Decode-Overhead), erscheint sofort
+    beim Laden und überbrückt die Zeit, bis die WASM-Engine gestartet ist und
+    Flutter das erste Frame rendert. Verbessert die *gefühlte* Ladezeit
+    spürbar - der Nutzer sieht statt eines leeren Bildschirms sofort das
+    Branding. Flutter entfernt beim ersten Frame automatisch den Inhalt von
+    <body>, daher verschwindet der Splash ohne zusätzliches JS.
+  -->
+  <style>
+    #pc-splash {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #2C2C2C;
+      font-family: system-ui, -apple-system, Roboto, sans-serif;
+      transition: opacity 0.3s ease;
+    }
+    #pc-splash .pc-title {
+      color: #FFA500; font-size: 22px; font-weight: 600;
+      letter-spacing: 0.5px; margin-top: 18px;
+    }
+    #pc-splash .pc-spinner {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 3px solid rgba(255,165,0,0.25);
+      border-top-color: #FFA500;
+      animation: pc-spin 0.8s linear infinite;
+    }
+    @keyframes pc-spin { to { transform: rotate(360deg); } }
+  </style>
+
+
+  <!--
+    ═══ Service Worker Registration + Cross-Origin-Isolation (COI) ═══
+    Registriert unseren eigenen sw.js. Der SW macht die App offline-fähig,
+    installierbar als PWA UND injiziert die COOP/COEP-Header, die der Browser
+    braucht, um SharedArrayBuffer freizuschalten -> multi-threaded skwasm
+    (flüssigeres Rendering).
+
+    Timing-Problem: Beim allerersten Besuch kontrolliert der SW die Seite noch
+    nicht, die erste HTML-Antwort kommt also ohne COI-Header. Daher: sobald der
+    SW aktiv ist, aber die Seite (noch) nicht cross-origin-isoliert ist, laden
+    wir EINMALIG automatisch neu. Beim zweiten Laden liefert der SW die Header,
+    crossOriginIsolated === true, und Flutter startet multi-threaded.
+    Ein sessionStorage-Flag verhindert eine Endlos-Reload-Schleife (z.B. in
+    Browsern, die credentialless-COEP nicht unterstützen).
+
+    Hinweis zu Flutters eigenem Service Worker: flutter_bootstrap.js meldet
+    seinen deprecateten SW bei Aktivierung selbst wieder ab; unser sw.js hat
+    einen anderen Namen/Scope und stört sich nicht daran.
   -->
   <script>
-    if ('serviceWorker' in navigator) {
-      // Warten bis die Seite fertig geladen ist, damit SW-Installation
-      // das initiale Laden nicht verlangsamt.
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js', { scope: './' })
-          .then(function (reg) {
-            // Optional: Auf Updates lauschen. Wenn ein neuer SW bereit ist,
-            // koennten wir hier ein "Update verfuegbar"-Banner zeigen.
-            // Fuer jetzt: automatisch uebernehmen.
-            if (reg.waiting) {
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-            reg.addEventListener('updatefound', function () {
-              var newWorker = reg.installing;
-              if (!newWorker) return;
-              newWorker.addEventListener('statechange', function () {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                }
-              });
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+
+      var RELOAD_FLAG = 'pc-coi-reloaded';
+
+      navigator.serviceWorker.register('sw.js', { scope: './' })
+        .then(function (reg) {
+          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          reg.addEventListener('updatefound', function () {
+            var nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', function () {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                nw.postMessage({ type: 'SKIP_WAITING' });
+              }
             });
-          })
-          .catch(function (err) {
-            console.warn('Service Worker registration failed:', err);
           });
-      });
-    }
+
+          // Wenn die Seite noch nicht cross-origin-isoliert ist, aber jetzt
+          // ein SW die Kontrolle hat (oder gleich bekommt), einmalig neu laden,
+          // damit die COI-Header der zweiten Antwort greifen.
+          function maybeReload() {
+            if (window.crossOriginIsolated) return;            // schon isoliert
+            if (sessionStorage.getItem(RELOAD_FLAG)) return;   // schon versucht
+            if (!navigator.serviceWorker.controller) return;   // SW noch nicht aktiv
+            // Feature-Detection: Wenn der Browser SharedArrayBuffer grundsätzlich
+            // nicht kennt (z.B. ältere Safari), bringt die Isolation nichts -
+            // dann sparen wir uns den unnötigen Reload und laufen single-threaded.
+            if (typeof SharedArrayBuffer === 'undefined' &&
+                typeof self.SharedArrayBuffer === 'undefined') {
+              return;
+            }
+            sessionStorage.setItem(RELOAD_FLAG, '1');
+            window.location.reload();
+          }
+
+          if (navigator.serviceWorker.controller) {
+            maybeReload();
+          } else {
+            navigator.serviceWorker.addEventListener('controllerchange', maybeReload);
+          }
+        })
+        .catch(function (err) {
+          console.warn('Service Worker registration failed:', err);
+        });
+
+      // Aufräumen: wenn die Isolation erfolgreich ist, das Flag zurücksetzen,
+      // damit ein späterer Cache-Reset wieder einen Reload erlauben würde.
+      if (window.crossOriginIsolated) sessionStorage.removeItem(RELOAD_FLAG);
+    })();
   </script>
 </head>
 <body>
+  <!-- CSS-Splash: wird von Flutter beim ersten Frame automatisch ersetzt. -->
+  <div id="pc-splash">
+    <div class="pc-spinner"></div>
+    <div class="pc-title">PerfusionCalc</div>
+  </div>
+  <script>
+    // Entfernt den CSS-Splash zuverlässig, sobald Flutter sein erstes
+    // Render-Element (<flutter-view> / <flt-glass-pane>) in den DOM hängt.
+    // Versionsunabhängig über MutationObserver, mit Sicherheits-Timeout.
+    (function () {
+      function removeSplash() {
+        var s = document.getElementById('pc-splash');
+        if (!s) return;
+        s.style.opacity = '0';
+        setTimeout(function () { if (s && s.parentNode) s.parentNode.removeChild(s); }, 350);
+      }
+      var obs = new MutationObserver(function () {
+        if (document.querySelector('flutter-view, flt-glass-pane, flt-scene-host')) {
+          removeSplash();
+          obs.disconnect();
+        }
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+      // Fallback: spätestens nach 8 s entfernen, falls die Selektoren sich
+      // in einer künftigen Flutter-Version ändern.
+      setTimeout(removeSplash, 8000);
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
