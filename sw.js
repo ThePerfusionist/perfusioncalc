@@ -35,33 +35,28 @@
 //     flüssigere Interaktion). Auf GitHub Pages sind diese Header serverseitig
 //     nicht setzbar, daher der SW-Weg ("coi-serviceworker"-Prinzip, hier
 //     direkt in den bestehenden SW integriert statt als zweiter Worker).
-const VERSION = 'pcalc-v5';
+// v6: COOP/COEP WIEDER ENTFERNT. Ein Performance-Trace zeigte, dass die Header
+//     auf dem Zielgerät WebGL deaktivierten (webGLVersion -1) und CanvasKit
+//     dadurch auf CPU-Rendering zurückfiel -> langsamer als ohne. GPU-Rendering
+//     ist der größere Hebel. Diese Version verwirft die mit COI-Headern
+//     gecachten Responses aus v5.
+const VERSION = 'pcalc-v6';
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
 // =============================================================================
-// Cross-Origin-Isolation Header-Injektion
+// HINWEIS: Cross-Origin-Isolation (COOP/COEP) wurde wieder ENTFERNT.
 // =============================================================================
-// Fügt jeder Response die Header hinzu, die der Browser braucht, um
-// SharedArrayBuffer (und damit multi-threaded WASM) freizuschalten:
-//   - Cross-Origin-Opener-Policy: same-origin
-//   - Cross-Origin-Embedder-Policy: credentialless
-// "credentialless" wird gegenüber "require-corp" bevorzugt, weil es keine
-// CORP-Header auf jeder einzelnen Subresource erzwingt - robuster, falls doch
-// mal eine Ressource ohne CORP geladen wird (z.B. CanvasKit-CDN-Fallback).
-function withCoiHeaders(response) {
-  // Opaque/fehlerhafte Responses unverändert durchreichen (sonst Exception).
-  if (!response || response.status === 0) return response;
-  const headers = new Headers(response.headers);
-  headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
-  // Eigene Ressourcen als same-origin markieren, damit sie unter COEP geladen
-  // werden dürfen.
-  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+// Frühere Versionen (v5) injizierten COOP/COEP-Header, um SharedArrayBuffer
+// und multi-threaded skwasm freizuschalten. Ein Performance-Trace hat aber
+// gezeigt, dass diese Header auf dem Zielgerät die Erstellung des WebGL-
+// Kontexts verhindert haben ("webGLVersion is -1"), wodurch CanvasKit auf
+// reines CPU-Rendering zurückfiel - das war LANGSAMER als vorher.
+//
+// GPU-Rendering (CanvasKit über WebGL) ist auf Smartphones der mit Abstand
+// größere Performance-Hebel als Multi-Threading. Daher reichen wir Responses
+// jetzt UNVERÄNDERT durch (kein COOP/COEP mehr).
+function passThrough(response) {
+  return response;
 }
 
 // Nur Same-Origin-Requests cachen. Alles von externen Hosts
@@ -155,14 +150,13 @@ self.addEventListener('fetch', (event) => {
         const fresh = await fetch(request);
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, fresh.clone());
-        // COI-Header injizieren -> aktiviert SharedArrayBuffer auf der Seite.
-        return withCoiHeaders(fresh);
+        return passThrough(fresh);
       } catch (e) {
         const cached = await caches.match(request);
-        if (cached) return withCoiHeaders(cached);
+        if (cached) return passThrough(cached);
         // Letzter Fallback: index.html aus dem Cache.
         const indexFallback = await caches.match('./');
-        if (indexFallback) return withCoiHeaders(indexFallback);
+        if (indexFallback) return passThrough(indexFallback);
         throw e;
       }
     })());
@@ -184,7 +178,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => null);
       // Sofort aus Cache liefern wenn vorhanden, sonst auf Netzwerk warten.
       const resp = cached || (await networkFetch);
-      return resp ? withCoiHeaders(resp) : Response.error();
+      return resp ? passThrough(resp) : Response.error();
     })());
     return;
   }
@@ -195,7 +189,7 @@ self.addEventListener('fetch', (event) => {
   // kommen über die SW-VERSION (oben) sauber als Ganzes.
   event.respondWith((async () => {
     const cached = await caches.match(request);
-    if (cached) return withCoiHeaders(cached);
+    if (cached) return passThrough(cached);
 
     try {
       const fresh = await fetch(request);
@@ -205,7 +199,7 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, fresh.clone());
       }
-      return withCoiHeaders(fresh);
+      return passThrough(fresh);
     } catch (e) {
       // Offline und nicht im Cache -> Netzwerk-Fehler zum Browser durchreichen.
       throw e;

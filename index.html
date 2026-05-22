@@ -10,16 +10,21 @@
 
   <!-- ═══ Security Headers ═══ -->
   <!--
-    CSP-Hinweise für den WASM/skwasm-Build mit Cross-Origin-Isolation:
+    CSP-Hinweise für den WASM-Build:
       - 'wasm-unsafe-eval' ist zwingend, damit der Browser das WebAssembly-
         Modul (skwasm bzw. CanvasKit-Fallback) kompilieren darf.
-      - worker-src 'self' blob: erlaubt den skwasm-Render-Worker (Multi-Thread).
+      - worker-src 'self' blob: erlaubt den skwasm-Render-Worker.
       - child-src spiegelt worker-src für Browser, die worker-src (noch) nicht
         unterstützen (z. B. ältere Safari) und auf child-src zurückfallen.
       - Assets werden lokal ausgeliefert (--no-web-resources-cdn); gstatic.com
-        bleibt nur als Fallback-Quelle für CanvasKit gelistet. Unter COEP
-        'credentialless' (vom Service Worker gesetzt) werden solche Cross-
-        Origin-Ressourcen ohne Credentials geladen - das funktioniert.
+        bleibt nur als Fallback-Quelle für CanvasKit gelistet.
+  -->
+  <!--
+    Hinweis: 'frame-ancestors' und 'X-Frame-Options' wurden entfernt - beide
+    wirken NUR als echte HTTP-Header, nicht im <meta>-Tag (der Browser ignoriert
+    sie dort und gibt eine Konsolenwarnung aus). GitHub Pages kann keine HTTP-
+    Header setzen, daher sind sie hier wirkungslos. Clickjacking-Schutz müsste,
+    falls nötig, über einen Reverse-Proxy/CDN als echte Header erfolgen.
   -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
@@ -33,9 +38,7 @@
     object-src 'none';
     base-uri 'self';
     form-action 'none';
-    frame-ancestors 'none';
   ">
-  <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()">
@@ -47,6 +50,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=9">
 
   <!-- iOS meta tags -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="PerfusionCalc">
@@ -91,19 +95,14 @@
 
 
   <!--
-    ═══ Service Worker Registration + Cross-Origin-Isolation (COI) ═══
-    Registriert unseren eigenen sw.js. Der SW macht die App offline-fähig,
-    installierbar als PWA UND injiziert die COOP/COEP-Header, die der Browser
-    braucht, um SharedArrayBuffer freizuschalten -> multi-threaded skwasm
-    (flüssigeres Rendering).
+    ═══ Service Worker Registration (Offline-PWA) ═══
+    Registriert unseren eigenen sw.js. Der SW macht die App offline-fähig und
+    als PWA installierbar (App-Shell-Precache + stale-while-revalidate).
 
-    Timing-Problem: Beim allerersten Besuch kontrolliert der SW die Seite noch
-    nicht, die erste HTML-Antwort kommt also ohne COI-Header. Daher: sobald der
-    SW aktiv ist, aber die Seite (noch) nicht cross-origin-isoliert ist, laden
-    wir EINMALIG automatisch neu. Beim zweiten Laden liefert der SW die Header,
-    crossOriginIsolated === true, und Flutter startet multi-threaded.
-    Ein sessionStorage-Flag verhindert eine Endlos-Reload-Schleife (z.B. in
-    Browsern, die credentialless-COEP nicht unterstützen).
+    HINWEIS: Die früher hier vorhandene Cross-Origin-Isolation (COOP/COEP +
+    automatischer Reload) wurde entfernt. Ein Performance-Trace zeigte, dass die
+    COI-Header WebGL deaktivierten und CanvasKit dadurch auf langsames CPU-
+    Rendering zurückfiel. GPU-Rendering ist auf Smartphones der größere Hebel.
 
     Hinweis zu Flutters eigenem Service Worker: flutter_bootstrap.js meldet
     seinen deprecateten SW bei Aktivierung selbst wieder ab; unser sw.js hat
@@ -112,53 +111,24 @@
   <script>
     (function () {
       if (!('serviceWorker' in navigator)) return;
-
-      var RELOAD_FLAG = 'pc-coi-reloaded';
-
-      navigator.serviceWorker.register('sw.js', { scope: './' })
-        .then(function (reg) {
-          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          reg.addEventListener('updatefound', function () {
-            var nw = reg.installing;
-            if (!nw) return;
-            nw.addEventListener('statechange', function () {
-              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                nw.postMessage({ type: 'SKIP_WAITING' });
-              }
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js', { scope: './' })
+          .then(function (reg) {
+            if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            reg.addEventListener('updatefound', function () {
+              var nw = reg.installing;
+              if (!nw) return;
+              nw.addEventListener('statechange', function () {
+                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                  nw.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
             });
+          })
+          .catch(function (err) {
+            console.warn('Service Worker registration failed:', err);
           });
-
-          // Wenn die Seite noch nicht cross-origin-isoliert ist, aber jetzt
-          // ein SW die Kontrolle hat (oder gleich bekommt), einmalig neu laden,
-          // damit die COI-Header der zweiten Antwort greifen.
-          function maybeReload() {
-            if (window.crossOriginIsolated) return;            // schon isoliert
-            if (sessionStorage.getItem(RELOAD_FLAG)) return;   // schon versucht
-            if (!navigator.serviceWorker.controller) return;   // SW noch nicht aktiv
-            // Feature-Detection: Wenn der Browser SharedArrayBuffer grundsätzlich
-            // nicht kennt (z.B. ältere Safari), bringt die Isolation nichts -
-            // dann sparen wir uns den unnötigen Reload und laufen single-threaded.
-            if (typeof SharedArrayBuffer === 'undefined' &&
-                typeof self.SharedArrayBuffer === 'undefined') {
-              return;
-            }
-            sessionStorage.setItem(RELOAD_FLAG, '1');
-            window.location.reload();
-          }
-
-          if (navigator.serviceWorker.controller) {
-            maybeReload();
-          } else {
-            navigator.serviceWorker.addEventListener('controllerchange', maybeReload);
-          }
-        })
-        .catch(function (err) {
-          console.warn('Service Worker registration failed:', err);
-        });
-
-      // Aufräumen: wenn die Isolation erfolgreich ist, das Flag zurücksetzen,
-      // damit ein späterer Cache-Reset wieder einen Reload erlauben würde.
-      if (window.crossOriginIsolated) sessionStorage.removeItem(RELOAD_FLAG);
+      });
     })();
   </script>
 </head>
