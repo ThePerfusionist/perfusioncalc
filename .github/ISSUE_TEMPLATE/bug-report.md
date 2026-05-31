@@ -25,19 +25,19 @@ _Replace this placeholder with a meaningful and precise description of the bug._
 
 <!-- If applicable, add screenshots, logs to help explain your problem. -->
 
-### Version of SearXNG
+### Version of PerfusionCalc
 
 <!-- Commit number if you are using on master branch and stipulate if you forked
-     SearXNG -->
+     PerfusionCalc -->
 
-<!-- Look at the bottom of the SearXNG page and check for the version after
-     "Powered by SearXNG" If you are using a forked version of SearXNG include a
+<!-- Look at the bottom of the PerfusionCalc page and check for the version after
+     "Powered by PerfusionCalc" If you are using a forked version of PerfusionCalc include a
      link to the fork source code. -->
 
-### How did you install SearXNG?
+### How did you install PerfusionCalc?
 
-<!-- Did you install SearXNG using the official documentation or using
-     searxng-docker? -->
+<!-- Did you install PerfusionCalc using the official documentation or using
+     PerfusionCalc-docker? -->
 
 ### Additional context
 
