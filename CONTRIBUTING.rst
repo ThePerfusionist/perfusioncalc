@@ -8,7 +8,7 @@ Please follow the provided PR template when writing a description for your
 changes.
 
 Do not take criticism personally. When you get feedback, it is about your work,
-not your character or personality. Keep in mind we all want to make SearXNG
+not your character or personality. Keep in mind we all want to make PerfusionCalc
 better.
 
 When something is not clear, please ask questions to clear things up.
