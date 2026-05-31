@@ -233,6 +233,12 @@ work fully offline.
 
 ---
 
+### 🤖 Android – Download/Update from Releases
+
+1. Go to **[Releases](https://github.com/ThePerfusionist/perfusioncalc/releases)**
+2. Download the **[latest build](https://github.com/ThePerfusionist/perfusioncalc/releases/latest)**
+3. Install the `.apk` on your android device
+
 ### 🤖 Android – Build APK from Source
 
 This guide walks you through building your own PerfusionCalc APK from source — no
