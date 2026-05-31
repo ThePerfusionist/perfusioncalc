@@ -1,6 +1,6 @@
 ---
 name: "Feature request"
-about: "Request a new feature in SearXNG"
+about: "Request a new feature in PerfusionCalc"
 labels: ["new feature"]
 type: "feature"
 ---
