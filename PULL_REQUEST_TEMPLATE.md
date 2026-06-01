@@ -25,7 +25,7 @@ Closes: #234
      that are clearly AI (slop) will be blocked for all future contributions.
      -->
 
-[AI Policy]: https://github.com/ThePerfusionist/perfusioncalc/blob/master/AI_POLICY.rst
+[AI Policy]: https://github.com/ThePerfusionist/perfusioncalc/blob/main/AI_POLICY.rst
 
 - [ ] **I hereby confirm that this PR conforms with the [AI Policy].**
 

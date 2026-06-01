@@ -50,4 +50,4 @@ rules in this project are:
 AI Policy
 ~~~~~~~~~
 
-For our policy on the use of AI tools, please read `AI Policy`_.
+For our policy on the use of AI tools, please read `AI Policy <https://github.com/ThePerfusionist/perfusioncalc/blob/main/AI_POLICY.rst>`_.
