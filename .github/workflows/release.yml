@@ -85,7 +85,15 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Keystore-Secret gefunden – release-signing wird konfiguriert."
-            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            # Zeilenumbrüche und Leerzeichen entfernen, die beim Einfügen
+            # ins GitHub-Secret mitgenommen werden können, dann dekodieren.
+            echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > android/app/release.keystore
+            # Prüfen, ob die Keystore-Datei valide ist (>0 Bytes)
+            if [ ! -s android/app/release.keystore ]; then
+              echo "FEHLER: Keystore-Datei ist leer – KEYSTORE_BASE64 prüfen."
+              exit 1
+            fi
+            echo "Keystore dekodiert ($(wc -c < android/app/release.keystore) Bytes)."
             cat > android/key.properties << EOF
           storePassword=${STORE_PASSWORD}
           keyPassword=${KEY_PASSWORD}
