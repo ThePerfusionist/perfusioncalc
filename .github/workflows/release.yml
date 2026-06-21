@@ -132,13 +132,15 @@ jobs:
           body: |
             ## Download
 
-            | Datei | Beschreibung |
+            | File | Description |
             |-------|-------------|
-            | `PerfusionCalc-${{ env.VERSION }}.apk` | Android-App (direkt installierbar) |
+            | `PerfusionCalc-${{ env.VERSION }}.apk` | Android-App (direct install) |
 
             ### Installation
-            1. APK herunterladen
-            2. Auf dem Android-Gerät: **Einstellungen → Sicherheit → Unbekannte Quellen** aktivieren
-            3. APK öffnen und installieren
+            1. APK download
+            2. At the Android-Device: **Settings → Security → Unkown Sources** activate
+            3. Open APK and install
 
-            > **Hinweis:** Nur zu Ausbildungszwecken. Keine klinische Verwendung.
+            > **⚠️ Disclaimer** This application is intended only for educational and personal use. 
+            >It is not validated for clinical use and must not be used for medical diagnosis, treatment decisions, or patient management. 
+            >No guarantee of accuracy. Always verify results with primary sources and qualified professionals.

@@ -494,6 +494,8 @@ PerfusionCalc only accepts calculations with verifiable, citable origins.
 
 ## 📄 License
 
+Copyright (C) 2026 ThePerfusionist
+
 This project is licensed under the **GNU General Public License v3.0**.
 See the [LICENSE](LICENSE) file for details.
 
