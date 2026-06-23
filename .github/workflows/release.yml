@@ -4,13 +4,14 @@
 #   git tag -a v0.2.1 -m "Release v0.2.1"
 #   git push origin v0.2.1
 #
-# ERGEBNIS: GitHub-Release mit APK als Download-Asset.
-#   Dateiname: PerfusionCalc-v0.2.1.apk
-#   Release-Notes: automatisch aus Commits seit dem letzten Tag.
+# ERGEBNIS: GitHub-Release mit APK (Direktinstall) UND AAB (Play Store) als Assets.
+#   APK-Dateiname:  PerfusionCalc-v0.2.1.apk
+#   AAB-Dateiname:  PerfusionCalc-v0.2.1.aab
+#   Release-Notes:  automatisch aus Commits seit dem letzten Tag.
 #
-# SIGNIERUNG (optional):
-#   Ohne Secrets → APK wird debug-signed (installierbar, kein Play Store).
-#   Mit Secrets  → APK wird release-signed (Play Store tauglich).
+# SIGNIERUNG:
+#   Ohne Secrets → APK/AAB wird debug-signed (nicht Play-Store-tauglich).
+#   Mit Secrets  → APK/AAB wird release-signed (Play Store tauglich).
 #   Secrets im Repo unter Settings → Secrets and variables → Actions anlegen:
 #     KEYSTORE_BASE64   – base64-kodierter JKS-Keystore
 #                         (openssl base64 -in release.keystore | tr -d '\n')
@@ -33,7 +34,7 @@ env:
 
 jobs:
   build-and-release:
-    name: Build APK & Create Release
+    name: Build APK + AAB & Create Release
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -85,10 +86,7 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Keystore-Secret gefunden – release-signing wird konfiguriert."
-            # Zeilenumbrüche und Leerzeichen entfernen, die beim Einfügen
-            # ins GitHub-Secret mitgenommen werden können, dann dekodieren.
             echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > android/app/release.keystore
-            # Prüfen, ob die Keystore-Datei valide ist (>0 Bytes)
             if [ ! -s android/app/release.keystore ]; then
               echo "FEHLER: Keystore-Datei ist leer – KEYSTORE_BASE64 prüfen."
               exit 1
@@ -102,45 +100,51 @@ jobs:
           EOF
             echo "key.properties geschrieben."
           else
-            echo "Kein KEYSTORE_BASE64-Secret gefunden – APK wird debug-signed."
+            echo "Kein KEYSTORE_BASE64-Secret gefunden – APK/AAB wird debug-signed."
           fi
 
-      # ── 6. APK bauen ──────────────────────────────────────────────────
+      # ── 6. APK bauen (für Direktinstall / Sideloading) ────────────────
       - name: Build release APK
         run: flutter build apk --release
 
-      # ── 7. APK umbenennen (Tag-Version in Dateinamen) ─────────────────
-      - name: Rename APK with version
+      # ── 7. AAB bauen (für Google Play Store) ──────────────────────────
+      - name: Build release AAB
+        run: flutter build appbundle --release
+
+      # ── 8. Artefakte umbenennen (Tag-Version in Dateinamen) ───────────
+      - name: Rename artifacts with version
         run: |
           VERSION="${{ github.ref_name }}"
           cp build/app/outputs/flutter-apk/app-release.apk \
              "PerfusionCalc-${VERSION}.apk"
+          cp build/app/outputs/bundle/release/app-release.aab \
+             "PerfusionCalc-${VERSION}.aab"
           echo "APK_PATH=PerfusionCalc-${VERSION}.apk" >> $GITHUB_ENV
+          echo "AAB_PATH=PerfusionCalc-${VERSION}.aab" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      # ── 8. GitHub-Release erstellen + APK hochladen ───────────────────
+      # ── 9. GitHub-Release erstellen + APK & AAB hochladen ─────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: "PerfusionCalc ${{ env.VERSION }}"
-          # Automatischer Changelog aus Commits seit dem letzten Tag.
-          # Für angepasste Release-Notes: draft: true setzen und manuell
-          # bearbeiten, bevor der Release veröffentlicht wird.
           generate_release_notes: true
-          files: ${{ env.APK_PATH }}
-          # Tag-Nachricht (aus `git tag -a ... -m "..."`) als Intro.
+          files: |
+            ${{ env.APK_PATH }}
+            ${{ env.AAB_PATH }}
           body: |
             ## Download
 
             | File | Description |
             |-------|-------------|
-            | `PerfusionCalc-${{ env.VERSION }}.apk` | Android-App (direct install) |
+            | `PerfusionCalc-${{ env.VERSION }}.apk` | Android-App (Direktinstall / Sideloading) |
+            | `PerfusionCalc-${{ env.VERSION }}.aab` | Android App Bundle (Google Play Store Upload) |
 
             ### Installation
             1. APK download
             2. At the Android-Device: **Settings → Security → Unkown Sources** activate
             3. Open APK and install
 
-            > **⚠️ Disclaimer** This application is intended only for educational and personal use. 
-            >It is not validated for clinical use and must not be used for medical diagnosis, treatment decisions, or patient management. 
-            >No guarantee of accuracy. Always verify results with primary sources and qualified professionals.
+            > **⚠️ Disclaimer** This application is intended only for educational and personal use.
+            > It is not validated for clinical use and must not be used for medical diagnosis, treatment decisions, or patient management.
+            > No guarantee of accuracy. Always verify results with primary sources and qualified professionals.
