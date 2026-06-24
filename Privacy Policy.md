@@ -1,0 +1,1 @@
+Privacy is my policy: I will not, under any circumstances whatsoever, give out or sell privacy sensitive information to anyone, unless required by law.
