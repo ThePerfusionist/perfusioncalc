@@ -1,4 +1,4 @@
-package com.example.perfusioncalc
+package com.perfusioncalc
 
 import io.flutter.embedding.android.FlutterActivity
 
