@@ -2,12 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
+import '../theme/app_theme.dart';
 import '../utils/pdf_export.dart';
 
-const kCardColor  = Color(0xFF1C1C1C);
-const kGold       = Color(0xFFFFA500);
-const kBg         = Color(0xFF2C2C2C);
-const kBtnGrey    = Color(0xFF4A4A4A); // +/- button background
+// ── Theme-abhängige Farb-Tokens ─────────────────────────────────────────────
+// Getter statt const: lesen live ThemeNotifier.instance.isDark, damit alle
+// bestehenden Aufrufstellen (color: kCardColor, color: kBg, ...) ohne
+// Syntaxänderung theme-aware werden - ein Rebuild wird bereits über den
+// AnimatedBuilder in main.dart ausgelöst, der auf ThemeNotifier hört.
+//
+// kGold bleibt bewusst eine ECHTE Konstante: die Akzentfarbe soll in beiden
+// Themes identisch bleiben (Wiedererkennungswert des Markenlooks).
+const kGold = Color(0xFFFFA500);
+
+Color get kCardColor => ThemeNotifier.instance.isDark ? const Color(0xFF1C1C1C) : const Color(0xFFFFFFFF);
+Color get kBg        => ThemeNotifier.instance.isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF1F1F1);
+Color get kBtnGrey   => ThemeNotifier.instance.isDark ? const Color(0xFF4A4A4A) : const Color(0xFFE2E2E2); // +/- button background
+Color get kLetterbox => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFE4E4E4); // Seitenflächen auf breiten Screens
+
+// Text-/Trenner-Tokens: ersetzen die früher direkt verwendeten
+// Colors.white*-Werte, die nur im Dark Theme lesbar waren. Die Abstufung
+// (voll deckend -> stark transparent) bleibt erhalten, nur die Basisfarbe
+// wechselt zwischen Weiß (dark) und Schwarz-Anthrazit (light).
+Color get kText          => ThemeNotifier.instance.isDark ? Colors.white   : const Color(0xFF1A1A1A);
+Color get kTextSecondary => ThemeNotifier.instance.isDark ? Colors.white70 : const Color(0xFF454545);
+Color get kTextTertiary  => ThemeNotifier.instance.isDark ? Colors.white60 : const Color(0xFF5C5C5C);
+Color get kTextMuted     => ThemeNotifier.instance.isDark ? Colors.white54 : const Color(0xFF6E6E6E);
+Color get kTextFaint     => ThemeNotifier.instance.isDark ? Colors.white38 : const Color(0xFF8A8A8A);
+Color get kTextGhost2    => ThemeNotifier.instance.isDark ? Colors.white30 : const Color(0xFF9E9E9E);
+Color get kTextGhost     => ThemeNotifier.instance.isDark ? Colors.white24 : const Color(0xFFB0B0B0);
+Color get kDivider       => ThemeNotifier.instance.isDark ? Colors.white12 : const Color(0xFFDDDDDD);
+Color get kSurfaceWash   => ThemeNotifier.instance.isDark ? Colors.white10 : const Color(0xFFE7E7E7);
+Color get kLink          => ThemeNotifier.instance.isDark ? const Color(0xFF60A0E0) : const Color(0xFF1D5C99); // DOI-Links
+
+// Tabellen-Chrome (Header-/Zeilenstreifen-Hintergrund), bisher als
+// magische Hex-Werte in fast jedem Tab-Screen dupliziert.
+Color get kTableHeaderBg => ThemeNotifier.instance.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEDEDED);
+Color get kRowStripeA    => ThemeNotifier.instance.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAFA);
+Color get kRowStripeB    => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
 
 class InputCard extends StatefulWidget {
   final String label;
@@ -120,7 +152,7 @@ class _InputCardState extends State<InputCard> {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             // Label + optionales Warn-Icon mit Tooltip.
             Row(children: [
-              Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+              Text(widget.label, style:  TextStyle(color: kText, fontSize: 14)),
               if (outOfRange) ...[
                 const SizedBox(width: 6),
                 Tooltip(
@@ -132,7 +164,7 @@ class _InputCardState extends State<InputCard> {
                 ),
               ],
             ]),
-            Text(widget.unit,  style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(widget.unit,  style:  TextStyle(color: kTextSecondary, fontSize: 13)),
           ]),
           const SizedBox(height: 4),
           Row(children: [
@@ -143,7 +175,7 @@ class _InputCardState extends State<InputCard> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: outOfRange ? warnColor : Colors.white70,
+                  color: outOfRange ? warnColor : kTextSecondary,
                   fontSize: 22,
                 ),
                 // Input validation: max 10 chars, only digits/decimals/minus
@@ -156,7 +188,7 @@ class _InputCardState extends State<InputCard> {
                   counterText: '', // hide the "x/10" counter
                   border: InputBorder.none,
                   hintText: t('enter_value'),
-                  hintStyle: const TextStyle(color: Colors.white30, fontSize: 18),
+                  hintStyle:  TextStyle(color: kTextGhost2, fontSize: 18),
                 ),
                 onTap: () => setState(() => _editing = true),
                 onChanged: (s) => widget.onChanged(_safeParse(s)),
@@ -182,8 +214,8 @@ class _InputCardState extends State<InputCard> {
     onTap: onTap,
     child: Container(
       width: 36, height: 36,
-      decoration: const BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
-      child: Icon(icon, color: Colors.white, size: 20),
+      decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
+      child: Icon(icon, color: kText, size: 20),
     ),
   );
 }
@@ -224,24 +256,24 @@ class ResultCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+              Text(label, style:  TextStyle(color: kText, fontSize: 14)),
               if (rangeHint != null && !hasMissing)
-                Text(rangeHint!, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                Text(rangeHint!, style:  TextStyle(color: kTextMuted, fontSize: 11)),
               if (hasMissing) ...[
                 const SizedBox(height: 2),
                 Text(
                   '${t('missing_inputs_hint')}${missingInputs.join(', ')}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
+                  style:  TextStyle(color: kTextFaint, fontSize: 11, fontStyle: FontStyle.italic),
                 ),
               ],
             ])),
             const SizedBox(width: 12),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(unit,  style: TextStyle(color: hasMissing ? Colors.white24 : Colors.white70, fontSize: 12)),
+              Text(unit,  style: TextStyle(color: hasMissing ? kTextGhost : kTextSecondary, fontSize: 12)),
               Text(
                 hasMissing ? '—' : value.toStringAsFixed(decimals),
                 style: TextStyle(
-                  color: hasMissing ? Colors.white38 : kGold,
+                  color: hasMissing ? kTextFaint : kGold,
                   fontSize: 24,
                   fontWeight: FontWeight.w500,
                 ),
@@ -262,7 +294,7 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
     child: Text(title,
-        style: const TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600)),
+        style:  TextStyle(color: kTextMuted, fontSize: 13, fontWeight: FontWeight.w600)),
   );
 }
 
@@ -284,23 +316,23 @@ class DataTable2 extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: Text(title!,
-                style: TextStyle(color: titleIsGold ? kGold : Colors.white,
+                style: TextStyle(color: titleIsGold ? kGold : kText,
                     fontSize: 15, fontWeight: FontWeight.bold)),
           ),
         Table(
-          border: TableBorder(horizontalInside: BorderSide(color: Colors.white12)),
+          border: TableBorder(horizontalInside: BorderSide(color: kDivider)),
           columnWidths: {for (int i = 0; i < headers.length; i++) i: const FlexColumnWidth()},
           children: [
             TableRow(
-              decoration: BoxDecoration(color: Colors.white10),
+              decoration: BoxDecoration(color: kSurfaceWash),
               children: headers.map((h) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Text(h, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                child: Text(h, style:  TextStyle(color: kText, fontWeight: FontWeight.bold, fontSize: 13)),
               )).toList(),
             ),
             ...rows.map((row) => TableRow(children: row.map((cell) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Text(cell, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              child: Text(cell, style:  TextStyle(color: kText, fontSize: 13)),
             )).toList())),
           ],
         ),
@@ -411,11 +443,11 @@ class BrowserSafeImage extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             alignment: Alignment.center,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.broken_image, color: Colors.white24, size: 48),
+               Icon(Icons.broken_image, color: kTextGhost, size: 48),
               const SizedBox(height: 8),
               Text('Image unavailable: $assetPath',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                  style:  TextStyle(color: kTextFaint, fontSize: 11)),
             ]),
           ),
         );
@@ -578,7 +610,7 @@ class PdfExportButton extends StatelessWidget {
         decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text(t('pdf_export_button'),
-              style: const TextStyle(color: Colors.white, fontSize: 15)),
+              style:  TextStyle(color: kText, fontSize: 15)),
           const SizedBox(width: 8),
           const Icon(Icons.picture_as_pdf, color: kGold, size: 20),
         ]),
@@ -607,7 +639,7 @@ class SourceButton extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(t('source'), style: const TextStyle(color: Colors.white, fontSize: 15)),
+          Text(t('source'), style:  TextStyle(color: kText, fontSize: 15)),
           const SizedBox(width: 8),
           const Icon(Icons.info_outline, color: Colors.redAccent, size: 20),
         ]),
@@ -656,15 +688,15 @@ class SourceButton extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(r.authors,
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                style:  TextStyle(color: kText, fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
             Text(r.title,
-                style: const TextStyle(color: Colors.white70, fontSize: 12, fontStyle: FontStyle.italic)),
+                style:  TextStyle(color: kTextSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
             const SizedBox(height: 2),
             Text(r.journal,
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style:  TextStyle(color: kTextMuted, fontSize: 11)),
             if (r.doi.isNotEmpty)
-              Text(r.doi, style: const TextStyle(color: Color(0xFF60A0E0), fontSize: 11)),
+              Text(r.doi, style: TextStyle(color: kLink, fontSize: 11)),
           ]),
         ),
       ]),

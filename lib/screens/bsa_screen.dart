@@ -224,7 +224,7 @@ class _CIInputCardState extends State<_CIInputCard> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Row(children: [
-              Text(t('bsa_cardiac_index'), style: const TextStyle(color: Colors.white, fontSize: 14)),
+              Text(t('bsa_cardiac_index'), style:  TextStyle(color: kText, fontSize: 14)),
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -232,7 +232,7 @@ class _CIInputCardState extends State<_CIInputCard> {
                 child: Text(t('bsa_saved'), style: const TextStyle(color: kGold, fontSize: 10, fontWeight: FontWeight.bold)),
               ),
             ]),
-            const Text('l/min/m\u00b2', style: TextStyle(color: Colors.white70, fontSize: 13)),
+             Text('l/min/m\u00b2', style: TextStyle(color: kTextSecondary, fontSize: 13)),
           ]),
           const SizedBox(height: 4),
           Row(children: [
@@ -242,7 +242,7 @@ class _CIInputCardState extends State<_CIInputCard> {
                 controller: _ctrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 22),
+                style:  TextStyle(color: kTextSecondary, fontSize: 22),
                 decoration: const InputDecoration(border: InputBorder.none),
                 onTap: () => setState(() => _editing = true),
                 onChanged: (s) => widget.onChanged(double.tryParse(s.replaceAll(',', '.'))),
@@ -255,7 +255,7 @@ class _CIInputCardState extends State<_CIInputCard> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(t('bsa_saved_hint'),
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                style:  TextStyle(color: kTextFaint, fontSize: 10)),
           ),
         ]),
       ),
@@ -266,8 +266,8 @@ class _CIInputCardState extends State<_CIInputCard> {
     onTap: onTap,
     child: Container(
       width: 36, height: 36,
-      decoration: const BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
-      child: Icon(icon, color: Colors.white, size: 20),
+      decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
+      child: Icon(icon, color: kText, size: 20),
     ),
   );
 }

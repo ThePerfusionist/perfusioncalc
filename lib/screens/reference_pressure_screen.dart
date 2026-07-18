@@ -78,10 +78,10 @@ class ReferencePressureScreen extends StatelessWidget {
                 const Expanded(flex: 4, child: SizedBox()),
                 Expanded(flex: 3,
                   child: Text(t('ref_col_normal'),
-                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))),
+                      style:  TextStyle(color: kText, fontSize: 14, fontWeight: FontWeight.bold))),
                 Expanded(flex: 3,
                   child: Text(t('ref_col_range'),
-                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))),
+                      style:  TextStyle(color: kText, fontSize: 14, fontWeight: FontWeight.bold))),
               ]),
             ),
             const SizedBox(height: 4),
@@ -104,14 +104,14 @@ class ReferencePressureScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: kSurfaceWash),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: const BoxDecoration(
-            color: Color(0xFF252525),
+          decoration:  BoxDecoration(
+            color: kTableHeaderBg,
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: Text(s['title'] as String,
@@ -123,13 +123,13 @@ class ReferencePressureScreen extends StatelessWidget {
           final isLast = i == rows.length - 1;
           return Container(
             decoration: BoxDecoration(
-              color: i.isOdd ? const Color(0xFF1E1E1E) : const Color(0xFF1A1A1A),
+              color: i.isOdd ? kRowStripeA : kRowStripeB,
               borderRadius: isLast
                   ? const BorderRadius.vertical(bottom: Radius.circular(12))
                   : BorderRadius.zero,
               border: isLast
                   ? null
-                  : Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07))),
+                  : Border(bottom: BorderSide(color: kText.withValues(alpha: 0.07))),
             ),
             child: Row(children: [
               Expanded(flex: 4,
@@ -142,13 +142,13 @@ class ReferencePressureScreen extends StatelessWidget {
               Expanded(flex: 3,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-                  child: Text(r[1], style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  child: Text(r[1], style:  TextStyle(color: kText, fontSize: 13)),
                 ),
               ),
               Expanded(flex: 3,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-                  child: Text(r[2], style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  child: Text(r[2], style:  TextStyle(color: kText, fontSize: 13)),
                 ),
               ),
             ]),

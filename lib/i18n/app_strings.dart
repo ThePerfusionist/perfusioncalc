@@ -87,6 +87,10 @@ class Strings {
     'app_title':              {AppLocale.en: 'PerfusionCalc', AppLocale.de: 'PerfusionCalc'},
     'navigation':             {AppLocale.en: 'Navigation', AppLocale.de: 'Navigation'},
     'language':               {AppLocale.en: 'Language', AppLocale.de: 'Sprache'},
+    'theme':                  {AppLocale.en: 'Appearance', AppLocale.de: 'Darstellung'},
+    'theme_system':           {AppLocale.en: 'System', AppLocale.de: 'System'},
+    'theme_light':            {AppLocale.en: 'Light', AppLocale.de: 'Hell'},
+    'theme_dark':             {AppLocale.en: 'Dark', AppLocale.de: 'Dunkel'},
     'source':                 {AppLocale.en: 'Source',  AppLocale.de: 'Quelle'},
     'sources':                {AppLocale.en: 'Sources', AppLocale.de: 'Quellen'},
     // ── PDF Export ────────────────────────────────────────────────────────

@@ -92,7 +92,7 @@ class HeartAnatomyScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: kCardColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
+            border: Border.all(color: kDivider),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Image with max-height so it doesn't blow up on wide screens.
@@ -119,13 +119,13 @@ class HeartAnatomyScreen extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(
                   caption,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.5),
+                  style:  TextStyle(color: kTextSecondary, fontSize: 12, height: 1.5),
                 ),
                 const SizedBox(height: 6),
                 Row(children: [
-                  const Icon(Icons.zoom_in, color: Colors.white24, size: 14),
+                   Icon(Icons.zoom_in, color: kTextGhost, size: 14),
                   const SizedBox(width: 4),
-                  Text(t('anat_tap_zoom'), style: const TextStyle(color: Colors.white24, fontSize: 11)),
+                  Text(t('anat_tap_zoom'), style:  TextStyle(color: kTextGhost, fontSize: 11)),
                 ]),
               ]),
             ),

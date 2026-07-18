@@ -69,13 +69,13 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       decoration: BoxDecoration(
         color: kCardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: kDivider),
       ),
       child: Column(children: [
         // Header row
         Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF2A2A2A),
+          decoration:  BoxDecoration(
+            color: kTableHeaderBg,
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: Row(children: [
@@ -92,13 +92,13 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
           final isLast = i == _hypoRows().length - 1;
           return Container(
             decoration: BoxDecoration(
-              color: i.isOdd ? const Color(0xFF222222) : const Color(0xFF1A1A1A),
+              color: i.isOdd ? kRowStripeA : kRowStripeB,
               borderRadius: isLast
                   ? const BorderRadius.vertical(bottom: Radius.circular(12))
                   : BorderRadius.zero,
               border: isLast
                   ? null
-                  : const Border(bottom: BorderSide(color: Colors.white10)),
+                  :  Border(bottom: BorderSide(color: kSurfaceWash)),
             ),
             child: Row(children: [
               _cell(r[0], flex: 3, color: kGold, bold: true),
@@ -152,11 +152,11 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
           child: Row(children: [
-            const Icon(Icons.info_outline, color: Colors.white24, size: 14),
+             Icon(Icons.info_outline, color: kTextGhost, size: 14),
             const SizedBox(width: 6),
             Text(
               t('hypo_hint_enter'),
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style:  TextStyle(color: kTextFaint, fontSize: 12),
             ),
           ]),
         ),
@@ -265,12 +265,12 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       decoration: BoxDecoration(
         color: kCardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: kDivider),
       ),
       child: Column(children: [
         Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF2A2A2A),
+          decoration:  BoxDecoration(
+            color: kTableHeaderBg,
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: Row(children: [
@@ -287,21 +287,21 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
           final isDelta = dT != null && r[2] != '–';
           return Container(
             decoration: BoxDecoration(
-              color: i.isOdd ? const Color(0xFF222222) : const Color(0xFF1A1A1A),
+              color: i.isOdd ? kRowStripeA : kRowStripeB,
               borderRadius: isLast
                   ? const BorderRadius.vertical(bottom: Radius.circular(12))
                   : BorderRadius.zero,
               border: isLast
                   ? null
-                  : const Border(bottom: BorderSide(color: Colors.white10)),
+                  :  Border(bottom: BorderSide(color: kSurfaceWash)),
             ),
             child: Row(children: [
               _cell(r[0], flex: 2, color: kGold, bold: true),
               _cell(r[1], flex: 3),
               _cell(r[2], flex: 2,
-                  color: isDelta ? Colors.white : Colors.white38,
+                  color: isDelta ? kText : kTextFaint,
                   bold: isDelta),
-              _cell(r[3], flex: 2, color: Colors.white54),
+              _cell(r[3], flex: 2, color: kTextMuted),
             ]),
           );
         }),
@@ -309,13 +309,13 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: const BoxDecoration(
-            color: Color(0xFF1A1A1A),
+          decoration:  BoxDecoration(
+            color: kRowStripeB,
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
           ),
-          child: const Text(
+          child:  Text(
             'StatPearls NBK557769  ·  Deranged Physiology',
-            style: TextStyle(color: Colors.white24, fontSize: 10),
+            style: TextStyle(color: kTextGhost, fontSize: 10),
           ),
         ),
       ]),
@@ -328,15 +328,15 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: kRowStripeB,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(children: [
-        const Icon(Icons.functions, color: Colors.white24, size: 13),
+         Icon(Icons.functions, color: kTextGhost, size: 13),
         const SizedBox(width: 8),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(main, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-          Text(sub,  style: const TextStyle(color: Colors.white24, fontSize: 10)),
+          Text(main, style:  TextStyle(color: kTextMuted, fontSize: 11)),
+          Text(sub,  style:  TextStyle(color: kTextGhost, fontSize: 10)),
         ])),
       ]),
     );
@@ -353,14 +353,14 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
     ),
   );
 
-  Widget _cell(String text, {int flex = 1, Color color = Colors.white, bool bold = false}) =>
+  Widget _cell(String text, {int flex = 1, Color? color, bool bold = false}) =>
       Expanded(
         flex: flex,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Text(text,
               style: TextStyle(
-                  color: color,
+                  color: color ?? kText,
                   fontWeight: bold ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13)),
         ),

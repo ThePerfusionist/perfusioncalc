@@ -39,10 +39,10 @@ class _ZollChairreScreenState extends State<ZollChairreScreen> {
               style: const TextStyle(color: kGold, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Container(
-            decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
+            decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: kDivider)),
             child: Column(children: [
               Container(
-                decoration: const BoxDecoration(color: Color(0xFF2A2A2A), borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
+                decoration:  BoxDecoration(color: kTableHeaderBg, borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
                 child: Row(children: [
                   _hCell(t('zoll_col_size'),      flex: 2),
                   _hCell(t('zoll_col_diameter'),  flex: 3),
@@ -53,9 +53,9 @@ class _ZollChairreScreenState extends State<ZollChairreScreen> {
                 final i = e.key; final r = e.value; final isLast = i == _rows.length - 1;
                 return Container(
                   decoration: BoxDecoration(
-                    color: i.isOdd ? const Color(0xFF222222) : const Color(0xFF1A1A1A),
+                    color: i.isOdd ? kRowStripeA : kRowStripeB,
                     borderRadius: isLast ? const BorderRadius.vertical(bottom: Radius.circular(12)) : BorderRadius.zero,
-                    border: isLast ? null : const Border(bottom: BorderSide(color: Colors.white10)),
+                    border: isLast ? null :  Border(bottom: BorderSide(color: kSurfaceWash)),
                   ),
                   child: Row(children: [
                     _cell(r[0], flex: 2, color: kGold, bold: true),
@@ -107,8 +107,8 @@ class _ZollChairreScreenState extends State<ZollChairreScreen> {
     child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Text(text, style: const TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 13))));
 
-  Widget _cell(String text, {int flex = 1, Color color = Colors.white, bool bold = false}) =>
+  Widget _cell(String text, {int flex = 1, Color? color, bool bold = false}) =>
     Expanded(flex: flex,
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        child: Text(text, style: TextStyle(color: color, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14))));
+        child: Text(text, style: TextStyle(color: color ?? kText, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14))));
 }

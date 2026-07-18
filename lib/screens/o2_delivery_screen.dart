@@ -148,9 +148,9 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
             width: double.infinity,
             decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(t('o2_chart'), style: const TextStyle(color: Colors.white, fontSize: 15)),
+              Text(t('o2_chart'), style:  TextStyle(color: kText, fontSize: 15)),
               const SizedBox(width: 8),
-              const Icon(Icons.bar_chart, color: Colors.white70, size: 20),
+               Icon(Icons.bar_chart, color: kTextSecondary, size: 20),
             ]),
           ),
         ),
@@ -288,15 +288,15 @@ class _CoCiCardState extends State<_CoCiCard> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text(isCo ? t('o2_co_label') : t('o2_ci_label'),
-                style: const TextStyle(color: Colors.white, fontSize: 14)),
+                style:  TextStyle(color: kText, fontSize: 14)),
             Container(
-              decoration: const BoxDecoration(color: Color(0xFF2A2A2A), borderRadius: BorderRadius.all(Radius.circular(20))),
+              decoration:  BoxDecoration(color: kTableHeaderBg, borderRadius: BorderRadius.all(Radius.circular(20))),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 _toggleBtn('CO', _CoMode.co), _toggleBtn('CI', _CoMode.ci),
               ]),
             ),
           ]),
-          Text(isCo ? 'l/min' : 'l/min/m\u00b2', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+          Text(isCo ? 'l/min' : 'l/min/m\u00b2', style:  TextStyle(color: kTextMuted, fontSize: 11)),
           const SizedBox(height: 4),
           Row(children: [
             _btn(Icons.remove, _dec),
@@ -304,9 +304,9 @@ class _CoCiCardState extends State<_CoCiCard> {
               controller: _ctrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 22),
+              style:  TextStyle(color: kTextSecondary, fontSize: 22),
               decoration: InputDecoration(border: InputBorder.none, hintText: t('o2_enter_value'),
-                  hintStyle: const TextStyle(color: Colors.white30, fontSize: 18)),
+                  hintStyle:  TextStyle(color: kTextGhost2, fontSize: 18)),
               onTap: () => setState(() => _editing = true),
               onChanged: (s) => _cb(double.tryParse(s.replaceAll(',', '.'))),
               onEditingComplete: () { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
@@ -331,7 +331,7 @@ class _CoCiCardState extends State<_CoCiCard> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
         decoration: BoxDecoration(color: active ? kGold : Colors.transparent, borderRadius: BorderRadius.circular(20)),
-        child: Text(label, style: TextStyle(color: active ? Colors.black : Colors.white54,
+        child: Text(label, style: TextStyle(color: active ? Colors.black : kTextMuted,
             fontWeight: active ? FontWeight.bold : FontWeight.normal, fontSize: 12)),
       ),
     );
@@ -340,7 +340,7 @@ class _CoCiCardState extends State<_CoCiCard> {
   Widget _btn(IconData icon, VoidCallback onTap) => GestureDetector(
     onTap: onTap,
     child: Container(width: 36, height: 36,
-        decoration: const BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
-        child: Icon(icon, color: Colors.white, size: 20)),
+        decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
+        child: Icon(icon, color: kText, size: 20)),
   );
 }

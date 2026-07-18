@@ -123,10 +123,10 @@ class _PediatricScreenState extends State<PediatricScreen> {
 
   Widget _fancyTable({required List<String> headers, required List<List<String>> rows, required List<int> flexes}) {
     return Container(
-      decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
+      decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: kDivider)),
       child: Column(children: [
         Container(
-          decoration: const BoxDecoration(color: Color(0xFF2A2A2A), borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
+          decoration:  BoxDecoration(color: kTableHeaderBg, borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
           child: Row(children: headers.asMap().entries.map((e) =>
             Expanded(flex: flexes[e.key],
               child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
@@ -136,15 +136,15 @@ class _PediatricScreenState extends State<PediatricScreen> {
           final i = e.key; final r = e.value; final isLast = i == rows.length - 1;
           return Container(
             decoration: BoxDecoration(
-              color: i.isOdd ? const Color(0xFF222222) : const Color(0xFF1A1A1A),
+              color: i.isOdd ? kRowStripeA : kRowStripeB,
               borderRadius: isLast ? const BorderRadius.vertical(bottom: Radius.circular(12)) : BorderRadius.zero,
-              border: isLast ? null : const Border(bottom: BorderSide(color: Colors.white10)),
+              border: isLast ? null :  Border(bottom: BorderSide(color: kSurfaceWash)),
             ),
             child: Row(children: r.asMap().entries.map((ce) =>
               Expanded(flex: flexes[ce.key],
                 child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   child: Text(ce.value, style: TextStyle(
-                    color: ce.key == 0 ? kGold : Colors.white,
+                    color: ce.key == 0 ? kGold : kText,
                     fontSize: 14,
                     fontWeight: ce.key == 0 ? FontWeight.w600 : FontWeight.normal))))).toList()),
           );
