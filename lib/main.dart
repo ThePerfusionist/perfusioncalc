@@ -12,12 +12,14 @@ import 'screens/pediatric_screen.dart';
 import 'screens/reference_pressure_screen.dart';
 import 'screens/heart_anatomy_screen.dart';
 import 'models/patient_data.dart';
+import 'models/bga_model.dart';
 import 'i18n/app_strings.dart';
 import 'theme/app_theme.dart';
+import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.2.2';
+const kAppVersion = '0.2.3';
 
 void main() async {
   // Sprache + Theme aus SharedPreferences laden bevor die UI gerendert wird,
@@ -61,6 +63,7 @@ class _MainScreenState extends State<MainScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   final PatientData _patientData = PatientData();
+  final BgaModel _bgaModel = BgaModel();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   /// Tabs-Definition: icon ist statisch, label wird per t() bei jedem Build
@@ -224,6 +227,61 @@ class _MainScreenState extends State<MainScreen>
     ],
   );
 
+  // ── Gesamtbericht (kombinierter PDF-Export über mehrere Tabs) ──────────────
+  //
+  // Acht Tabs mit tatsächlichem Patienten-/Falldatenbezug gehören in einen
+  // "Patientenbericht" (BSA, O2-Delivery, Hypothermie/BGA-Korrektur,
+  // Elektrolyte, Widerstände, Pädiatrie, Schlauchvolumen, Charrière). Ihre
+  // Modelle (_patientData, _bgaModel) leben in MainScreen und werden an die
+  // jeweiligen Screens durchgereicht - genau deshalb kann hier direkt darauf
+  // zugegriffen werden, ohne die aktuell sichtbaren Tab-Widgets zu kennen.
+  // Flow/Drainage, Referenzdrücke und Herzanatomie sind reine, patienten-
+  // unabhängige Nachschlage-Tools und bleiben außen vor - dafür gibt es dort
+  // gar keinen PDF-Export.
+  //
+  // "Nur ausgefüllte Tabs": ein Tab wird nur aufgenommen, wenn mindestens
+  // eine seiner Zeilen einen echten Wert hat (nicht nur "—"). So bleibt der
+  // Bericht kompakt, auch wenn der Nutzer erst einen Teil der Tabs bearbeitet
+  // hat.
+  Future<void> _exportCombinedReport() async {
+    final pd = _patientData;
+    final candidates = [
+      PdfTabReport(tabTitle: t('tab_bsa'),          sections: buildBsaPdfSections(pd)),
+      PdfTabReport(tabTitle: t('tab_o2'),           sections: buildO2PdfSections(pd)),
+      PdfTabReport(tabTitle: t('tab_hypothermia'),  sections: buildHypothermiaPdfSections(_bgaModel)),
+      PdfTabReport(tabTitle: t('tab_electrolytes'), sections: buildElectrolytesPdfSections(pd)),
+      PdfTabReport(tabTitle: t('tab_resistances'),  sections: buildResistancesPdfSections(pd)),
+      PdfTabReport(tabTitle: t('tab_pediatric'),    sections: buildPediatricPdfSections(pd)),
+      PdfTabReport(tabTitle: t('tab_tube_volume'),  sections: buildTubeVolumePdfSections(pd)),
+      PdfTabReport(tabTitle: t('tab_zoll'),         sections: buildZollPdfSections(pd)),
+    ];
+    final filled = candidates.where((tab) =>
+        tab.sections.any((s) => s.rows.any((r) => r.value != '—'))).toList();
+
+    if (filled.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('combined_report_empty')), duration: const Duration(seconds: 4)),
+      );
+      return;
+    }
+
+    try {
+      await exportCombinedReportAsPdf(tabs: filled);
+    } catch (e, stack) {
+      debugPrint('[CombinedReport] export failed: $e');
+      debugPrint('$stack');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${t('pdf_export_failed')}: $e'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
+  }
+
   // ── Drawer ─────────────────────────────────────────────────────────────────
   Widget _buildDrawer() {
     return Drawer(
@@ -285,6 +343,23 @@ class _MainScreenState extends State<MainScreen>
                   },
                 );
               },
+            ),
+          ),
+          // ── Gesamtbericht (kombinierter PDF-Export) ─────────────────────────
+          Divider(color: kDivider, height: 1),
+          InkWell(
+            onTap: () {
+              Navigator.pop(context); // Drawer schließen, dann Export anstoßen
+              _exportCombinedReport();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Row(children: [
+                Icon(Icons.picture_as_pdf_outlined, color: kGold, size: 20),
+                const SizedBox(width: 14),
+                Expanded(child: Text(t('combined_report_button'),
+                    style: TextStyle(color: kText, fontWeight: FontWeight.w600, fontSize: 14))),
+              ]),
             ),
           ),
           // ── Theme switcher ────────────────────────────────────────────────
@@ -468,7 +543,7 @@ class _MainScreenState extends State<MainScreen>
             // die Hauptursache für das ruckelige Tippverhalten.
             BSAScreen(patientData: _patientData, onChanged: _noop),
             O2DeliveryScreen(patientData: _patientData, onChanged: _noop),
-            HypothermiaScreen(),
+            HypothermiaScreen(bgaModel: _bgaModel, onChanged: _noop),
             ElectrolytesScreen(patientData: _patientData, onChanged: _noop),
             ResistancesScreen(patientData: _patientData, onChanged: _noop),
             PediatricScreen(patientData: _patientData, onChanged: _noop),

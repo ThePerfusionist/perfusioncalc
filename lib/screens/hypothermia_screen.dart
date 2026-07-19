@@ -9,14 +9,24 @@ import '../utils/pdf_export.dart';
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 class HypothermiaScreen extends StatefulWidget {
-  const HypothermiaScreen({super.key});
+  final BgaModel bgaModel;
+  final VoidCallback onChanged;
+  const HypothermiaScreen({super.key, required this.bgaModel, required this.onChanged});
   @override
   State<HypothermiaScreen> createState() => _HypothermiaScreenState();
 }
 
 class _HypothermiaScreenState extends State<HypothermiaScreen> {
-  final _model = BgaModel();
-  void _rebuild() => setState(() {});
+  // Getter statt eigener Instanz: das Modell gehört jetzt MainScreen (wie
+  // PatientData bei den anderen Tabs), damit der kombinierte Gesamtbericht
+  // darauf zugreifen kann. Alle bestehenden `_model.xxx`-Aufrufe unten
+  // bleiben dadurch unverändert.
+  BgaModel get _model => widget.bgaModel;
+
+  void _rebuild() {
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
 
   // Table data: [Level, Range, Circulatory arrest, O2 requirement]
   // Dynamisch, damit Sprachwechsel die Level-Bezeichnungen aktualisiert.
@@ -226,21 +236,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       PdfExportButton(
         filename: 'hypothermia',
         tabTitleKey: 'tab_hypothermia',
-        buildSections: () => [
-          PdfSection(title: t('pdf_inputs'), rows: [
-            PdfRow.numeric(label: t('hypo_temp'),  value: _model.temp,  unit: '°C',   decimals: 1),
-            PdfRow.numeric(label: t('hypo_pao2'),  value: _model.paO2,  unit: 'mmHg', decimals: 0),
-            PdfRow.numeric(label: t('hypo_paco2'), value: _model.paCO2, unit: 'mmHg', decimals: 0),
-            PdfRow.numeric(label: t('hypo_ph'),    value: _model.pH,    unit: '',     decimals: 2),
-          ]),
-          PdfSection(title: t('pdf_results'), rows: [
-            PdfRow.numeric(label: t('hypo_corr_pao2'),  value: _model.corrPaO2,  unit: 'mmHg',  decimals: 1),
-            PdfRow.numeric(label: t('hypo_corr_paco2'), value: _model.corrPaCO2, unit: 'mmHg',  decimals: 1),
-            PdfRow.numeric(label: t('hypo_corr_ph'),    value: _model.corrPH,    unit: '',      decimals: 3),
-            PdfRow.numeric(label: t('hypo_hco3'),       value: _model.hco3,      unit: 'mmol/L',decimals: 1),
-            PdfRow.numeric(label: t('hypo_sat'),        value: _model.satFromPaO2, unit: '%',  decimals: 1),
-          ]),
-        ],
+        buildSections: () => buildHypothermiaPdfSections(_model),
       ),
     ]);
   }
@@ -366,3 +362,20 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
         ),
       );
 }
+
+// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+List<PdfSection> buildHypothermiaPdfSections(BgaModel model) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: t('hypo_temp'),  value: model.temp,  unit: '°C',   decimals: 1),
+    PdfRow.numeric(label: t('hypo_pao2'),  value: model.paO2,  unit: 'mmHg', decimals: 0),
+    PdfRow.numeric(label: t('hypo_paco2'), value: model.paCO2, unit: 'mmHg', decimals: 0),
+    PdfRow.numeric(label: t('hypo_ph'),    value: model.pH,    unit: '',     decimals: 2),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: t('hypo_corr_pao2'),  value: model.corrPaO2,  unit: 'mmHg',  decimals: 1),
+    PdfRow.numeric(label: t('hypo_corr_paco2'), value: model.corrPaCO2, unit: 'mmHg',  decimals: 1),
+    PdfRow.numeric(label: t('hypo_corr_ph'),    value: model.corrPH,    unit: '',      decimals: 3),
+    PdfRow.numeric(label: t('hypo_hco3'),       value: model.hco3,      unit: 'mmol/L',decimals: 1),
+    PdfRow.numeric(label: t('hypo_sat'),        value: model.satFromPaO2, unit: '%',  decimals: 1),
+  ]),
+];

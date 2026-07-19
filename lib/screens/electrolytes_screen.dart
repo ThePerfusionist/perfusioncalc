@@ -51,7 +51,7 @@ class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
             onChanged: (v) { patientData.natriumIst = v; onChanged(); }),
         InputCard(label: t('elec_sodium_target'), unit: 'mmol', value: patientData.natriumSoll,
             range: Ranges.natrium,
-            onChanged: (v) { patientData.natriumSoll = v; onChanged(); }),
+            onChanged: (v) { patientData.natriumSoll = v; patientData.natriumSollTouched = true; onChanged(); }),
         ResultCard(label: t('elec_sodium_need'), unit: 'ml NaCl 10%', value: patientData.natriumBedarf,
             missingInputs: missing([hWeight, hNaIst, hNaSoll])),
         SectionHeader(t('elec_section_potassium')),
@@ -60,7 +60,7 @@ class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
             onChanged: (v) { patientData.kaliumIst = v; onChanged(); }),
         InputCard(label: t('elec_potassium_target'), unit: 'mmol', value: patientData.kaliumSoll,
             range: Ranges.kalium,
-            onChanged: (v) { patientData.kaliumSoll = v; onChanged(); }),
+            onChanged: (v) { patientData.kaliumSoll = v; patientData.kaliumSollTouched = true; onChanged(); }),
         ResultCard(label: t('elec_potassium_need'), unit: 'ml KCl 7,45%', value: patientData.kaliumBedarf,
             missingInputs: missing([hWeight, hKIst, hKSoll])),
         SectionHeader(t('elec_section_calcium')),
@@ -69,7 +69,7 @@ class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
             onChanged: (v) { patientData.calziumIst = v; onChanged(); }),
         InputCard(label: t('elec_calcium_target'), unit: 'mmol', value: patientData.calziumSoll,
             range: Ranges.calzium,
-            onChanged: (v) { patientData.calziumSoll = v; onChanged(); }),
+            onChanged: (v) { patientData.calziumSoll = v; patientData.calziumSollTouched = true; onChanged(); }),
         ResultCard(label: t('elec_calcium_need'), unit: 'ml Ca.gluc. 10%', value: patientData.calziumBedarf,
             missingInputs: missing([hWeight, hCaIst, hCaSoll])),
         SectionHeader(t('elec_section_buffer')),
@@ -84,25 +84,7 @@ class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
         PdfExportButton(
           filename: 'electrolytes',
           tabTitleKey: 'tab_electrolytes',
-          buildSections: () => [
-            PdfSection(title: t('pdf_inputs'), rows: [
-              PdfRow.numeric(label: t('bsa_body_weight'),       value: patientData.bodyWeightElec, unit: 'kg'),
-              PdfRow.numeric(label: t('elec_sodium_current'),   value: patientData.natriumIst,     unit: 'mmol'),
-              PdfRow.numeric(label: t('elec_sodium_target'),    value: patientData.natriumSoll,    unit: 'mmol'),
-              PdfRow.numeric(label: t('elec_potassium_current'),value: patientData.kaliumIst,      unit: 'mmol'),
-              PdfRow.numeric(label: t('elec_potassium_target'), value: patientData.kaliumSoll,     unit: 'mmol'),
-              PdfRow.numeric(label: t('elec_calcium_current'),  value: patientData.calziumIst,     unit: 'mmol'),
-              PdfRow.numeric(label: t('elec_calcium_target'),   value: patientData.calziumSoll,    unit: 'mmol'),
-              PdfRow.numeric(label: t('elec_base_excess'),      value: patientData.baseExcess,     unit: 'mmol/L'),
-            ]),
-            PdfSection(title: t('pdf_results'), rows: [
-              PdfRow.numeric(label: t('elec_sodium_need'),    value: patientData.natriumBedarf, unit: 'ml NaCl 10%',     decimals: 1),
-              PdfRow.numeric(label: t('elec_potassium_need'), value: patientData.kaliumBedarf,  unit: 'ml KCl 7,45%',    decimals: 1),
-              PdfRow.numeric(label: t('elec_calcium_need'),   value: patientData.calziumBedarf, unit: 'ml Ca.gluc. 10%', decimals: 1),
-              PdfRow.numeric(label: 'NaBic 8,4%',             value: patientData.nabic,         unit: 'ml',              decimals: 1),
-              PdfRow.numeric(label: 'TRIS 36,34%',            value: patientData.tris,          unit: 'ml',              decimals: 1),
-            ]),
-          ],
+          buildSections: () => buildElectrolytesPdfSections(patientData),
         ),
         SourceButton(refs: [
           AppSources.mellemgaardAstrup1960,
@@ -114,3 +96,27 @@ class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
     );
   }
 }
+
+// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+List<PdfSection> buildElectrolytesPdfSections(PatientData pd) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: t('bsa_body_weight'),       value: pd.bodyWeightElec, unit: 'kg'),
+    PdfRow.numeric(label: t('elec_sodium_current'),   value: pd.natriumIst,     unit: 'mmol'),
+    PdfRow.numeric(label: t('elec_sodium_target'),
+        value: pd.natriumSollTouched ? pd.natriumSoll : null, unit: 'mmol'),
+    PdfRow.numeric(label: t('elec_potassium_current'),value: pd.kaliumIst,      unit: 'mmol'),
+    PdfRow.numeric(label: t('elec_potassium_target'),
+        value: pd.kaliumSollTouched ? pd.kaliumSoll : null, unit: 'mmol'),
+    PdfRow.numeric(label: t('elec_calcium_current'),  value: pd.calziumIst,     unit: 'mmol'),
+    PdfRow.numeric(label: t('elec_calcium_target'),
+        value: pd.calziumSollTouched ? pd.calziumSoll : null, unit: 'mmol'),
+    PdfRow.numeric(label: t('elec_base_excess'),      value: pd.baseExcess,     unit: 'mmol/L'),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: t('elec_sodium_need'),    value: pd.natriumBedarf, unit: 'ml NaCl 10%',     decimals: 1),
+    PdfRow.numeric(label: t('elec_potassium_need'), value: pd.kaliumBedarf,  unit: 'ml KCl 7,45%',    decimals: 1),
+    PdfRow.numeric(label: t('elec_calcium_need'),   value: pd.calziumBedarf, unit: 'ml Ca.gluc. 10%', decimals: 1),
+    PdfRow.numeric(label: 'NaBic 8,4%',             value: pd.nabic,         unit: 'ml',              decimals: 1),
+    PdfRow.numeric(label: 'TRIS 36,34%',            value: pd.tris,          unit: 'ml',              decimals: 1),
+  ]),
+];

@@ -43,17 +43,7 @@ class _TubeVolumeScreenState extends State<TubeVolumeScreen> {
         PdfExportButton(
           filename: 'tube_volume',
           tabTitleKey: 'tab_tube_volume',
-          buildSections: () => [
-            PdfSection(title: t('pdf_inputs'), rows: [
-              PdfRow.numeric(label: t('tube_length'), value: patientData.tubeLength, unit: 'cm', decimals: 0),
-            ]),
-            PdfSection(title: t('pdf_results'), rows: [
-              PdfRow.numeric(label: '1/2"',  value: patientData.tubeVol12,  unit: 'ml', decimals: 1),
-              PdfRow.numeric(label: '3/8"',  value: patientData.tubeVol38,  unit: 'ml', decimals: 1),
-              PdfRow.numeric(label: '1/4"',  value: patientData.tubeVol14,  unit: 'ml', decimals: 1),
-              PdfRow.numeric(label: '3/16"', value: patientData.tubeVol316, unit: 'ml', decimals: 1),
-            ]),
-          ],
+          buildSections: () => buildTubeVolumePdfSections(patientData),
         ),
         SourceButton(refs: [
           AppSources.oldeen2020,
@@ -63,3 +53,16 @@ class _TubeVolumeScreenState extends State<TubeVolumeScreen> {
     );
   }
 }
+
+// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+List<PdfSection> buildTubeVolumePdfSections(PatientData pd) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: t('tube_length'), value: pd.tubeLength, unit: 'cm', decimals: 0),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: '1/2"',  value: pd.tubeVol12,  unit: 'ml', decimals: 1),
+    PdfRow.numeric(label: '3/8"',  value: pd.tubeVol38,  unit: 'ml', decimals: 1),
+    PdfRow.numeric(label: '1/4"',  value: pd.tubeVol14,  unit: 'ml', decimals: 1),
+    PdfRow.numeric(label: '3/16"', value: pd.tubeVol316, unit: 'ml', decimals: 1),
+  ]),
+];

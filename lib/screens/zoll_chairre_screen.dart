@@ -84,16 +84,7 @@ class _ZollChairreScreenState extends State<ZollChairreScreen> {
           PdfExportButton(
             filename: 'zoll_charriere',
             tabTitleKey: 'tab_zoll',
-            buildSections: () => [
-              PdfSection(title: t('pdf_inputs'), rows: [
-                PdfRow.numeric(label: t('zoll_ch_to_mm'), value: patientData.chInput, unit: 'Ch', decimals: 1),
-                PdfRow.numeric(label: t('zoll_mm_to_ch'), value: patientData.mmInput, unit: 'mm', decimals: 2),
-              ]),
-              PdfSection(title: t('pdf_results'), rows: [
-                PdfRow.numeric(label: t('zoll_result_mm'), value: patientData.chToMm, unit: 'mm', decimals: 4),
-                PdfRow.numeric(label: t('zoll_result_ch'), value: patientData.mmToCh, unit: 'Ch', decimals: 1),
-              ]),
-            ],
+            buildSections: () => buildZollPdfSections(patientData),
           ),
           SourceButton(refs: [AppSources.oldeen2020]),
           const SizedBox(height: 8),
@@ -112,3 +103,15 @@ class _ZollChairreScreenState extends State<ZollChairreScreen> {
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         child: Text(text, style: TextStyle(color: color ?? kText, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14))));
 }
+
+// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+List<PdfSection> buildZollPdfSections(PatientData pd) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: t('zoll_ch_to_mm'), value: pd.chInput, unit: 'Ch', decimals: 1),
+    PdfRow.numeric(label: t('zoll_mm_to_ch'), value: pd.mmInput, unit: 'mm', decimals: 2),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: t('zoll_result_mm'), value: pd.chToMm, unit: 'mm', decimals: 4),
+    PdfRow.numeric(label: t('zoll_result_ch'), value: pd.mmToCh, unit: 'Ch', decimals: 1),
+  ]),
+];

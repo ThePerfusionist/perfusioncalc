@@ -64,20 +64,7 @@ class _ResistancesScreenState extends State<ResistancesScreen> {
         PdfExportButton(
           filename: 'resistances',
           tabTitleKey: 'tab_resistances',
-          buildSections: () => [
-            PdfSection(title: t('pdf_inputs'), rows: [
-              PdfRow.numeric(label: 'MAP',                value: patientData.map,    unit: 'mmHg'),
-              PdfRow.numeric(label: 'CVP',                value: patientData.cvp,    unit: 'mmHg'),
-              PdfRow.numeric(label: t('res_co_for_svr'),  value: patientData.hzvRes, unit: 'l/min'),
-              PdfRow.numeric(label: 'PAP',                value: patientData.pap,    unit: 'mmHg'),
-              PdfRow.numeric(label: 'LAP',                value: patientData.lap,    unit: 'mmHg'),
-              PdfRow.numeric(label: t('res_co_for_pvr'),  value: patientData.hzvPvr, unit: 'l/min'),
-            ]),
-            PdfSection(title: t('pdf_results'), rows: [
-              PdfRow.numeric(label: 'SVR', value: patientData.svr, unit: 'dyns/cm\u2075', decimals: 0),
-              PdfRow.numeric(label: 'PVR', value: patientData.pvr, unit: 'dyns/cm\u2075', decimals: 0),
-            ]),
-          ],
+          buildSections: () => buildResistancesPdfSections(patientData),
         ),
         SourceButton(refs: [
           AppSources.barrettBoyes,
@@ -88,3 +75,19 @@ class _ResistancesScreenState extends State<ResistancesScreen> {
     );
   }
 }
+
+// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+List<PdfSection> buildResistancesPdfSections(PatientData pd) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: 'MAP',                value: pd.map,    unit: 'mmHg'),
+    PdfRow.numeric(label: 'CVP',                value: pd.cvp,    unit: 'mmHg'),
+    PdfRow.numeric(label: t('res_co_for_svr'),  value: pd.hzvRes, unit: 'l/min'),
+    PdfRow.numeric(label: 'PAP',                value: pd.pap,    unit: 'mmHg'),
+    PdfRow.numeric(label: 'LAP',                value: pd.lap,    unit: 'mmHg'),
+    PdfRow.numeric(label: t('res_co_for_pvr'),  value: pd.hzvPvr, unit: 'l/min'),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: 'SVR', value: pd.svr, unit: 'dyns/cm\u2075', decimals: 0),
+    PdfRow.numeric(label: 'PVR', value: pd.pvr, unit: 'dyns/cm\u2075', decimals: 0),
+  ]),
+];

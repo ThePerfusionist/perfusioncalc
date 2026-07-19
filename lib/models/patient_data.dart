@@ -19,6 +19,12 @@ class PatientData {
   // BSA screen Cardiac Index (persisted, default 2.4)
   // This is loaded/saved via SharedPreferences in BSAScreen
   double bsaCardiacIndex = 2.4;
+  // Ob der Nutzer den Cardiac Index in DIESER Sitzung aktiv geändert hat
+  // (im Gegensatz zum automatisch aus SharedPreferences geladenen Wert oder
+  // dem Default 2.4). Wird genutzt, um unberührte Default-/Preference-Werte
+  // aus dem PDF-Export fernzuhalten - siehe buildBsaPdfSections() in
+  // bsa_screen.dart. Beeinflusst NICHT die eigentliche Berechnung.
+  bool bsaCardiacIndexTouched = false;
 
   // O2 delivery inputs
   double? paO2;
@@ -43,10 +49,13 @@ class PatientData {
   double? bodyWeightElec;
   double? natriumIst;
   double? natriumSoll = 130;
+  bool natriumSollTouched = false;
   double? kaliumIst;
   double? kaliumSoll = 4.8;
+  bool kaliumSollTouched = false;
   double? calziumIst;
   double? calziumSoll = 1.2;
+  bool calziumSollTouched = false;
   double? baseExcess;
 
   // Tube volume

@@ -159,31 +159,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         PdfExportButton(
           filename: 'o2_delivery',
           tabTitleKey: 'tab_o2',
-          buildSections: () => [
-            PdfSection(title: t('pdf_inputs'), rows: [
-              PdfRow.numeric(label: t('o2_bsa'),    value: pd.kof,    unit: 'm²'),
-              PdfRow.numeric(label: 'PaO\u2082',    value: pd.paO2,   unit: 'mmHg'),
-              PdfRow.numeric(label: 'SaO\u2082',    value: pd.saO2,   unit: '%'),
-              PdfRow.numeric(label: t('o2_art_hb'), value: pd.artHb,  unit: 'g/dl'),
-              PdfRow.numeric(label: 'PvO\u2082',    value: pd.pvO2,   unit: 'mmHg'),
-              PdfRow.numeric(label: 'SvO\u2082',    value: pd.svO2,   unit: '%'),
-              PdfRow.numeric(label: t('o2_ven_hb'), value: pd.venHb,  unit: 'g/dl'),
-              PdfRow.numeric(label: t('o2_co_label'), value: pd.hzv,  unit: 'l/min'),
-              PdfRow.numeric(label: t('o2_ci_label'), value: pd.cardiacIndex, unit: 'l/min/m²'),
-            ]),
-            PdfSection(title: t('pdf_results'), rows: [
-              PdfRow.numeric(label: 'CaO\u2082',     value: pd.caO2,   unit: 'ml/dl'),
-              PdfRow.numeric(label: 'CvO\u2082',     value: pd.cvO2,   unit: 'ml/dl'),
-              PdfRow.numeric(label: 'Ca-vDO\u2082',  value: pd.cavDO2, unit: 'ml/dl'),
-              PdfRow.numeric(label: 'DO\u2082',      value: pd.do2,    unit: 'ml/min',         decimals: 0),
-              PdfRow.numeric(label: 'DO\u2082i',     value: pd.do2i,   unit: 'ml/min/m²',      decimals: 0),
-              PdfRow.numeric(label: 'VO\u2082',      value: pd.vo2,    unit: 'ml/min',         decimals: 0),
-              PdfRow.numeric(label: 'VO\u2082i',     value: pd.vo2i,   unit: 'ml/min/m²',      decimals: 0),
-              PdfRow.numeric(label: 'O\u2082-ER',    value: pd.o2er,   unit: '%'),
-              PdfRow.numeric(label: t('o2_min_co'),  value: pd.minCardiacOutput, unit: 'l/min'),
-              PdfRow.numeric(label: t('o2_min_hb'),  value: pd.minHb,  unit: 'g/dl'),
-            ]),
-          ],
+          buildSections: () => buildO2PdfSections(pd),
         ),
         SourceButton(refs: [
           AppSources.deSomer,
@@ -346,3 +322,30 @@ class _CoCiCardState extends State<_CoCiCard> {
         child: Icon(icon, color: kText, size: 20)),
   );
 }
+
+// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+List<PdfSection> buildO2PdfSections(PatientData pd) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: t('o2_bsa'),    value: pd.kof,    unit: 'm²'),
+    PdfRow.numeric(label: 'PaO\u2082',    value: pd.paO2,   unit: 'mmHg'),
+    PdfRow.numeric(label: 'SaO\u2082',    value: pd.saO2,   unit: '%'),
+    PdfRow.numeric(label: t('o2_art_hb'), value: pd.artHb,  unit: 'g/dl'),
+    PdfRow.numeric(label: 'PvO\u2082',    value: pd.pvO2,   unit: 'mmHg'),
+    PdfRow.numeric(label: 'SvO\u2082',    value: pd.svO2,   unit: '%'),
+    PdfRow.numeric(label: t('o2_ven_hb'), value: pd.venHb,  unit: 'g/dl'),
+    PdfRow.numeric(label: t('o2_co_label'), value: pd.hzv,  unit: 'l/min'),
+    PdfRow.numeric(label: t('o2_ci_label'), value: pd.cardiacIndex, unit: 'l/min/m²'),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: 'CaO\u2082',     value: pd.caO2,   unit: 'ml/dl'),
+    PdfRow.numeric(label: 'CvO\u2082',     value: pd.cvO2,   unit: 'ml/dl'),
+    PdfRow.numeric(label: 'Ca-vDO\u2082',  value: pd.cavDO2, unit: 'ml/dl'),
+    PdfRow.numeric(label: 'DO\u2082',      value: pd.do2,    unit: 'ml/min',         decimals: 0),
+    PdfRow.numeric(label: 'DO\u2082i',     value: pd.do2i,   unit: 'ml/min/m²',      decimals: 0),
+    PdfRow.numeric(label: 'VO\u2082',      value: pd.vo2,    unit: 'ml/min',         decimals: 0),
+    PdfRow.numeric(label: 'VO\u2082i',     value: pd.vo2i,   unit: 'ml/min/m²',      decimals: 0),
+    PdfRow.numeric(label: 'O\u2082-ER',    value: pd.o2er,   unit: '%'),
+    PdfRow.numeric(label: t('o2_min_co'),  value: pd.minCardiacOutput, unit: 'l/min'),
+    PdfRow.numeric(label: t('o2_min_hb'),  value: pd.minHb,  unit: 'g/dl'),
+  ]),
+];

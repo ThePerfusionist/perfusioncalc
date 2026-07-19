@@ -76,6 +76,7 @@ class _BSAScreenState extends State<BSAScreen> {
           onChanged: (v) {
             if (v != null && v > 0) {
               pd.bsaCardiacIndex = v;
+              pd.bsaCardiacIndexTouched = true;
               _saveCI(v);
               _recalc();
             }
@@ -144,25 +145,7 @@ class _BSAScreenState extends State<BSAScreen> {
         PdfExportButton(
           filename: 'bsa',
           tabTitleKey: 'tab_bsa',
-          buildSections: () => [
-            PdfSection(title: t('pdf_inputs'), rows: [
-              PdfRow.numeric(label: t('bsa_body_height'),     value: pd.height,         unit: 'cm'),
-              PdfRow.numeric(label: t('bsa_body_weight'),     value: pd.weight,         unit: 'kg'),
-              PdfRow.numeric(label: t('bsa_current_hb'),      value: pd.currentHb,      unit: 'g/dl'),
-              PdfRow.numeric(label: t('bsa_current_hct'),     value: pd.currentHct,     unit: '%'),
-              PdfRow.numeric(label: t('bsa_priming_volume'),  value: pd.primingVolume,  unit: 'ml', decimals: 0),
-              PdfRow.numeric(label: t('bsa_cardiac_index'),   value: pd.bsaCardiacIndex, unit: 'l/min/m²', decimals: 1),
-            ]),
-            PdfSection(title: t('pdf_results'), rows: [
-              PdfRow.numeric(label: t('bsa_result_dubois'),     value: pd.bsa,             unit: 'm²'),
-              PdfRow.numeric(label: t('bsa_result_co'),         value: pd.cardiacOutput,   unit: 'l/min'),
-              PdfRow.numeric(label: t('bsa_result_bv_male'),    value: pd.bloodVolumeMale,   unit: 'l'),
-              PdfRow.numeric(label: t('bsa_result_bv_female'),  value: pd.bloodVolumeFemale, unit: 'l'),
-              PdfRow.numeric(label: t('bsa_expected_hb'),       value: pd.expectedHb,        unit: 'g/dl'),
-              PdfRow.numeric(label: t('bsa_expected_hct_m'),    value: pd.expectedHctMale,   unit: '%'),
-              PdfRow.numeric(label: t('bsa_expected_hct_f'),    value: pd.expectedHctFemale, unit: '%'),
-            ]),
-          ],
+          buildSections: () => buildBsaPdfSections(pd),
         ),
         SourceButton(refs: [
           AppSources.dubois,
@@ -271,3 +254,27 @@ class _CIInputCardState extends State<_CIInputCard> {
     ),
   );
 }
+
+// ── PDF-Sections (extrahiert, damit sowohl der Einzel-Tab-Export als auch
+// der kombinierte Gesamtbericht (siehe main.dart) dieselbe Logik nutzen) ───
+List<PdfSection> buildBsaPdfSections(PatientData pd) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: t('bsa_body_height'),     value: pd.height,         unit: 'cm'),
+    PdfRow.numeric(label: t('bsa_body_weight'),     value: pd.weight,         unit: 'kg'),
+    PdfRow.numeric(label: t('bsa_current_hb'),      value: pd.currentHb,      unit: 'g/dl'),
+    PdfRow.numeric(label: t('bsa_current_hct'),     value: pd.currentHct,     unit: '%'),
+    PdfRow.numeric(label: t('bsa_priming_volume'),  value: pd.primingVolume,  unit: 'ml', decimals: 0),
+    PdfRow.numeric(label: t('bsa_cardiac_index'),
+        value: pd.bsaCardiacIndexTouched ? pd.bsaCardiacIndex : null,
+        unit: 'l/min/m²', decimals: 1),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: t('bsa_result_dubois'),     value: pd.bsa,             unit: 'm²'),
+    PdfRow.numeric(label: t('bsa_result_co'),         value: pd.cardiacOutput,   unit: 'l/min'),
+    PdfRow.numeric(label: t('bsa_result_bv_male'),    value: pd.bloodVolumeMale,   unit: 'l'),
+    PdfRow.numeric(label: t('bsa_result_bv_female'),  value: pd.bloodVolumeFemale, unit: 'l'),
+    PdfRow.numeric(label: t('bsa_expected_hb'),       value: pd.expectedHb,        unit: 'g/dl'),
+    PdfRow.numeric(label: t('bsa_expected_hct_m'),    value: pd.expectedHctMale,   unit: '%'),
+    PdfRow.numeric(label: t('bsa_expected_hct_f'),    value: pd.expectedHctFemale, unit: '%'),
+  ]),
+];

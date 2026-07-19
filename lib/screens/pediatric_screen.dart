@@ -82,16 +82,7 @@ class _PediatricScreenState extends State<PediatricScreen> {
           PdfExportButton(
             filename: 'pediatric',
             tabTitleKey: 'tab_pediatric',
-            buildSections: () => [
-              PdfSection(title: t('pdf_inputs'), rows: [
-                PdfRow.numeric(label: t('bsa_body_weight'), value: patientData.pediatricWeight,    unit: 'kg'),
-                PdfRow.numeric(label: t('ped_desired_hb'),  value: patientData.desiredHbIncrease, unit: 'g/dl', decimals: 1),
-              ]),
-              PdfSection(title: t('pdf_results'), rows: [
-                PdfRow.numeric(label: t('ped_transfusion_vol'), value: patientData.transfusionVolume, unit: 'ml', decimals: 0,
-                    note: t('ped_hct_in_ek')),
-              ]),
-            ],
+            buildSections: () => buildPediatricPdfSections(patientData),
           ),
           SourceButton(refs: [
             AppSources.oldeen2020,
@@ -153,3 +144,15 @@ class _PediatricScreenState extends State<PediatricScreen> {
     );
   }
 }
+
+// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+List<PdfSection> buildPediatricPdfSections(PatientData pd) => [
+  PdfSection(title: t('pdf_inputs'), rows: [
+    PdfRow.numeric(label: t('bsa_body_weight'), value: pd.pediatricWeight,    unit: 'kg'),
+    PdfRow.numeric(label: t('ped_desired_hb'),  value: pd.desiredHbIncrease, unit: 'g/dl', decimals: 1),
+  ]),
+  PdfSection(title: t('pdf_results'), rows: [
+    PdfRow.numeric(label: t('ped_transfusion_vol'), value: pd.transfusionVolume, unit: 'ml', decimals: 0,
+        note: t('ped_hct_in_ek')),
+  ]),
+];

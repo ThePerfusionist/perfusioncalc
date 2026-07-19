@@ -161,28 +161,7 @@ Future<void> exportTabAsPdf({
       ),
 
       // ── Footer (auf jeder Seite) ────────────────────────────────────────
-      footer: (ctx) => pw.Container(
-        padding: const pw.EdgeInsets.only(top: 8),
-        decoration: const pw.BoxDecoration(
-          border: pw.Border(
-            top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-          ),
-        ),
-        child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-          pw.Text(disclaimerText, style: pw.TextStyle(
-            color: PdfColors.grey600,
-            fontSize: 7.5,
-            fontStyle: pw.FontStyle.italic,
-          )),
-          pw.SizedBox(height: 2),
-          pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-            pw.Text('PerfusionCalc · $versionLabel $kAppVersion',
-                style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 8)),
-            pw.Text('$pageLabel ${ctx.pageNumber} / ${ctx.pagesCount}',
-                style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 8)),
-          ]),
-        ]),
-      ),
+      footer: (ctx) => _buildFooter(ctx, disclaimerText, pageLabel, versionLabel),
 
       // ── Body: Sections ──────────────────────────────────────────────────
       build: (ctx) => [
@@ -200,8 +179,162 @@ Future<void> exportTabAsPdf({
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// Kombinierter Bericht (mehrere Tabs in einem PDF)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Fasst mehrere bereits ausgefüllte Tabs (BSA, O2-Delivery, Elektrolyte, ...)
+// in einem einzigen PDF zusammen - praktisch für die OP-Dokumentation, wenn
+// mehrere Parameter-Kategorien für denselben Patienten erfasst wurden, statt
+// pro Kategorie einzeln zu exportieren.
+//
+// Nutzung:
+//   await exportCombinedReportAsPdf(tabs: [
+//     PdfTabReport(tabTitle: t('tab_bsa'), sections: buildBsaPdfSections(pd)),
+//     PdfTabReport(tabTitle: t('tab_o2'),  sections: buildO2PdfSections(pd)),
+//     ...
+//   ]);
+//
+// Die Filterung "nur ausgefüllte Tabs" erfolgt beim Aufrufer (MainScreen),
+// nicht hier - diese Funktion rendert einfach, was ihr übergeben wird.
+
+/// Ein Tab-Bericht für den kombinierten Export: Tab-Titel + seine Sections
+/// (Eingaben/Ergebnisse), im selben Format wie bei den Einzel-Tab-Exports.
+class PdfTabReport {
+  final String tabTitle;
+  final List<PdfSection> sections;
+  PdfTabReport({required this.tabTitle, required this.sections});
+}
+
+/// Exportiert einen kombinierten Bericht über mehrere Tabs als ein PDF.
+Future<void> exportCombinedReportAsPdf({
+  required List<PdfTabReport> tabs,
+}) async {
+  final locale = LocaleNotifier.instance.current;
+  final theme = await _loadTheme();
+  final pdf = pw.Document(theme: theme);
+
+  final now = DateTime.now();
+  final dateStr = _formatDateTime(now, locale);
+
+  final headerTitle = 'PerfusionCalc';
+  final reportTitle = locale == AppLocale.de ? 'Perfusionsbericht' : 'Perfusion report';
+  final disclaimerText = locale == AppLocale.de
+      ? 'Nur zu Ausbildungszwecken. Keine klinische Verwendung. Keine Garantie auf Richtigkeit der Ergebnisse.'
+      : 'For educational use only. Not for clinical use. No guarantee of result accuracy.';
+  final pageLabel = locale == AppLocale.de ? 'Seite' : 'Page';
+  final exportedLabel = locale == AppLocale.de ? 'Exportiert am' : 'Exported on';
+  final versionLabel = locale == AppLocale.de ? 'Version' : 'Version';
+
+  pdf.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 60),
+
+      // ── Header (auf jeder Seite) ────────────────────────────────────────
+      header: (ctx) => pw.Container(
+        padding: const pw.EdgeInsets.only(bottom: 8),
+        decoration: const pw.BoxDecoration(
+          border: pw.Border(
+            bottom: pw.BorderSide(color: PdfColors.amber700, width: 1.5),
+          ),
+        ),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+              pw.Text(headerTitle, style: pw.TextStyle(
+                color: PdfColors.amber800,
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              )),
+              pw.SizedBox(height: 2),
+              pw.Text(reportTitle, style: const pw.TextStyle(
+                color: PdfColors.grey800,
+                fontSize: 13,
+              )),
+            ]),
+            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+              pw.Text('$exportedLabel $dateStr',
+                  style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
+            ]),
+          ],
+        ),
+      ),
+
+      // ── Footer (auf jeder Seite) - identisch zum Einzel-Tab-Export ──────
+      footer: (ctx) => _buildFooter(ctx, disclaimerText, pageLabel, versionLabel),
+
+      // ── Body: ein "Kapitel" pro Tab, jeweils mit eigenen Sections ───────
+      build: (ctx) => [
+        for (final tab in tabs) _buildTabChapter(tab),
+      ],
+    ),
+  );
+
+  final bytes = await pdf.save();
+  final ts = '${now.year}${_pad(now.month)}${_pad(now.day)}_'
+             '${_pad(now.hour)}${_pad(now.minute)}';
+  final fullFilename = 'perfusioncalc_combined_report_$ts.pdf';
+  await downloadPdf(bytes, fullFilename);
+}
+
+/// Ein Tab als "Kapitel" im kombinierten Bericht: deutlich prominenterer,
+/// farbig hinterlegter Titel (statt des einfachen goldenen Unterstrichs bei
+/// einzelnen Sections), damit die Tabs im durchlaufenden Dokument klar
+/// auseinanderzuhalten sind.
+pw.Widget _buildTabChapter(PdfTabReport tab) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.only(top: 20),
+    child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: const pw.BoxDecoration(
+          color: PdfColors.amber800,
+          borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
+        ),
+        child: pw.Text(tab.tabTitle, style: pw.TextStyle(
+          color: PdfColors.white,
+          fontSize: 14,
+          fontWeight: pw.FontWeight.bold,
+        )),
+      ),
+      for (final section in tab.sections) _buildSection(section),
+    ]),
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // Helpers
 // ════════════════════════════════════════════════════════════════════════════
+
+/// Footer-Zeile: Disclaimer + Version/Seitenzahl. Von beiden Export-Arten
+/// (Einzel-Tab und kombinierter Bericht) identisch genutzt.
+pw.Widget _buildFooter(pw.Context ctx, String disclaimerText, String pageLabel, String versionLabel) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.only(top: 8),
+    decoration: const pw.BoxDecoration(
+      border: pw.Border(
+        top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+      ),
+    ),
+    child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      pw.Text(disclaimerText, style: pw.TextStyle(
+        color: PdfColors.grey600,
+        fontSize: 7.5,
+        fontStyle: pw.FontStyle.italic,
+      )),
+      pw.SizedBox(height: 2),
+      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+        pw.Text('PerfusionCalc · $versionLabel $kAppVersion',
+            style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 8)),
+        pw.Text('$pageLabel ${ctx.pageNumber} / ${ctx.pagesCount}',
+            style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 8)),
+      ]),
+    ]),
+  );
+}
 
 pw.Widget _buildSection(PdfSection section) {
   return pw.Padding(

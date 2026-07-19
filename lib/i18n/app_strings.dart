@@ -102,6 +102,10 @@ class Strings {
                                AppLocale.de: 'Ergebnisse'},
     'pdf_export_failed':      {AppLocale.en: 'PDF export failed',
                                AppLocale.de: 'PDF-Export fehlgeschlagen'},
+    'combined_report_button': {AppLocale.en: 'Export combined report',
+                               AppLocale.de: 'Gesamtbericht exportieren'},
+    'combined_report_empty':  {AppLocale.en: 'No data entered yet - please fill in at least one tab first.',
+                               AppLocale.de: 'Noch keine Daten erfasst - bitte zuerst mindestens einen Tab ausfüllen.'},
 
     // ── Tabs ──────────────────────────────────────────────────────────────
     'tab_bsa':                {AppLocale.en: 'BSA/CO/Hb/Hct',
