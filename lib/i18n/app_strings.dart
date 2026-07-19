@@ -208,6 +208,10 @@ class Strings {
     'enter_value':            {AppLocale.en: 'Enter value', AppLocale.de: 'Wert eingeben'},
     'missing_inputs_hint':    {AppLocale.en: 'Please enter: ',
                                AppLocale.de: 'Bitte eingeben: '},
+    'result_below_threshold': {AppLocale.en: 'Below the clinically relevant threshold',
+                               AppLocale.de: 'Unterhalb des klinisch relevanten Schwellenwerts'},
+    'do2i_gdp_warning':       {AppLocale.en: 'Below the Goal-Directed-Perfusion threshold of 272 ml/min/m² — associated with increased risk of acute kidney injury (AKI).',
+                               AppLocale.de: 'Unterhalb des Goal-Directed-Perfusion-Schwellenwerts von 272 ml/min/m² — assoziiert mit erhöhtem Risiko für ein akutes Nierenversagen (AKI).'},
 
     // ── Resistances Screen ────────────────────────────────────────────────
     'res_co_for_svr':         {AppLocale.en: 'Cardiac output (for SVR)',

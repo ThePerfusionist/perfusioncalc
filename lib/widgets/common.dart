@@ -233,6 +233,18 @@ class ResultCard extends StatelessWidget {
   /// gelassene Formeln als "0,00" missverstanden werden.
   final List<String> missingInputs;
 
+  /// Klinischer Warnschwellenwert (kein Plausibilitäts-Check wie bei
+  /// InputCard/Range — hier geht es um klinische Relevanz eines an sich
+  /// plausiblen Ergebnisses, z.B. DO₂i < 272 ml/min/m² als Goal-Directed-
+  /// Perfusion-Schwelle für erhöhtes AKI-Risiko). Wenn gesetzt und
+  /// value < warnBelow: oranger Rahmen + Warn-Icon, gleiche Optik wie der
+  /// Plausibilitäts-Warnrahmen bei den Eingabefeldern.
+  final double? warnBelow;
+
+  /// Tooltip-Text bei Unterschreitung von [warnBelow]. Pflicht, sobald
+  /// [warnBelow] gesetzt ist, damit die Warnung klinisch begründet ist.
+  final String? warnMessage;
+
   const ResultCard({
     super.key,
     required this.label,
@@ -241,14 +253,31 @@ class ResultCard extends StatelessWidget {
     this.rangeHint,
     this.decimals = 2,
     this.missingInputs = const [],
+    this.warnBelow,
+    this.warnMessage,
   });
 
   @override
   Widget build(BuildContext context) {
     final hasMissing = missingInputs.isNotEmpty;
+    // Orange Akzentfarbe für Warnzustand - gleicher Ton wie InputCards
+    // Plausibilitäts-Warnrahmen, damit "Achtung" im ganzen Screen einheitlich
+    // aussieht, auch wenn die Bedeutung hier eine andere ist.
+    const warnColor = Color(0xFFFFA726);
+    final belowThreshold = warnBelow != null && !hasMissing && value < warnBelow!;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: kCardColor,
+        borderRadius: BorderRadius.circular(8),
+        // Warnrand: nur bei Schwellenwert-Unterschreitung. Sonst
+        // transparenter Border, damit sich das Layout nicht verschiebt.
+        border: Border.all(
+          color: belowThreshold ? warnColor : Colors.transparent,
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
@@ -256,7 +285,19 @@ class ResultCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style:  TextStyle(color: kText, fontSize: 14)),
+              Row(children: [
+                Flexible(child: Text(label, style:  TextStyle(color: kText, fontSize: 14))),
+                if (belowThreshold) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: warnMessage ?? t('result_below_threshold'),
+                    triggerMode: TooltipTriggerMode.tap,
+                    showDuration: const Duration(seconds: 4),
+                    child: const Icon(Icons.warning_amber_rounded,
+                        color: warnColor, size: 16),
+                  ),
+                ],
+              ]),
               if (rangeHint != null && !hasMissing)
                 Text(rangeHint!, style:  TextStyle(color: kTextMuted, fontSize: 11)),
               if (hasMissing) ...[
@@ -273,7 +314,7 @@ class ResultCard extends StatelessWidget {
               Text(
                 hasMissing ? '—' : value.toStringAsFixed(decimals),
                 style: TextStyle(
-                  color: hasMissing ? kTextFaint : kGold,
+                  color: hasMissing ? kTextFaint : (belowThreshold ? warnColor : kGold),
                   fontSize: 24,
                   fontWeight: FontWeight.w500,
                 ),

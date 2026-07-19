@@ -119,6 +119,8 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
                 missingInputs: [...missing(caO2Inputs), ...coDerivedMissing()]),
             ResultCard(label: 'DO\u2082i',    unit: 'ml/min/m\u00b2', value: pd.do2i,
                 rangeHint: '(>272 ml/min/m\u00b2)',
+                warnBelow: 272,
+                warnMessage: t('do2i_gdp_warning'),
                 missingInputs: [...missing(caO2Inputs), ...ciDerivedMissing()]),
             ResultCard(label: 'VO\u2082',     unit: 'ml/min',         value: pd.vo2,
                 missingInputs: [...missing(cavInputs), ...coDerivedMissing()]),
