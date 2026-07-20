@@ -4,9 +4,19 @@
 // Referenzquellen:
 //   Severinghaus JW. J Appl Physiol 1958; 12: 485-6.
 //   Severinghaus JW. J Appl Physiol 1979; 46: 599-602.
+//     Eq. 1 (S aus PO2), Eq. 3 (Temperaturkoeffizient f_T) - Originalformeln
+//     im Volltext verifiziert: S = ((PO2³+150·PO2)⁻¹×23400 + 1)⁻¹
+//     Publizierter P50 der Eq. 1: 26.86 mmHg (Severinghaus 1979, S. 600).
+//   Rosenthal TB. J Biol Chem 1948; 173: 25-30.
+//     pH-Temperaturkoeffizient -0.0147 pH-Einheiten/°C, gültig 18-37°C
+//     (bestätigt durch Craig FN, 1952 - siehe Marshall & Marshall, JECT 1977).
+//   Bradley AF, Severinghaus JW, Stupfel M. J Appl Physiol 1956; 9: 201-4.
+//     PCO2-Temperaturkoeffizient 0.0185.
 //
 // Toleranzen: closeTo() mit 0.5 für mmHg-Werte, 0.01 für pH (stärkere
-// Genauigkeit nötig, da pH logarithmisch ist), 1.0% für Sättigungen.
+// Genauigkeit nötig, da pH logarithmisch ist), 1.0% für Sättigungen -
+// außer bei Tests, die EXAKT einen publizierten Referenzwert prüfen
+// (dort enger toleriert, siehe Kommentare).
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:perfusion_calc/models/bga_model.dart';
@@ -32,6 +42,28 @@ void main() {
     test('pH bleibt unverändert', () {
       final m = BgaModel()..pH = 7.40..temp = 37;
       expect(m.corrPH, closeTo(7.40, 0.001));
+    });
+  });
+
+  group('pH-Temperaturkoeffizient (Rosenthal 1948, bestätigt Craig 1952)', () {
+    // Die Konstante -0.0147 pH-Einheiten/°C stammt ursprünglich von
+    // Rosenthal (J Biol Chem 1948;173:25-30), nicht von Bradley/Severinghaus
+    // 1956 (die primär die PCO2/PO2-Koeffizienten liefern). Craig
+    // bestätigte 1952 unabhängig denselben Wert. Dokumentierter
+    // Gültigkeitsbereich: 18-37°C (Vollblut). Da die Formel eine reine
+    // lineare Multiplikation ist, ist hier eine sehr enge Toleranz möglich -
+    // dieser Test prüft die Konstante selbst, nicht nur eine Näherung.
+
+    test('pH 7.40 bei 18°C (untere Grenze des validierten Bereichs) → 7.6793', () {
+      final m = BgaModel()..pH = 7.40..temp = 18;
+      // 7.40 - 0.0147 × (18 - 37) = 7.40 + 0.2793 = 7.6793
+      expect(m.corrPH, closeTo(7.6793, 0.0005));
+    });
+
+    test('pH 7.40 bei 42°C (Fieber/Hyperthermie) → 7.3265', () {
+      final m = BgaModel()..pH = 7.40..temp = 42;
+      // 7.40 - 0.0147 × (42 - 37) = 7.40 - 0.0735 = 7.3265
+      expect(m.corrPH, closeTo(7.3265, 0.0005));
     });
   });
 
@@ -65,6 +97,17 @@ void main() {
     test('P50: PaO2 ≈ 27 mmHg → ~50% Sättigung', () {
       final m = BgaModel()..paO2 = 27..temp = 37;
       expect(m.satFromPaO2, closeTo(50, 1.0));
+    });
+
+    test('P50 EXAKT nach Severinghaus 1979 Eq.1: PaO2 26.86 mmHg → 50.0%', () {
+      // Severinghaus selbst berichtet im Originalpaper (S. 600): "P50 with
+      // Eq. 1 is 26.86" - das ist also der exakte Punkt, an dem Eq. 1 (die
+      // hier implementierte Formel) selbst 50.0% liefert, im Gegensatz zum
+      // klinisch gerundeten Lehrbuchwert 26.6-27 mmHg (Adair-Gleichung/
+      // gemessene Werte). Enge Toleranz, da dies kein Rundungswert ist,
+      // sondern der von der Formel selbst erzeugte Umkehrpunkt.
+      final m = BgaModel()..paO2 = 26.86..temp = 37;
+      expect(m.satFromPaO2, closeTo(50.0, 0.1));
     });
 
     test('PaO2 60 mmHg → ca. 90% (Steilabfall der Kurve)', () {

@@ -92,6 +92,24 @@ void main() {
       final pd = PatientData()..weight = 60;
       expect(pd.bloodVolumeFemale, closeTo(3.68, 0.001));
     });
+
+    test('Sanity-Check gegen Nadler 1962 Goldstandard-Formel (175 cm / 70 kg Mann)', () {
+      // Die App nutzt bewusst eine vereinfachte, gewichtsbasierte Näherung
+      // (Silbernagl/Despopoulos) statt der vollen Nadler-Regressionsformel
+      // (die zusätzlich die Körpergröße mit einbezieht). Nadler SB, Hidalgo
+      // JH, Bloch T. Surgery. 1962;51(2):224-232:
+      //   BV_Mann = 0.3669 × h[m]³ + 0.03219 × w[kg] + 0.6041
+      // Für 175 cm / 70 kg: 0.3669×1.75³ + 0.03219×70 + 0.6041 ≈ 4.824 L
+      // vs. vereinfachte Formel hier: 4.40 L (≈ 8.8 % niedriger).
+      // Dieser Test stellt sicher, dass die vereinfachte Näherung nicht
+      // versehentlich weit vom klinischen Goldstandard abdriftet (z.B. durch
+      // einen Tippfehler in einem Koeffizienten) - 15 % Toleranzband, da
+      // beide Formeln bewusst unterschiedlich sind, nicht identisch sein
+      // sollen.
+      const nadlerBV = 0.3669 * 1.75 * 1.75 * 1.75 + 0.03219 * 70 + 0.6041;
+      final pd = PatientData()..height = 175..weight = 70;
+      expect(pd.bloodVolumeMale, closeTo(nadlerBV, nadlerBV * 0.15));
+    });
   });
 
   group('Expected Hb/Hct nach Priming', () {
@@ -176,6 +194,26 @@ void main() {
       expect(pd.do2i, closeTo(452.81, 0.5));
       // Weit über Ranucci-Schwelle 272 → kein kritischer Bereich
       expect(pd.do2i, greaterThan(272));
+    });
+
+    test('Ranucci-2005-Schwelle: DO2i knapp über/unter 272 ml/min/m² wird korrekt unterschieden', () {
+      // Quelle: Ranucci M et al. Ann Thorac Surg. 2005;80(6):2213-2220.
+      // n=1048 CABG-Patienten; ROC-Cutoff für akutes Nierenversagen bei
+      // 272 mL·min⁻¹·m⁻². Mehrfach unabhängig bestätigt (u.a. de Somer 2011:
+      // ~262; Newland 2019, ANZCPR-Register n=19410). Dieser Test prüft
+      // nicht die Schwelle selbst (die liegt in main.dart/ResultCard als UI-
+      // Warnung, nicht im Modell), sondern dass DO2i knapp über und knapp
+      // unter dem publizierten Cutoff korrekt und stabil berechnet wird -
+      // Regressionsschutz für den GDP-Warnhinweis im O2-Tab.
+      final knappDrunter = PatientData()
+        ..artHb = 8.5..saO2 = 93..paO2 = 75..cardiacIndex = 2.4;
+      final knappDrueber = PatientData()
+        ..artHb = 9.0..saO2 = 93..paO2 = 75..cardiacIndex = 2.4;
+      // Beide Fälle unterscheiden sich nur um 0.5 g/dl Hb:
+      // Hb 8.5 → DO2i ≈ 259.8 (unter der Schwelle)
+      // Hb 9.0 → DO2i ≈ 274.8 (über der Schwelle)
+      expect(knappDrunter.do2i, lessThan(272));
+      expect(knappDrueber.do2i, greaterThan(272));
     });
 
     test('O2-ER im Normalbereich (~25%)', () {
