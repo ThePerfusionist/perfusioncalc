@@ -1,14 +1,13 @@
-// Internationalisierung (i18n) für PerfusionCalc
-// ===============================================
-// Eigene, leichtgewichtige Lösung mit zwei Sprachen (EN/DE).
+// Internationalization (i18n) for PerfusionCalc
+// ================================================
+// Custom, lightweight solution with two languages (EN/DE).
 //
-// Architektur:
-//   - AppLocale: enum mit unterstützten Sprachen
-//   - LocaleNotifier: ChangeNotifier, hält die aktive Sprache, persistent
-//     in SharedPreferences. Wird in main.dart oben in den Widget-Tree gestellt.
-//   - Strings: alle UI-Texte als statische Maps
-//   - t(): globaler Helfer, der den aktuellen Wert der LocaleNotifier nutzt
-// test
+// Architecture:
+//   - AppLocale: enum with supported languages
+//   - LocaleNotifier: ChangeNotifier, holds the active language, persisted
+//     in SharedPreferences. Placed near the top of the widget tree in main.dart.
+//   - Strings: all UI text as static maps
+//   - t(): global helper that reads the current value from LocaleNotifier
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,8 +30,8 @@ extension AppLocaleX on AppLocale {
       };
 }
 
-/// Singleton: die aktive Sprache der App.
-/// Beim App-Start wird in main.dart einmal load() aufgerufen.
+/// Singleton: the app's active language.
+/// load() is called once in main.dart on app start.
 class LocaleNotifier extends ChangeNotifier {
   static const _prefsKey = 'app_locale';
   static final LocaleNotifier instance = LocaleNotifier._();
@@ -41,8 +40,8 @@ class LocaleNotifier extends ChangeNotifier {
   AppLocale _current = AppLocale.en;
   AppLocale get current => _current;
 
-  /// Lädt die gespeicherte Sprache aus SharedPreferences.
-  /// Falls noch keine gespeichert: Default Englisch.
+  /// Loads the saved language from SharedPreferences.
+  /// If none is saved yet: defaults to English.
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -53,12 +52,12 @@ class LocaleNotifier extends ChangeNotifier {
       );
       notifyListeners();
     } catch (_) {
-      // SharedPreferences nicht verfügbar (z.B. Test) -> Default
+      // SharedPreferences unavailable (e.g. in tests) -> default
       _current = AppLocale.en;
     }
   }
 
-  /// Wechselt die Sprache und speichert sie.
+  /// Switches the language and persists it.
   Future<void> setLocale(AppLocale l) async {
     if (l == _current) return;
     _current = l;
@@ -67,18 +66,18 @@ class LocaleNotifier extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, l.code);
     } catch (_) {
-      // Speichern fehlgeschlagen -> wird beim nächsten Start auf Default zurückfallen
+      // Save failed -> will fall back to default on next start
     }
   }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Übersetzungen
+// Translations
 // ════════════════════════════════════════════════════════════════════════════
 //
-// Konvention: snake_case-Keys nach Bedeutung gruppiert. Einmal definiert,
-// für beide Sprachen. Wenn ein Key in DE fehlt, wird auf EN zurückgefallen.
-// Das verhindert Crashes bei unvollständigen Übersetzungen.
+// Convention: snake_case keys grouped by meaning. Defined once, for both
+// languages. If a key is missing in DE, it falls back to EN. This prevents
+// crashes from incomplete translations.
 
 class Strings {
   static const Map<String, Map<AppLocale, String>> _all = {
@@ -106,6 +105,17 @@ class Strings {
                                AppLocale.de: 'Gesamtbericht exportieren'},
     'combined_report_empty':  {AppLocale.en: 'No data entered yet - please fill in at least one tab first.',
                                AppLocale.de: 'Noch keine Daten erfasst - bitte zuerst mindestens einen Tab ausfüllen.'},
+
+    // ── Accessibility (screen reader labels) ────────────────────────────────
+    'a11y_increase':          {AppLocale.en: 'Increase', AppLocale.de: 'Erhöhen'},
+    'a11y_decrease':          {AppLocale.en: 'Decrease', AppLocale.de: 'Verringern'},
+    'a11y_warning':           {AppLocale.en: 'Warning', AppLocale.de: 'Warnung'},
+    'a11y_open_menu':         {AppLocale.en: 'Open navigation menu', AppLocale.de: 'Navigationsmenü öffnen'},
+    'a11y_app_info':          {AppLocale.en: 'App information', AppLocale.de: 'App-Informationen'},
+    'a11y_close_app':         {AppLocale.en: 'Close app', AppLocale.de: 'App schließen'},
+    'a11y_view_fullscreen':   {AppLocale.en: 'View image fullscreen', AppLocale.de: 'Bild in Vollansicht öffnen'},
+    'a11y_close_fullscreen':  {AppLocale.en: 'Close fullscreen view', AppLocale.de: 'Vollansicht schließen'},
+    'a11y_selected':          {AppLocale.en: 'selected', AppLocale.de: 'ausgewählt'},
 
     // ── Tabs ──────────────────────────────────────────────────────────────
     'tab_bsa':                {AppLocale.en: 'BSA/CO/Hb/Hct',
@@ -162,7 +172,7 @@ class Strings {
     'info_github':            {AppLocale.en: 'GitHub', AppLocale.de: 'GitHub'},
     'close':                  {AppLocale.en: 'Close', AppLocale.de: 'Schließen'},
 
-    // ── Plausibility-Tooltip (Warnung im InputCard) ───────────────────────
+    // ── Plausibility tooltip (warning in InputCard) ─────────────────────────
     'plausibility_warning':   {AppLocale.en: 'Unusual value',
                                AppLocale.de: 'Ungewöhnlicher Wert'},
     'plausibility_plausible': {AppLocale.en: 'Plausible',
@@ -398,16 +408,16 @@ class Strings {
                                AppLocale.de: 'Zum Vergrößern tippen'},
   };
 
-  /// Übersetze einen Key. Fällt auf EN zurück, wenn DE-Übersetzung fehlt;
-  /// gibt den Key selbst zurück, wenn überhaupt nicht definiert (sichtbar
-  /// als "Bug-Marker").
+  /// Translate a key. Falls back to EN if the DE translation is missing;
+  /// returns the key itself if not defined at all (visible as a
+  /// "bug marker").
   static String of(String key, AppLocale locale) {
     final entry = _all[key];
-    if (entry == null) return '⟨$key⟩'; // sichtbar machen, falls vergessen
+    if (entry == null) return '⟨$key⟩'; // make it visible if forgotten
     return entry[locale] ?? entry[AppLocale.en] ?? '⟨$key⟩';
   }
 }
 
-/// Globaler Kurz-Helfer. Verwendung: `t('bsa_body_height')`.
-/// Liest die aktuell aktive Sprache aus dem LocaleNotifier-Singleton.
+/// Global shorthand helper. Usage: `t('bsa_body_height')`.
+/// Reads the currently active language from the LocaleNotifier singleton.
 String t(String key) => Strings.of(key, LocaleNotifier.instance.current);

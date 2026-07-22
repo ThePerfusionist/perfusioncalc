@@ -16,8 +16,8 @@ class ElectrolytesScreen extends StatefulWidget {
 class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
   PatientData get patientData => widget.patientData;
 
-  /// Lokaler Rebuild: aktualisiert nur diesen Screen, nicht den ganzen
-  /// MainScreen. Anschließend wird der (No-Op-)Parent-Callback informiert.
+  /// Local rebuild: updates only this screen, not the whole MainScreen.
+  /// The (no-op) parent callback is then notified.
   void onChanged() {
     if (mounted) setState(() {});
     widget.onChanged();
@@ -25,8 +25,8 @@ class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Helper-Listen pro Formel - sammeln die fehlenden Pflichteingaben.
-    // Wenn auch nur eine fehlt, wird "—" statt einer Zahl angezeigt.
+    // Helper lists per formula - collect the missing required inputs.
+    // If even one is missing, "—" is shown instead of a number.
     List<String> missing(List<({Object? v, String label})> fields) =>
         fields.where((f) => f.v == null).map((f) => f.label).toList();
 
@@ -97,7 +97,7 @@ class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
   }
 }
 
-// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+// ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildElectrolytesPdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: t('bsa_body_weight'),       value: pd.bodyWeightElec, unit: 'kg'),

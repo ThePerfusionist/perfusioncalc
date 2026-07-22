@@ -5,8 +5,8 @@ import '../i18n/app_strings.dart';
 class ReferencePressureScreen extends StatelessWidget {
   const ReferencePressureScreen({super.key});
 
-  // Sections sind dynamisch, damit die Sprache umgeschaltet werden kann.
-  // 'title' kommt jeweils per t() pro Build-Aufruf.
+  // Sections are dynamic so the language can be switched.
+  // 'title' comes via t() on each build call.
   List<Map<String, dynamic>> _sections() => [
     {
       'title': t('ref_section_arterial'),

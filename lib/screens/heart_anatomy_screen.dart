@@ -86,7 +86,10 @@ class HeartAnatomyScreen extends StatelessWidget {
     bool whiteBg = false,
   }) {
     return Builder(
-      builder: (context) => GestureDetector(
+      builder: (context) => Semantics(
+        button: true,
+        label: t('anat_tap_zoom'),
+        child: GestureDetector(
         onTap: () => _showFullscreen(context, assetPath, isSvg, whiteBg: whiteBg),
         child: Container(
           decoration: BoxDecoration(
@@ -131,6 +134,7 @@ class HeartAnatomyScreen extends StatelessWidget {
             ),
           ]),
         ),
+        ),
       ),
     );
   }
@@ -159,16 +163,21 @@ class HeartAnatomyScreen extends StatelessWidget {
           // Close button
           Positioned(
             top: 8, right: 8,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(ctx),
-              child: Container(
-                width: 34, height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2C2C2C),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white24),
+            child: Semantics(
+              button: true,
+              label: t('a11y_close_fullscreen'),
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C2C2C),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 18),
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 18),
               ),
             ),
           ),

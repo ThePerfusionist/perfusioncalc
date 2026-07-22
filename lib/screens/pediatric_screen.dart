@@ -145,7 +145,7 @@ class _PediatricScreenState extends State<PediatricScreen> {
   }
 }
 
-// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+// ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildPediatricPdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: t('bsa_body_weight'), value: pd.pediatricWeight,    unit: 'kg'),

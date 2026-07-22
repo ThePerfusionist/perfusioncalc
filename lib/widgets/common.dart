@@ -5,25 +5,25 @@ import '../i18n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../utils/pdf_export.dart';
 
-// ── Theme-abhängige Farb-Tokens ─────────────────────────────────────────────
-// Getter statt const: lesen live ThemeNotifier.instance.isDark, damit alle
-// bestehenden Aufrufstellen (color: kCardColor, color: kBg, ...) ohne
-// Syntaxänderung theme-aware werden - ein Rebuild wird bereits über den
-// AnimatedBuilder in main.dart ausgelöst, der auf ThemeNotifier hört.
+// ── Theme-dependent color tokens ────────────────────────────────────────────
+// Getters instead of const: read ThemeNotifier.instance.isDark live, so all
+// existing call sites (color: kCardColor, color: kBg, ...) become theme-aware
+// without any syntax change - a rebuild is already triggered via the
+// AnimatedBuilder in main.dart, which listens to ThemeNotifier.
 //
-// kGold bleibt bewusst eine ECHTE Konstante: die Akzentfarbe soll in beiden
-// Themes identisch bleiben (Wiedererkennungswert des Markenlooks).
+// kGold deliberately stays a REAL constant: the accent color should stay
+// identical in both themes (brand recognition).
 const kGold = Color(0xFFFFA500);
 
 Color get kCardColor => ThemeNotifier.instance.isDark ? const Color(0xFF1C1C1C) : const Color(0xFFFFFFFF);
 Color get kBg        => ThemeNotifier.instance.isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF1F1F1);
 Color get kBtnGrey   => ThemeNotifier.instance.isDark ? const Color(0xFF4A4A4A) : const Color(0xFFE2E2E2); // +/- button background
-Color get kLetterbox => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFE4E4E4); // Seitenflächen auf breiten Screens
+Color get kLetterbox => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFE4E4E4); // side panels on wide screens
 
-// Text-/Trenner-Tokens: ersetzen die früher direkt verwendeten
-// Colors.white*-Werte, die nur im Dark Theme lesbar waren. Die Abstufung
-// (voll deckend -> stark transparent) bleibt erhalten, nur die Basisfarbe
-// wechselt zwischen Weiß (dark) und Schwarz-Anthrazit (light).
+// Text/divider tokens: replace the previously directly-used Colors.white*
+// values, which were only readable in the dark theme. The gradation (fully
+// opaque -> highly transparent) is preserved, only the base color switches
+// between white (dark) and black-anthracite (light).
 Color get kText          => ThemeNotifier.instance.isDark ? Colors.white   : const Color(0xFF1A1A1A);
 Color get kTextSecondary => ThemeNotifier.instance.isDark ? Colors.white70 : const Color(0xFF454545);
 Color get kTextTertiary  => ThemeNotifier.instance.isDark ? Colors.white60 : const Color(0xFF5C5C5C);
@@ -35,8 +35,8 @@ Color get kDivider       => ThemeNotifier.instance.isDark ? Colors.white12 : con
 Color get kSurfaceWash   => ThemeNotifier.instance.isDark ? Colors.white10 : const Color(0xFFE7E7E7);
 Color get kLink          => ThemeNotifier.instance.isDark ? const Color(0xFF60A0E0) : const Color(0xFF1D5C99); // DOI-Links
 
-// Tabellen-Chrome (Header-/Zeilenstreifen-Hintergrund), bisher als
-// magische Hex-Werte in fast jedem Tab-Screen dupliziert.
+// Table chrome (header/row-stripe background), previously duplicated as
+// magic hex values in almost every tab screen.
 Color get kTableHeaderBg => ThemeNotifier.instance.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEDEDED);
 Color get kRowStripeA    => ThemeNotifier.instance.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAFA);
 Color get kRowStripeB    => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
@@ -48,10 +48,10 @@ class InputCard extends StatefulWidget {
   final ValueChanged<double?> onChanged;
   final double step;
 
-  /// Optionaler plausibler Wertebereich. Wenn gesetzt und der Wert liegt
-  /// außerhalb dieses Bereichs, wird das Feld orange umrandet und ein
-  /// Warn-Icon neben dem Label angezeigt (sanfte Warnung - die Berechnung
-  /// läuft trotzdem normal weiter).
+  /// Optional plausible value range. If set and the value is outside this
+  /// range, the field gets an orange border and a warning icon next to the
+  /// label (gentle warning - the calculation still proceeds normally
+  /// regardless).
   final Range? range;
 
   const InputCard({
@@ -126,12 +126,12 @@ class _InputCardState extends State<InputCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Prüfen, ob der aktuelle Wert im plausiblen Bereich liegt.
-    // null (kein Wert eingegeben) gilt als "OK" - keine Warnung anzeigen.
+    // Check whether the current value is within the plausible range.
+    // null (no value entered) counts as "OK" - no warning shown.
     final bool outOfRange =
         widget.range != null && !widget.range!.contains(widget.value);
 
-    // Orange Akzentfarbe für Warnzustand, sonst Standard-Darkcard.
+    // Orange accent color for the warning state, otherwise the standard dark card.
     const warnColor = Color(0xFFFFA726); // material orange 400
 
     return Container(
@@ -139,8 +139,8 @@ class _InputCardState extends State<InputCard> {
       decoration: BoxDecoration(
         color: kCardColor,
         borderRadius: BorderRadius.circular(8),
-        // Warnrand: nur wenn outOfRange. Sonst transparenter Border,
-        // damit sich das Layout zwischen "ok" und "warn" nicht verschiebt.
+        // Warning border: only when outOfRange. Otherwise a transparent
+        // border, so the layout doesn't shift between "ok" and "warn".
         border: Border.all(
           color: outOfRange ? warnColor : Colors.transparent,
           width: 1.5,
@@ -150,7 +150,7 @@ class _InputCardState extends State<InputCard> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            // Label + optionales Warn-Icon mit Tooltip.
+            // Label + optional warning icon with tooltip.
             Row(children: [
               Text(widget.label, style:  TextStyle(color: kText, fontSize: 14)),
               if (outOfRange) ...[
@@ -159,8 +159,12 @@ class _InputCardState extends State<InputCard> {
                   message: _warnTooltipFor(widget.range!),
                   triggerMode: TooltipTriggerMode.tap,
                   showDuration: const Duration(seconds: 4),
-                  child: const Icon(Icons.warning_amber_rounded,
-                      color: warnColor, size: 16),
+                  child: Semantics(
+                    label: '${t('a11y_warning')}: ${_warnTooltipFor(widget.range!)}',
+                    excludeSemantics: true,
+                    child: const Icon(Icons.warning_amber_rounded,
+                        color: warnColor, size: 16),
+                  ),
                 ),
               ],
             ]),
@@ -168,7 +172,7 @@ class _InputCardState extends State<InputCard> {
           ]),
           const SizedBox(height: 4),
           Row(children: [
-            _btn(Icons.remove, _decrement),
+            _btn(Icons.remove, _decrement, '${t('a11y_decrease')}: ${widget.label}'),
             Expanded(
               child: TextField(
                 controller: _ctrl,
@@ -196,26 +200,31 @@ class _InputCardState extends State<InputCard> {
                 onTapOutside: (_) { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
               ),
             ),
-            _btn(Icons.add, _increment),
+            _btn(Icons.add, _increment, '${t('a11y_increase')}: ${widget.label}'),
           ]),
         ]),
       ),
     );
   }
 
-  /// Erzeugt den Tooltip-Text für das Warn-Icon.
-  /// Format: "Ungewöhnlich - plausibel: 5–20 g/dl\nSchwere Anämie bis Polyglobulie"
+  /// Builds the tooltip text for the warning icon.
+  /// Format: "Unusual value - plausible: 5–20 g/dl\nSevere anemia to polycythemia"
   String _warnTooltipFor(Range r) {
     final base = 'Ungewöhnlicher Wert\nPlausibel: ${r.display}';
     return r.note != null ? '$base\n${r.note}' : base;
   }
 
-  Widget _btn(IconData icon, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 36, height: 36,
-      decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
-      child: Icon(icon, color: kText, size: 20),
+  Widget _btn(IconData icon, VoidCallback onTap, String semanticLabel) => Semantics(
+    button: true,
+    label: semanticLabel,
+    excludeSemantics: true,
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36, height: 36,
+        decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
+        child: Icon(icon, color: kText, size: 20),
+      ),
     ),
   );
 }
@@ -227,22 +236,22 @@ class ResultCard extends StatelessWidget {
   final String? rangeHint;
   final int decimals;
 
-  /// Liste fehlender Eingaben (bereits uebersetzt). Wenn nicht-leer:
-  /// statt eines numerischen Wertes wird "—" angezeigt und darunter ein
-  /// Hinweis, welche Eingaben noch ausstehen. Verhindert, dass leer
-  /// gelassene Formeln als "0,00" missverstanden werden.
+  /// List of missing inputs (already translated). If non-empty: instead of
+  /// a numeric value, "—" is shown, with a note below listing which inputs
+  /// are still outstanding. Prevents formulas left blank from being
+  /// misread as "0.00".
   final List<String> missingInputs;
 
-  /// Klinischer Warnschwellenwert (kein Plausibilitäts-Check wie bei
-  /// InputCard/Range — hier geht es um klinische Relevanz eines an sich
-  /// plausiblen Ergebnisses, z.B. DO₂i < 272 ml/min/m² als Goal-Directed-
-  /// Perfusion-Schwelle für erhöhtes AKI-Risiko). Wenn gesetzt und
-  /// value < warnBelow: oranger Rahmen + Warn-Icon, gleiche Optik wie der
-  /// Plausibilitäts-Warnrahmen bei den Eingabefeldern.
+  /// Clinical warning threshold (not a plausibility check like
+  /// InputCard/Range — this is about the clinical relevance of an
+  /// otherwise plausible result, e.g. DO₂i < 272 ml/min/m² as the
+  /// Goal-Directed-Perfusion threshold for increased AKI risk). If set and
+  /// value < warnBelow: orange border + warning icon, same look as the
+  /// plausibility warning border on input fields.
   final double? warnBelow;
 
-  /// Tooltip-Text bei Unterschreitung von [warnBelow]. Pflicht, sobald
-  /// [warnBelow] gesetzt ist, damit die Warnung klinisch begründet ist.
+  /// Tooltip text shown when below [warnBelow]. Required as soon as
+  /// [warnBelow] is set, so the warning is clinically justified.
   final String? warnMessage;
 
   const ResultCard({
@@ -260,9 +269,9 @@ class ResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasMissing = missingInputs.isNotEmpty;
-    // Orange Akzentfarbe für Warnzustand - gleicher Ton wie InputCards
-    // Plausibilitäts-Warnrahmen, damit "Achtung" im ganzen Screen einheitlich
-    // aussieht, auch wenn die Bedeutung hier eine andere ist.
+    // Orange accent color for the warning state - same tone as InputCard's
+    // plausibility warning border, so "attention" looks consistent across
+    // the whole screen, even though the meaning here is different.
     const warnColor = Color(0xFFFFA726);
     final belowThreshold = warnBelow != null && !hasMissing && value < warnBelow!;
 
@@ -271,8 +280,8 @@ class ResultCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardColor,
         borderRadius: BorderRadius.circular(8),
-        // Warnrand: nur bei Schwellenwert-Unterschreitung. Sonst
-        // transparenter Border, damit sich das Layout nicht verschiebt.
+        // Warning border: only when below the threshold. Otherwise a
+        // transparent border, so the layout doesn't shift.
         border: Border.all(
           color: belowThreshold ? warnColor : Colors.transparent,
           width: 1.5,
@@ -293,8 +302,12 @@ class ResultCard extends StatelessWidget {
                     message: warnMessage ?? t('result_below_threshold'),
                     triggerMode: TooltipTriggerMode.tap,
                     showDuration: const Duration(seconds: 4),
-                    child: const Icon(Icons.warning_amber_rounded,
-                        color: warnColor, size: 16),
+                    child: Semantics(
+                      label: '${t('a11y_warning')}: ${warnMessage ?? t('result_below_threshold')}',
+                      excludeSemantics: true,
+                      child: const Icon(Icons.warning_amber_rounded,
+                          color: warnColor, size: 16),
+                    ),
                   ),
                 ],
               ]),
@@ -402,30 +415,30 @@ class GoldListCard extends StatelessWidget {
 
 // ── Browser-safe image loading ───────────────────────────────────────────────
 //
-// Problem: Flutter Web rendert standardmaessig ALLE Bilder ueber CanvasKit
-// (WebGL). Das gilt auch fuer Image.network - der Bytes werden per fetch()
-// geladen und in CanvasKit gezeichnet, NICHT als natives <img>-Element.
-// In Browsern mit strikten Defaults (Privacy-Browser, Firefox mit
-// fingerprinting-protection, einige Chromium-Forks) bricht entweder das
-// WASM-Image-Decoding oder das CanvasKit-Pixelreading ab. Effekt: Bild
-// erscheint nicht oder als leere weisse Flaeche (besonders bei SVGs).
+// Problem: Flutter Web renders ALL images via CanvasKit (WebGL) by default.
+// This also applies to Image.network - the bytes are loaded via fetch() and
+// drawn in CanvasKit, NOT as a native <img> element. In browsers with strict
+// defaults (privacy browsers, Firefox with fingerprinting protection, some
+// Chromium forks), either the WASM image decoding or the CanvasKit pixel
+// reading fails. Effect: the image doesn't appear, or shows as an empty
+// white area (especially for SVGs).
 //
-// Loesung: Flutter 3.27+ bietet den Parameter `webHtmlElementStrategy` von
-// Image.network. Wenn auf 'prefer' gesetzt, rendert Flutter das Bild als
-// nativen <img>-Tag im DOM via HtmlElementView. Der Browser laedt und
-// rendert dann selbst - unabhaengig von CanvasKit, unabhaengig vom
-// Renderer. Funktioniert auch mit SVGs, weil Browser SVGs in <img>
-// nativ unterstuetzen.
+// Solution: Flutter 3.27+ offers the `webHtmlElementStrategy` parameter on
+// Image.network. When set to 'prefer', Flutter renders the image as a
+// native <img> tag in the DOM via HtmlElementView. The browser then loads
+// and renders it itself - independent of CanvasKit, independent of the
+// renderer. Also works with SVGs, because browsers natively support SVGs
+// inside <img>.
 //
-// Trade-offs (laut Flutter-Doku akzeptabel fuer unseren Use Case):
-//   - Suboptimale Performance (irrelevant bei wenigen statischen Bildern)
-//   - Kein Image.toByteData / OffsetLayer.toImage (nutzen wir nicht)
-//   - Einige Color/Blend-Effekte funktionieren nicht (nutzen wir nicht)
+// Trade-offs (acceptable for our use case per the Flutter docs):
+//   - Suboptimal performance (irrelevant for a handful of static images)
+//   - No Image.toByteData / OffsetLayer.toImage (we don't use these)
+//   - Some color/blend effects don't work (we don't use these)
 //
-// Voraussetzung: Asset liegt unter assets/<filename> in pubspec.yaml.
-// Flutter packt es im web-Build unter assets/assets/<filename>, was dank
-// <base href="/<app>/"> als 'assets/assets/<filename>' relativ adressierbar
-// ist.
+// Prerequisite: the asset lives under assets/<filename> in pubspec.yaml.
+// Flutter packages it in the web build under assets/assets/<filename>,
+// which - thanks to <base href="/<app>/"> - is addressable as a relative
+// path 'assets/assets/<filename>'.
 
 class BrowserSafeImage extends StatelessWidget {
   final String assetPath;        // wie in pubspec deklariert, z.B. 'assets/finck_va.jpg'
@@ -443,21 +456,21 @@ class BrowserSafeImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Flutter packt Assets in den web-Build unter assets/assets/<file>.
-    // Ein relativer Pfad respektiert das <base href> der Seite.
+    // Flutter packages assets in the web build under assets/assets/<file>.
+    // A relative path respects the page's <base href>.
     final url = 'assets/$assetPath';
     return Image.network(
       url,
       fit: fit,
       width: width,
       height: height,
-      // KRITISCH: zwingt Flutter, einen nativen <img>-Tag im DOM zu nutzen
-      // statt das Bild ueber CanvasKit zu zeichnen. Bytes werden vom Browser
-      // geladen, nicht von Flutter. Loest:
-      //   - Bilder unsichtbar in Privacy-Browsern
-      //   - SVG erscheint als weisse Flaeche
+      // CRITICAL: forces Flutter to use a native <img> tag in the DOM
+      // instead of drawing the image via CanvasKit. Bytes are loaded by the
+      // browser, not by Flutter. Fixes:
+      //   - images invisible in privacy browsers
+      //   - SVG appearing as a white area
       webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-      // Loading-Indikator waehrend des Bildladens
+      // Loading indicator while the image loads
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
         return Container(
@@ -472,8 +485,8 @@ class BrowserSafeImage extends StatelessWidget {
           ),
         );
       },
-      // Fallback bei Fehler: Image.asset versuchen (z.B. fuer Mobile-Build,
-      // wo es kein HTTP-Asset-Hosting gibt).
+      // Fallback on error: try Image.asset (e.g. for the mobile build,
+      // where there is no HTTP asset hosting).
       errorBuilder: (context, error, stack) {
         return Image.asset(
           assetPath,
@@ -514,12 +527,16 @@ class ImageSectionCard extends StatelessWidget {
           child: Text(title,
               style: const TextStyle(color: kGold, fontSize: 14, fontWeight: FontWeight.bold)),
         ),
-        GestureDetector(
-          onTap: () => _showFullImage(context),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-            child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.fitWidth),
+        Semantics(
+          button: true,
+          label: t('a11y_view_fullscreen'),
+          child: GestureDetector(
+            onTap: () => _showFullImage(context),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+              child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.fitWidth),
+            ),
           ),
         ),
       ]),
@@ -532,10 +549,10 @@ class ImageSectionCard extends StatelessWidget {
       builder: (ctx) => Dialog(
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(8),
-        // Stack-Layout: Bild fuellt den Dialog und nutzt InteractiveViewer
-        // fuer Pinch-Zoom; der Close-Button schwebt darueber. So bleibt der
-        // Close-Button immer erreichbar, auch wenn das Bild sehr hoch ist
-        // (z.B. die portrait-format Finck-Tabellen).
+        // Stack layout: image fills the dialog and uses InteractiveViewer
+        // for pinch-zoom; the close button floats on top. This keeps the
+        // close button always reachable, even when the image is very tall
+        // (e.g. the portrait-format Finck tables).
         child: Stack(children: [
           // Title at top
           Positioned(
@@ -559,16 +576,21 @@ class ImageSectionCard extends StatelessWidget {
           // Close button — top right, always reachable
           Positioned(
             top: 8, right: 8,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(ctx),
-              child: Container(
-                width: 34, height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2C2C2C),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white24),
+            child: Semantics(
+              button: true,
+              label: t('a11y_close_fullscreen'),
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C2C2C),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 18),
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 18),
               ),
             ),
           ),
@@ -580,15 +602,15 @@ class ImageSectionCard extends StatelessWidget {
 
 // ── PDF Export button ─────────────────────────────────────────────────────────
 //
-// Wiederverwendbarer Button am Ende eines Tabs zum Export der aktuellen
-// Eingaben/Ergebnisse als PDF. Auf Web wird der Browser-Download getriggert,
-// auf Mobile wuerde man path_provider + share_plus nutzen (nicht implementiert).
+// Reusable button at the end of a tab for exporting the current
+// inputs/results as a PDF. On web, it triggers the browser download; on
+// mobile you would use path_provider + share_plus (not implemented).
 //
-// Der Tab uebergibt eine Funktion, die die Sections aktuell zusammenstellt -
-// damit werden immer die aktuellsten Werte exportiert, nicht ein Snapshot
-// vom Zeitpunkt des Tab-Aufbaus.
+// The tab passes in a function that assembles the sections on demand -
+// this way the most current values are always exported, not a snapshot
+// from when the tab was built.
 //
-// Beispiel:
+// Example:
 //   PdfExportButton(
 //     filename: 'bsa',
 //     tabTitleKey: 'tab_bsa',
@@ -599,14 +621,14 @@ class ImageSectionCard extends StatelessWidget {
 //   )
 
 class PdfExportButton extends StatelessWidget {
-  /// Dateinamenstamm, z.B. 'bsa' -> "perfusioncalc_bsa_20260425_1630.pdf"
+  /// Filename stem, e.g. 'bsa' -> "perfusioncalc_bsa_20260425_1630.pdf"
   final String filename;
 
-  /// i18n-Key fuer den Tab-Titel im PDF-Header (z.B. 'tab_bsa').
+  /// i18n key for the tab title in the PDF header (e.g. 'tab_bsa').
   final String tabTitleKey;
 
-  /// Callback der aktuellen Sections - wird erst beim Klick aufgerufen,
-  /// damit immer die neuesten Werte erfasst werden.
+  /// Callback for the current sections - only called on click, so the
+  /// most recent values are always captured.
   final List<PdfSection> Function() buildSections;
 
   // ignore: prefer_const_constructors_in_immutables
@@ -625,8 +647,8 @@ class PdfExportButton extends StatelessWidget {
         sections: buildSections(),
       );
     } catch (e, stack) {
-      // Fehler in Browser-Console loggen, damit wir bei Problemen
-      // den genauen Grund sehen koennen (statt stillem Versagen).
+      // Log the error to the browser console so we can see the exact
+      // reason if there are problems (instead of failing silently).
       debugPrint('[PdfExportButton] export failed: $e');
       debugPrint('$stack');
       if (!context.mounted) return;
@@ -664,9 +686,9 @@ class PdfExportButton extends StatelessWidget {
 class SourceButton extends StatelessWidget {
   final List<SourceRef> refs;
 
-  // Nicht const, weil build() den globalen t()-Helfer aufruft, der sich bei
-  // Sprachwechsel aendert. Mit const wuerde Flutter das Widget cachen und
-  // den Sprachwechsel nicht mitbekommen.
+  // Not const, because build() calls the global t() helper, which changes
+  // on a language switch. With const, Flutter would cache the widget and
+  // miss the language switch.
   // ignore: prefer_const_constructors_in_immutables
   SourceButton({super.key, required this.refs});
 

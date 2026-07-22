@@ -54,7 +54,7 @@ class _TubeVolumeScreenState extends State<TubeVolumeScreen> {
   }
 }
 
-// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+// ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildTubeVolumePdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: t('tube_length'), value: pd.tubeLength, unit: 'cm', decimals: 0),

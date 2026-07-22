@@ -19,7 +19,7 @@ class BSAScreen extends StatefulWidget {
 class _BSAScreenState extends State<BSAScreen> {
   bool _loaded = false;
 
-  /// Lokaler Rebuild dieses Screens statt globalem MainScreen-Rebuild.
+  /// Local rebuild of this screen instead of a global MainScreen rebuild.
   void _recalc() {
     if (mounted) setState(() {});
     widget.onChanged();
@@ -82,9 +82,9 @@ class _BSAScreenState extends State<BSAScreen> {
             }
           },
         ),
-        // ── Berechnete Ergebnisse ─────────────────────────────────────────
-        // Helper-Listen: erfassen die Eingaben, die jede Formel braucht.
-        // Wenn auch nur eine fehlt, wird "—" statt einer Zahl angezeigt.
+        // ── Calculated results ────────────────────────────────────────────
+        // Helper lists: collect the inputs each formula needs.
+        // If even one is missing, "—" is shown instead of a number.
         Builder(builder: (_) {
           List<String> missing(List<({Object? v, String label})> fields) =>
               fields.where((f) => f.v == null).map((f) => f.label).toList();
@@ -219,7 +219,7 @@ class _CIInputCardState extends State<_CIInputCard> {
           ]),
           const SizedBox(height: 4),
           Row(children: [
-            _btn(Icons.remove, _dec),
+            _btn(Icons.remove, _dec, '${t('a11y_decrease')}: ${t('bsa_cardiac_index')}'),
             Expanded(
               child: TextField(
                 controller: _ctrl,
@@ -233,7 +233,7 @@ class _CIInputCardState extends State<_CIInputCard> {
                 onTapOutside: (_) { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
               ),
             ),
-            _btn(Icons.add, _inc),
+            _btn(Icons.add, _inc, '${t('a11y_increase')}: ${t('bsa_cardiac_index')}'),
           ]),
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -245,18 +245,23 @@ class _CIInputCardState extends State<_CIInputCard> {
     );
   }
 
-  Widget _btn(IconData icon, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 36, height: 36,
-      decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
-      child: Icon(icon, color: kText, size: 20),
+  Widget _btn(IconData icon, VoidCallback onTap, String semanticLabel) => Semantics(
+    button: true,
+    label: semanticLabel,
+    excludeSemantics: true,
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36, height: 36,
+        decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
+        child: Icon(icon, color: kText, size: 20),
+      ),
     ),
   );
 }
 
-// ── PDF-Sections (extrahiert, damit sowohl der Einzel-Tab-Export als auch
-// der kombinierte Gesamtbericht (siehe main.dart) dieselbe Logik nutzen) ───
+// ── PDF sections (extracted so both the single-tab export and the
+// combined report (see main.dart) use the same logic) ──────────────────────
 List<PdfSection> buildBsaPdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: t('bsa_body_height'),     value: pd.height,         unit: 'cm'),

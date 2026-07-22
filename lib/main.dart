@@ -19,11 +19,11 @@ import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.2.3';
+const kAppVersion = '0.2.4';
 
 void main() async {
-  // Sprache + Theme aus SharedPreferences laden bevor die UI gerendert wird,
-  // damit der erste Rebuild schon die richtige Sprache/Darstellung zeigt.
+  // Load language + theme from SharedPreferences before the UI is rendered,
+  // so the first rebuild already shows the correct language/appearance.
   WidgetsFlutterBinding.ensureInitialized();
   await LocaleNotifier.instance.load();
   await ThemeNotifier.instance.load();
@@ -35,10 +35,10 @@ class PerfusionCalcApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // AnimatedBuilder lauscht auf Sprache UND Theme. Bei jeder Änderung wird
-    // der gesamte Widget-Tree neu aufgebaut, damit alle t()-Aufrufe und alle
-    // theme-abhängigen Farb-Getter (kGold, kCardColor, ...) den aktuellen
-    // Stand sehen.
+    // AnimatedBuilder listens for language AND theme. On any change, the
+    // entire widget tree is rebuilt, so all t() calls and all theme-
+    // dependent color getters (kGold, kCardColor, ...) see the current
+    // state.
     return AnimatedBuilder(
       animation: Listenable.merge([LocaleNotifier.instance, ThemeNotifier.instance]),
       builder: (context, _) => MaterialApp(
@@ -66,15 +66,15 @@ class _MainScreenState extends State<MainScreen>
   final BgaModel _bgaModel = BgaModel();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  /// Tabs-Definition: icon ist statisch, label wird per t() bei jedem Build
-  /// frisch übersetzt. Wenn die Sprache wechselt, ruft AnimatedBuilder oben
-  /// einen Rebuild aus und _tabsList() wird neu evaluiert.
+  /// Tab definition: icon is static, label is freshly translated via t() on
+  /// every build. When the language switches, the AnimatedBuilder above
+  /// triggers a rebuild and _tabsList() is re-evaluated.
   ///
-  /// Reihenfolge bewusst gewählt: BSA und O2 als zentrale Berechnungen zuerst,
-  /// dann Hypothermie (Severinghaus, didaktisch besonders wichtig), gefolgt
-  /// von Elektrolyten und Resistances (haemodynamische Folgegroessen). Danach
-  /// paediatrische und schlauchbezogene Berechnungen, zum Schluss die reinen
-  /// Referenz-/Anatomie-Tabs.
+  /// Order chosen deliberately: BSA and O2 as the central calculations
+  /// first, then hypothermia (Severinghaus, didactically especially
+  /// important), followed by electrolytes and resistances (downstream
+  /// hemodynamic quantities). Then pediatric and tube-related
+  /// calculations, and finally the pure reference/anatomy tabs.
   static const List<Map<String, dynamic>> _kTabs = [
     {'key': 'tab_bsa',          'icon': Icons.monitor_heart_outlined},
     {'key': 'tab_o2',           'icon': Icons.air},
@@ -94,19 +94,19 @@ class _MainScreenState extends State<MainScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 11, vsync: this);
-    // WICHTIG für Performance: Der Listener darf NICHT bei jedem
-    // Animationsframe setState auslösen, sonst wird der gesamte Widget-Tree
-    // (AppBar, TabBar, alle 11 TabBarView-Children) 60x/Sekunde neu gebaut.
-    // Wir rebuilden nur, wenn sich der Ziel-Index tatsächlich ändert - das
-    // ist ausschließlich für die aktive Markierung im Drawer nötig.
+    // IMPORTANT for performance: the listener must NOT trigger setState on
+    // every animation frame, or the entire widget tree (AppBar, TabBar, all
+    // 11 TabBarView children) would rebuild 60x/second. We only rebuild
+    // when the target index actually changes - that's only needed for the
+    // active highlight in the drawer.
     _tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _showDisclaimerDialog());
   }
 
-  /// Wird vom Betriebssystem aufgerufen, wenn sich Hell/Dunkel ändert
-  /// (z.B. automatischer Wechsel bei Sonnenuntergang). Nur relevant, wenn
-  /// der Nutzer "System" als Theme-Modus gewählt hat - ThemeNotifier prüft
-  /// das selbst und ignoriert den Aufruf sonst.
+  /// Called by the OS when light/dark changes (e.g. an automatic switch at
+  /// sunset). Only relevant if the user has chosen "System" as the theme
+  /// mode - ThemeNotifier checks this itself and otherwise ignores the
+  /// call.
   @override
   void didChangePlatformBrightness() {
     ThemeNotifier.instance.handlePlatformBrightnessChanged();
@@ -117,8 +117,8 @@ class _MainScreenState extends State<MainScreen>
     final idx = _tabController.index;
     if (idx != _lastTabIndex) {
       _lastTabIndex = idx;
-      // Nur ein leichter Rebuild für die Drawer-Markierung; die TabBar selbst
-      // aktualisiert sich intern über den gemeinsamen Controller.
+      // Just a light rebuild for the drawer highlight; the TabBar itself
+      // updates internally via the shared controller.
       if (mounted) setState(() {});
     }
   }
@@ -136,11 +136,12 @@ class _MainScreenState extends State<MainScreen>
     _tabController.animateTo(index);
   }
 
-  /// Bewusst leer: Screens aktualisieren ihre Ergebnisse selbst (lokales
-  /// setState im jeweiligen Screen-State). Siehe Kommentar am TabBarView.
+  /// Deliberately empty: screens update their own results locally (local
+  /// setState in the respective screen state). See the comment on
+  /// TabBarView.
   void _noop() {}
 
-  // ── Dialogs ────────────────────────────────────────────────────────────────
+  // ── Dialogs ──────────────────────────────────────────────────────────────
   void _showDisclaimerDialog() {
     showDialog(
       context: context,
@@ -227,22 +228,21 @@ class _MainScreenState extends State<MainScreen>
     ],
   );
 
-  // ── Gesamtbericht (kombinierter PDF-Export über mehrere Tabs) ──────────────
+  // ── Combined report (combined PDF export across multiple tabs) ─────────────
   //
-  // Acht Tabs mit tatsächlichem Patienten-/Falldatenbezug gehören in einen
-  // "Patientenbericht" (BSA, O2-Delivery, Hypothermie/BGA-Korrektur,
-  // Elektrolyte, Widerstände, Pädiatrie, Schlauchvolumen, Charrière). Ihre
-  // Modelle (_patientData, _bgaModel) leben in MainScreen und werden an die
-  // jeweiligen Screens durchgereicht - genau deshalb kann hier direkt darauf
-  // zugegriffen werden, ohne die aktuell sichtbaren Tab-Widgets zu kennen.
-  // Flow/Drainage, Referenzdrücke und Herzanatomie sind reine, patienten-
-  // unabhängige Nachschlage-Tools und bleiben außen vor - dafür gibt es dort
-  // gar keinen PDF-Export.
+  // Eight tabs with an actual patient/case data connection belong in a
+  // "patient report" (BSA, O2 delivery, hypothermia/BGA correction,
+  // electrolytes, resistances, pediatrics, tube volume, Charrière). Their
+  // models (_patientData, _bgaModel) live in MainScreen and are passed down
+  // to the respective screens - which is exactly why they can be accessed
+  // directly here, without needing to know the currently visible tab
+  // widgets. Flow/drainage, reference pressures, and heart anatomy are pure,
+  // patient-independent reference tools and are excluded - which is why
+  // they have no PDF export at all.
   //
-  // "Nur ausgefüllte Tabs": ein Tab wird nur aufgenommen, wenn mindestens
-  // eine seiner Zeilen einen echten Wert hat (nicht nur "—"). So bleibt der
-  // Bericht kompakt, auch wenn der Nutzer erst einen Teil der Tabs bearbeitet
-  // hat.
+  // "Only filled-in tabs": a tab is only included if at least one of its
+  // rows has a real value (not just "—"). This keeps the report compact
+  // even if the user has only worked through part of the tabs.
   Future<void> _exportCombinedReport() async {
     final pd = _patientData;
     final candidates = [
@@ -282,14 +282,14 @@ class _MainScreenState extends State<MainScreen>
     }
   }
 
-  // ── Drawer ─────────────────────────────────────────────────────────────────
+  // ── Drawer ───────────────────────────────────────────────────────────────
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: kCardColor,
-      // AnimatedBuilder lauscht auf Sprache UND Theme. Ohne diesen Wrapper
-      // würde der Drawer bei einem Wechsel nicht neu rendern, weil er als
-      // Overlay über der App liegt - der globale Rebuild der MaterialApp
-      // erreicht den Drawer-Inhalt nicht, solange er offen ist.
+      // AnimatedBuilder listens for language AND theme. Without this
+      // wrapper, the drawer wouldn't re-render on a change, because it sits
+      // as an overlay above the app - the global MaterialApp rebuild
+      // doesn't reach the drawer content while it's open.
       child: AnimatedBuilder(
         animation: Listenable.merge([LocaleNotifier.instance, ThemeNotifier.instance]),
         builder: (context, _) => SafeArea(
@@ -308,14 +308,19 @@ class _MainScreenState extends State<MainScreen>
           Expanded(
             child: Builder(
               builder: (context) {
-                // tabs einmal pro Build holen, damit nicht 11x neu evaluiert.
+                // fetch tabs once per build, so it's not re-evaluated 11x.
                 final tabs = _kTabs;
                 return ListView.builder(
                   padding: EdgeInsets.zero,
                   itemCount: tabs.length,
                   itemBuilder: (ctx, i) {
                     final isActive = _tabController.index == i;
-                    return InkWell(
+                    return Semantics(
+                      button: true,
+                      selected: isActive,
+                      label: t(tabs[i]['key'] as String),
+                      excludeSemantics: true,
+                      child: InkWell(
                       onTap: () => _goToTab(i),
                       child: Container(
                         decoration: BoxDecoration(
@@ -339,17 +344,18 @@ class _MainScreenState extends State<MainScreen>
                             Icon(Icons.chevron_right, color: kGold, size: 18),
                         ]),
                       ),
+                      ),
                     );
                   },
                 );
               },
             ),
           ),
-          // ── Gesamtbericht (kombinierter PDF-Export) ─────────────────────────
+          // ── Combined report (combined PDF export) ────────────────────────────
           Divider(color: kDivider, height: 1),
           InkWell(
             onTap: () {
-              Navigator.pop(context); // Drawer schließen, dann Export anstoßen
+              Navigator.pop(context); // close the drawer, then trigger the export
               _exportCombinedReport();
             },
             child: Padding(
@@ -383,7 +389,12 @@ class _MainScreenState extends State<MainScreen>
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: InkWell(
+                  child: Semantics(
+                    button: true,
+                    selected: isActive,
+                    label: '${t(labelKey)}${isActive ? ", ${t('a11y_selected')}" : ""}',
+                    excludeSemantics: true,
+                    child: InkWell(
                     onTap: () async {
                       await ThemeNotifier.instance.setMode(mode);
                     },
@@ -411,6 +422,7 @@ class _MainScreenState extends State<MainScreen>
                         ),
                       ]),
                     ),
+                    ),
                   ),
                 ),
               );
@@ -432,7 +444,12 @@ class _MainScreenState extends State<MainScreen>
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: InkWell(
+                  child: Semantics(
+                    button: true,
+                    selected: isActive,
+                    label: '${loc.displayName}${isActive ? ", ${t('a11y_selected')}" : ""}',
+                    excludeSemantics: true,
+                    child: InkWell(
                     onTap: () async {
                       await LocaleNotifier.instance.setLocale(loc);
                     },
@@ -459,6 +476,7 @@ class _MainScreenState extends State<MainScreen>
                       ),
                     ),
                   ),
+                  ),
                 ),
               );
             }).toList()),
@@ -475,13 +493,13 @@ class _MainScreenState extends State<MainScreen>
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  // ── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    // AnimatedBuilder lauscht auf Sprache UND Theme. Damit baut sich der
-    // gesamte MainScreen (inkl. TabBar, AppBar, TabBarView und allen
-    // eingebetteten Screens) bei jedem Sprach- oder Theme-Wechsel sofort neu
-    // auf - ohne dass der Nutzer erst einen Tab antippen muss.
+    // AnimatedBuilder listens for language AND theme. This makes the
+    // entire MainScreen (incl. TabBar, AppBar, TabBarView, and all embedded
+    // screens) rebuild immediately on every language or theme switch -
+    // without the user having to tap a tab first.
     return AnimatedBuilder(
       animation: Listenable.merge([LocaleNotifier.instance, ThemeNotifier.instance]),
       builder: (context, _) => Scaffold(
@@ -494,6 +512,7 @@ class _MainScreenState extends State<MainScreen>
           IconButton(
             icon: Icon(Icons.menu, color: kText),
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+            tooltip: t('a11y_open_menu'),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
@@ -505,11 +524,13 @@ class _MainScreenState extends State<MainScreen>
           IconButton(
             icon: Icon(Icons.info_outline, color: kText),
             onPressed: _showInfoDialog,
+            tooltip: t('a11y_app_info'),
           ),
           // Close button — rightmost
           IconButton(
             icon: Icon(Icons.close, color: kText),
             onPressed: () => SystemNavigator.pop(),
+            tooltip: t('a11y_close_app'),
           ),
         ],
         bottom: PreferredSize(
@@ -537,10 +558,10 @@ class _MainScreenState extends State<MainScreen>
           controller: _tabController,
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            // onChanged ist bewusst ein No-Op: Jeder Screen aktualisiert seine
-            // eigenen Ergebnisse über ein lokales setState. Ein globaler Rebuild
-            // des MainScreen (und damit aller 11 Tabs) ist nicht nötig und war
-            // die Hauptursache für das ruckelige Tippverhalten.
+            // onChanged is deliberately a no-op: each screen updates its own
+            // results via a local setState. A global rebuild of MainScreen
+            // (and thus all 11 tabs) is not necessary and was the main
+            // cause of the janky typing behavior.
             BSAScreen(patientData: _patientData, onChanged: _noop),
             O2DeliveryScreen(patientData: _patientData, onChanged: _noop),
             HypothermiaScreen(bgaModel: _bgaModel, onChanged: _noop),

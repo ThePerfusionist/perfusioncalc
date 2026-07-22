@@ -104,7 +104,7 @@ class _ZollChairreScreenState extends State<ZollChairreScreen> {
         child: Text(text, style: TextStyle(color: color ?? kText, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14))));
 }
 
-// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+// ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildZollPdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: t('zoll_ch_to_mm'), value: pd.chInput, unit: 'Ch', decimals: 1),

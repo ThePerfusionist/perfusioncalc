@@ -76,7 +76,7 @@ class _ResistancesScreenState extends State<ResistancesScreen> {
   }
 }
 
-// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+// ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildResistancesPdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: 'MAP',                value: pd.map,    unit: 'mmHg'),

@@ -1,25 +1,25 @@
 // PerfusionCalc PDF Export
 // =========================
 //
-// Erzeugt ein professionelles PDF mit:
-//   - Header: App-Logo (Gold-Akzent), Tab-Titel, Datum/Uhrzeit
-//   - Eingabe-Sektion: alle Patientendaten/Parameter
-//   - Ergebnis-Sektion: berechnete Werte
-//   - Footer: App-Version, Disclaimer (kompakt), Seitenzahl
+// Produces a professional PDF with:
+//   - Header: app logo (gold accent), tab title, date/time
+//   - Input section: all patient data/parameters
+//   - Results section: calculated values
+//   - Footer: app version, disclaimer (compact), page number
 //
-// WICHTIG: Diese App nutzt Sonderzeichen wie m², °C, ·, —, Subskripte usw.
-// Die Standard-PDF-Schriften (Helvetica) unterstuetzen davon nur einen
-// Bruchteil. Daher laden wir Roboto-TTF-Schriften aus assets/fonts/ und
-// setzen sie als Default-Theme. Roboto deckt das gesamte Latin-Extended-
-// und Mathematische-Zeichensatz ab.
+// IMPORTANT: This app uses special characters like m², °C, ·, —, subscripts
+// etc. The standard PDF fonts (Helvetica) only support a fraction of these.
+// We therefore load Roboto TTF fonts from assets/fonts/ and set them as the
+// default theme. Roboto covers the full Latin Extended and mathematical
+// character set.
 //
-// Nutzung pro Tab:
+// Usage per tab:
 //   await exportTabAsPdf(
 //     tabTitle: t('tab_bsa'),
 //     filename: 'bsa',
 //     sections: [
-//       PdfSection(title: 'Eingaben', rows: [...]),
-//       PdfSection(title: 'Ergebnisse', rows: [...]),
+//       PdfSection(title: 'Inputs', rows: [...]),
+//       PdfSection(title: 'Results', rows: [...]),
 //     ],
 //   );
 
@@ -33,11 +33,11 @@ import 'pdf_download_stub.dart'
     if (dart.library.js_interop) 'pdf_download_web.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
-// Public Datenmodelle
+// Public data models
 // ════════════════════════════════════════════════════════════════════════════
 
-/// Eine Tabellen-Sektion im PDF. Jede Zeile besteht aus Label/Wert/Einheit.
-/// Ergebnis-Sektionen koennen Hinweise auf Normalbereiche haben.
+/// A table section in the PDF. Each row consists of label/value/unit.
+/// Result sections can carry hints about normal ranges.
 class PdfSection {
   final String title;
   final List<PdfRow> rows;
@@ -46,9 +46,9 @@ class PdfSection {
 
 class PdfRow {
   final String label;
-  final String value; // bereits formatiert, z.B. "1.85" oder "—"
+  final String value; // already formatted, e.g. "1.85" or "—"
   final String unit;
-  final String? note; // z.B. Range-Hinweis oder Quelle
+  final String? note; // e.g. range hint or source
 
   PdfRow({
     required this.label,
@@ -57,8 +57,8 @@ class PdfRow {
     this.note,
   });
 
-  /// Convenience: direkt aus einer numerischen Berechnung.
-  /// Wenn value 0 oder NaN ist, wird "—" angezeigt (= "noch nicht berechnet").
+  /// Convenience: directly from a numeric calculation.
+  /// If value is 0 or NaN, "—" is shown (= "not yet calculated").
   factory PdfRow.numeric({
     required String label,
     required double? value,
@@ -74,11 +74,11 @@ class PdfRow {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Font-Loading (Roboto unterstützt Unicode)
+// Font loading (Roboto supports Unicode)
 // ════════════════════════════════════════════════════════════════════════════
 
-// Lazy-loaded und gecached - werden nur einmal geladen, dann in jedem Export
-// wiederverwendet. Spart Performance bei wiederholten Exports.
+// Lazy-loaded and cached - loaded only once, then reused on every export.
+// Saves performance on repeated exports.
 pw.Font? _cachedRegular;
 pw.Font? _cachedBold;
 pw.Font? _cachedItalic;
@@ -95,12 +95,12 @@ Future<pw.ThemeData> _loadTheme() async {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Hauptfunktion
+// Main function
 // ════════════════════════════════════════════════════════════════════════════
 
-/// Exportiert die uebergebenen Sections als PDF und triggert den Download
-/// (im Web) bzw. zeigt das Share-Sheet (auf Android/iOS) bzw. ist no-op
-/// (auf Desktop ohne Printing-Support).
+/// Exports the given sections as a PDF and triggers the download (on web),
+/// shows the share sheet (on Android/iOS), or is a no-op (on desktop
+/// without printing support).
 Future<void> exportTabAsPdf({
   required String tabTitle,
   required String filename,
@@ -110,11 +110,11 @@ Future<void> exportTabAsPdf({
   final theme = await _loadTheme();
   final pdf = pw.Document(theme: theme);
 
-  // Aktuelles Datum/Zeit fuer den Header
+  // Current date/time for the header
   final now = DateTime.now();
   final dateStr = _formatDateTime(now, locale);
 
-  // Statische Texte (lokalisiert)
+  // Static texts (localized)
   final headerTitle = 'PerfusionCalc';
   final disclaimerText = locale == AppLocale.de
       ? 'Nur zu Ausbildungszwecken. Keine klinische Verwendung. Keine Garantie auf Richtigkeit der Ergebnisse.'
@@ -128,7 +128,7 @@ Future<void> exportTabAsPdf({
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 60),
 
-      // ── Header (auf jeder Seite) ────────────────────────────────────────
+      // ── Header (on every page) ──────────────────────────────────────────
       header: (ctx) => pw.Container(
         padding: const pw.EdgeInsets.only(bottom: 8),
         decoration: const pw.BoxDecoration(
@@ -160,17 +160,17 @@ Future<void> exportTabAsPdf({
         ),
       ),
 
-      // ── Footer (auf jeder Seite) ────────────────────────────────────────
+      // ── Footer (on every page) ──────────────────────────────────────────
       footer: (ctx) => _buildFooter(ctx, disclaimerText, pageLabel, versionLabel),
 
-      // ── Body: Sections ──────────────────────────────────────────────────
+      // ── Body: sections ───────────────────────────────────────────────────
       build: (ctx) => [
         for (final section in sections) _buildSection(section),
       ],
     ),
   );
 
-  // PDF-Bytes erzeugen, dann Download im Browser triggern
+  // Generate PDF bytes, then trigger the download in the browser
   final bytes = await pdf.save();
   final ts = '${now.year}${_pad(now.month)}${_pad(now.day)}_'
              '${_pad(now.hour)}${_pad(now.minute)}';
@@ -179,33 +179,33 @@ Future<void> exportTabAsPdf({
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Kombinierter Bericht (mehrere Tabs in einem PDF)
+// Combined report (multiple tabs in one PDF)
 // ════════════════════════════════════════════════════════════════════════════
 //
-// Fasst mehrere bereits ausgefüllte Tabs (BSA, O2-Delivery, Elektrolyte, ...)
-// in einem einzigen PDF zusammen - praktisch für die OP-Dokumentation, wenn
-// mehrere Parameter-Kategorien für denselben Patienten erfasst wurden, statt
-// pro Kategorie einzeln zu exportieren.
+// Combines several already-filled-in tabs (BSA, O2 delivery, electrolytes,
+// ...) into a single PDF - handy for OR documentation when several
+// parameter categories were captured for the same patient, instead of
+// exporting each category separately.
 //
-// Nutzung:
+// Usage:
 //   await exportCombinedReportAsPdf(tabs: [
 //     PdfTabReport(tabTitle: t('tab_bsa'), sections: buildBsaPdfSections(pd)),
 //     PdfTabReport(tabTitle: t('tab_o2'),  sections: buildO2PdfSections(pd)),
 //     ...
 //   ]);
 //
-// Die Filterung "nur ausgefüllte Tabs" erfolgt beim Aufrufer (MainScreen),
-// nicht hier - diese Funktion rendert einfach, was ihr übergeben wird.
+// Filtering "only filled-in tabs" happens at the call site (MainScreen),
+// not here - this function simply renders whatever it is given.
 
-/// Ein Tab-Bericht für den kombinierten Export: Tab-Titel + seine Sections
-/// (Eingaben/Ergebnisse), im selben Format wie bei den Einzel-Tab-Exports.
+/// A tab report for the combined export: tab title + its sections
+/// (inputs/results), in the same format as the single-tab exports.
 class PdfTabReport {
   final String tabTitle;
   final List<PdfSection> sections;
   PdfTabReport({required this.tabTitle, required this.sections});
 }
 
-/// Exportiert einen kombinierten Bericht über mehrere Tabs als ein PDF.
+/// Exports a combined report across multiple tabs as a single PDF.
 Future<void> exportCombinedReportAsPdf({
   required List<PdfTabReport> tabs,
 }) async {
@@ -230,7 +230,7 @@ Future<void> exportCombinedReportAsPdf({
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 60),
 
-      // ── Header (auf jeder Seite) ────────────────────────────────────────
+      // ── Header (on every page) ──────────────────────────────────────────
       header: (ctx) => pw.Container(
         padding: const pw.EdgeInsets.only(bottom: 8),
         decoration: const pw.BoxDecoration(
@@ -262,10 +262,10 @@ Future<void> exportCombinedReportAsPdf({
         ),
       ),
 
-      // ── Footer (auf jeder Seite) - identisch zum Einzel-Tab-Export ──────
+      // ── Footer (on every page) - identical to the single-tab export ─────
       footer: (ctx) => _buildFooter(ctx, disclaimerText, pageLabel, versionLabel),
 
-      // ── Body: ein "Kapitel" pro Tab, jeweils mit eigenen Sections ───────
+      // ── Body: one "chapter" per tab, each with its own sections ─────────
       build: (ctx) => [
         for (final tab in tabs) _buildTabChapter(tab),
       ],
@@ -279,10 +279,10 @@ Future<void> exportCombinedReportAsPdf({
   await downloadPdf(bytes, fullFilename);
 }
 
-/// Ein Tab als "Kapitel" im kombinierten Bericht: deutlich prominenterer,
-/// farbig hinterlegter Titel (statt des einfachen goldenen Unterstrichs bei
-/// einzelnen Sections), damit die Tabs im durchlaufenden Dokument klar
-/// auseinanderzuhalten sind.
+/// A tab as a "chapter" in the combined report: a noticeably more
+/// prominent, color-filled title (instead of the plain gold underline used
+/// for individual sections), so the tabs are clearly distinguishable within
+/// the continuous document.
 pw.Widget _buildTabChapter(PdfTabReport tab) {
   return pw.Padding(
     padding: const pw.EdgeInsets.only(top: 20),
@@ -309,8 +309,8 @@ pw.Widget _buildTabChapter(PdfTabReport tab) {
 // Helpers
 // ════════════════════════════════════════════════════════════════════════════
 
-/// Footer-Zeile: Disclaimer + Version/Seitenzahl. Von beiden Export-Arten
-/// (Einzel-Tab und kombinierter Bericht) identisch genutzt.
+/// Footer line: disclaimer + version/page number. Used identically by both
+/// export types (single-tab and combined report).
 pw.Widget _buildFooter(pw.Context ctx, String disclaimerText, String pageLabel, String versionLabel) {
   return pw.Container(
     padding: const pw.EdgeInsets.only(top: 8),
@@ -385,7 +385,7 @@ pw.Widget _buildRow(PdfRow row) {
   );
 }
 
-/// Lokalisiertes Datum/Zeit-Format.
+/// Localized date/time format.
 /// DE: "25.04.2026, 16:30"
 /// EN: "Apr 25, 2026, 4:30 PM"
 String _formatDateTime(DateTime dt, AppLocale locale) {

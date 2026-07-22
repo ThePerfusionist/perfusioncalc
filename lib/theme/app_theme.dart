@@ -1,18 +1,18 @@
-// Theme-Verwaltung für PerfusionCalc: Light / Dark / System
+// Theme management for PerfusionCalc: Light / Dark / System
 // =============================================================
-// ThemeNotifier hält den gewählten ThemeMode (system/light/dark) und
-// persistiert ihn in SharedPreferences - Architektur bewusst analog zu
-// LocaleNotifier in i18n/app_strings.dart.
+// ThemeNotifier holds the chosen ThemeMode (system/light/dark) and
+// persists it in SharedPreferences - architecture deliberately analogous
+// to LocaleNotifier in i18n/app_strings.dart.
 //
-// Warum kein reines Theme.of(context)? Ein Großteil der App verwendet
-// globale Farb-Konstanten (kGold, kCardColor, ...) aus widgets/common.dart,
-// die auch außerhalb eines BuildContext gebraucht werden (z.B. als
-// Default-Werte oder in statischen Helper-Methoden). ThemeNotifier.isDark
-// ist daher ein einfacher globaler Schalter, den diese Konstanten (als
-// Getter statt const) live abfragen. Die eigentlichen ThemeData-Objekte
-// unten werden zusätzlich ganz normal an MaterialApp.theme/darkTheme
-// übergeben, damit auch Standard-Material-Widgets (TextField-Cursor,
-// Ripple-Farben, Dialog-Formen, ...) korrekt reagieren.
+// Why not plain Theme.of(context)? A large part of the app uses global
+// color constants (kGold, kCardColor, ...) from widgets/common.dart,
+// which are also needed outside a BuildContext (e.g. as default values
+// or in static helper methods). ThemeNotifier.isDark is therefore a
+// simple global switch that these constants (as getters instead of
+// const) read live. The actual ThemeData objects below are additionally
+// passed to MaterialApp.theme/darkTheme as usual, so standard Material
+// widgets (TextField cursor, ripple colors, dialog shapes, ...) react
+// correctly too.
 
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -26,8 +26,8 @@ class ThemeNotifier extends ChangeNotifier {
   ThemeMode _mode = ThemeMode.system;
   ThemeMode get mode => _mode;
 
-  /// Aufgelöster Hell/Dunkel-Zustand. Bei ThemeMode.system wird die
-  /// aktuelle Plattform-Helligkeit abgefragt (Betriebssystem-Einstellung).
+  /// Resolved light/dark state. For ThemeMode.system, the current
+  /// platform brightness (OS setting) is queried.
   bool get isDark {
     switch (_mode) {
       case ThemeMode.dark:
@@ -39,8 +39,8 @@ class ThemeNotifier extends ChangeNotifier {
     }
   }
 
-  /// Lädt den gespeicherten Modus aus SharedPreferences.
-  /// Falls noch keiner gespeichert: Default "system".
+  /// Loads the saved mode from SharedPreferences.
+  /// If none is saved yet: defaults to "system".
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -51,7 +51,7 @@ class ThemeNotifier extends ChangeNotifier {
         _ => ThemeMode.system,
       };
     } catch (_) {
-      // SharedPreferences nicht verfügbar (z.B. Test) -> Default.
+      // SharedPreferences unavailable (e.g. in tests) -> default.
       _mode = ThemeMode.system;
     }
   }
@@ -69,23 +69,23 @@ class ThemeNotifier extends ChangeNotifier {
       };
       await prefs.setString(_prefsKey, value);
     } catch (_) {
-      // Auswahl gilt dann nur für die aktuelle Session.
+      // Save failed -> selection only applies for the current session.
     }
   }
 
-  /// Wird von einem WidgetsBindingObserver in main.dart aufgerufen, wenn
-  /// sich die System-Helligkeit ändert während mode == system aktiv ist,
-  /// damit die globalen Farb-Getter (kGold, kCardColor, ...) synchron
-  /// bleiben und einen Rebuild auslösen.
+  /// Called by a WidgetsBindingObserver in main.dart when the system
+  /// brightness changes while mode == system is active, so the global
+  /// color getters (kGold, kCardColor, ...) stay in sync and trigger a
+  /// rebuild.
   void handlePlatformBrightnessChanged() {
     if (_mode == ThemeMode.system) notifyListeners();
   }
 }
 
-// ── ThemeData für MaterialApp (theme:/darkTheme:) ──────────────────────────
-// Dieselben Hex-Werte wie die Getter in widgets/common.dart (kCardColor,
-// kBg, ...), damit App-Chrome (Scaffold/AppBar via ThemeData) und die
-// manuell gesetzten Widget-Farben exakt übereinstimmen.
+// ── ThemeData for MaterialApp (theme:/darkTheme:) ───────────────────────────
+// Same hex values as the getters in widgets/common.dart (kCardColor,
+// kBg, ...), so app chrome (Scaffold/AppBar via ThemeData) and the
+// manually set widget colors match exactly.
 const Color kGoldConst = Color(0xFFFFA500);
 
 ThemeData buildAppTheme({required bool dark}) {

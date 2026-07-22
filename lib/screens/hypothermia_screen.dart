@@ -17,10 +17,10 @@ class HypothermiaScreen extends StatefulWidget {
 }
 
 class _HypothermiaScreenState extends State<HypothermiaScreen> {
-  // Getter statt eigener Instanz: das Modell gehört jetzt MainScreen (wie
-  // PatientData bei den anderen Tabs), damit der kombinierte Gesamtbericht
-  // darauf zugreifen kann. Alle bestehenden `_model.xxx`-Aufrufe unten
-  // bleiben dadurch unverändert.
+  // Getter instead of its own instance: the model now belongs to MainScreen
+  // (like PatientData for the other tabs), so the combined report can
+  // access it. All existing `_model.xxx` calls below therefore stay
+  // unchanged.
   BgaModel get _model => widget.bgaModel;
 
   void _rebuild() {
@@ -29,7 +29,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
   }
 
   // Table data: [Level, Range, Circulatory arrest, O2 requirement]
-  // Dynamisch, damit Sprachwechsel die Level-Bezeichnungen aktualisiert.
+  // Dynamic, so a language switch updates the level names.
   List<List<String>> _hypoRows() => [
     [t('hypo_lvl_light'),    '36 – 32 °C', '32 °C = 3–9 min',  '37 °C = 100%'],
     [t('hypo_lvl_moderate'), '32 – 28 °C', '28 °C = 9–15 min', '30 °C = 50%'],
@@ -231,7 +231,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
         _thumbRuleTable(),
       ],
 
-      // ── PDF Export Button (immer sichtbar) ─────────────────────────────
+      // ── PDF export button (always visible) ──────────────────────────────
       const SizedBox(height: 8),
       PdfExportButton(
         filename: 'hypothermia',
@@ -363,7 +363,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       );
 }
 
-// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+// ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildHypothermiaPdfSections(BgaModel model) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: t('hypo_temp'),  value: model.temp,  unit: '°C',   decimals: 1),

@@ -19,11 +19,11 @@ class PatientData {
   // BSA screen Cardiac Index (persisted, default 2.4)
   // This is loaded/saved via SharedPreferences in BSAScreen
   double bsaCardiacIndex = 2.4;
-  // Ob der Nutzer den Cardiac Index in DIESER Sitzung aktiv geändert hat
-  // (im Gegensatz zum automatisch aus SharedPreferences geladenen Wert oder
-  // dem Default 2.4). Wird genutzt, um unberührte Default-/Preference-Werte
-  // aus dem PDF-Export fernzuhalten - siehe buildBsaPdfSections() in
-  // bsa_screen.dart. Beeinflusst NICHT die eigentliche Berechnung.
+  // Whether the user has actively changed the Cardiac Index in THIS session
+  // (as opposed to the value automatically loaded from SharedPreferences or
+  // the 2.4 default). Used to keep untouched default/preference values out
+  // of the PDF export - see buildBsaPdfSections() in bsa_screen.dart. Does
+  // NOT affect the actual calculation.
   bool bsaCardiacIndexTouched = false;
 
   // O2 delivery inputs

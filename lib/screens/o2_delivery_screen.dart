@@ -19,7 +19,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
   _CoMode _mode = _CoMode.co;
   PatientData get pd => widget.patientData;
 
-  /// Lokaler Rebuild dieses Screens statt globalem MainScreen-Rebuild.
+  /// Local rebuild of this screen instead of a global MainScreen rebuild.
   void _recalc() {
     if (mounted) setState(() {});
     widget.onChanged();
@@ -66,15 +66,15 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
         InputCard(label: t('o2_ven_hb'), unit: 'g/dl', value: pd.venHb,
             range: Ranges.hb,
             onChanged: (v) { pd.venHb = v; _recalc(); }),
-        // ── Berechnete Ergebnisse ─────────────────────────────────────────
-        // CO/CI Handling: cardiacIndexEffective ist >0, wenn der Nutzer
-        // entweder CO+BSA oder CI direkt eingegeben hat (siehe _CoCiCard).
+        // ── Calculated results ────────────────────────────────────────────
+        // CO/CI handling: cardiacIndexEffective is >0 if the user entered
+        // either CO+BSA or CI directly (see _CoCiCard).
         Builder(builder: (_) {
-          // Helper-Kurzschreibweisen fuer fehlende Pflichtfelder
+          // Shorthand helpers for missing required fields
           List<String> missing(List<({Object? v, String label})> fields) =>
               fields.where((f) => f.v == null).map((f) => f.label).toList();
 
-          // Fuer CO-abhaengige Ergebnisse: CO direkt ODER CI+BSA reicht
+          // For CO-dependent results: CO directly OR CI+BSA is sufficient
           List<String> coDerivedMissing() {
             if (pd.hzv != null) return [];
             if (pd.cardiacIndex != null && pd.kof != null) return [];
@@ -83,7 +83,7 @@ class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
             if (pd.cardiacIndex != null && pd.kof == null) out.add(t('o2_bsa'));
             return out;
           }
-          // Fuer CI-abhaengige Ergebnisse: CI direkt ODER CO+BSA reicht
+          // For CI-dependent results: CI directly OR CO+BSA is sufficient
           List<String> ciDerivedMissing() {
             if (pd.cardiacIndex != null) return [];
             if (pd.hzv != null && pd.kof != null) return [];
@@ -277,7 +277,7 @@ class _CoCiCardState extends State<_CoCiCard> {
           Text(isCo ? 'l/min' : 'l/min/m\u00b2', style:  TextStyle(color: kTextMuted, fontSize: 11)),
           const SizedBox(height: 4),
           Row(children: [
-            _btn(Icons.remove, _dec),
+            _btn(Icons.remove, _dec, '${t('a11y_decrease')}: ${isCo ? t('o2_co_label') : t('o2_ci_label')}'),
             Expanded(child: TextField(
               controller: _ctrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -290,7 +290,7 @@ class _CoCiCardState extends State<_CoCiCard> {
               onEditingComplete: () { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
               onTapOutside: (_) { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
             )),
-            _btn(Icons.add, _inc),
+            _btn(Icons.add, _inc, '${t('a11y_increase')}: ${isCo ? t('o2_co_label') : t('o2_ci_label')}'),
           ]),
           if (hint != null) Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -303,27 +303,38 @@ class _CoCiCardState extends State<_CoCiCard> {
 
   Widget _toggleBtn(String label, _CoMode mode) {
     final active = widget.mode == mode;
-    return GestureDetector(
-      onTap: () { if (!active) { setState(() => _ctrl.text = ''); widget.onModeChanged(mode); } },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        decoration: BoxDecoration(color: active ? kGold : Colors.transparent, borderRadius: BorderRadius.circular(20)),
-        child: Text(label, style: TextStyle(color: active ? Colors.black : kTextMuted,
-            fontWeight: active ? FontWeight.bold : FontWeight.normal, fontSize: 12)),
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () { if (!active) { setState(() => _ctrl.text = ''); widget.onModeChanged(mode); } },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          decoration: BoxDecoration(color: active ? kGold : Colors.transparent, borderRadius: BorderRadius.circular(20)),
+          child: Text(label, style: TextStyle(color: active ? Colors.black : kTextMuted,
+              fontWeight: active ? FontWeight.bold : FontWeight.normal, fontSize: 12)),
+        ),
       ),
     );
   }
 
-  Widget _btn(IconData icon, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(width: 36, height: 36,
-        decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
-        child: Icon(icon, color: kText, size: 20)),
+  Widget _btn(IconData icon, VoidCallback onTap, String semanticLabel) => Semantics(
+    button: true,
+    label: semanticLabel,
+    excludeSemantics: true,
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(width: 36, height: 36,
+          decoration:  BoxDecoration(color: kBtnGrey, shape: BoxShape.circle),
+          child: Icon(icon, color: kText, size: 20)),
+    ),
   );
 }
 
-// ── PDF-Sections (extrahiert, für Einzel-Export und Gesamtbericht) ─────────
+// ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildO2PdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: t('o2_bsa'),    value: pd.kof,    unit: 'm²'),

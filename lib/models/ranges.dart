@@ -1,45 +1,45 @@
-// Physiologische Normbereiche für Plausibilitätsprüfung
-// =====================================================
-// Diese Werte werden NUR zur sanften Warnung in der UI verwendet.
-// Die eigentlichen Berechnungen akzeptieren weiterhin Werte außerhalb
-// dieser Bereiche (z.B. um in Schulungen bewusst Extremfälle durchzuspielen).
+// Physiological normal ranges for plausibility checking
+// =========================================================
+// These values are used ONLY for gentle warnings in the UI.
+// The actual calculations still accept values outside these ranges
+// (e.g. to deliberately work through extreme cases in training).
 //
-// Quellen zu den Ranges:
-//   Herold G. Innere Medizin. 2023. Standardwerte Erwachsene.
-//   Silbernagl & Despopoulos, Physiologie-Taschenatlas. 9. Aufl. 2018.
+// Sources for the ranges:
+//   Herold G. Innere Medizin. 2023. Adult standard values.
+//   Silbernagl & Despopoulos, Physiologie-Taschenatlas. 9th ed. 2018.
 //   Kasper DL et al. Harrison's Principles of Internal Medicine. 20th ed.
 //
-// Die Bereiche sind bewusst WEIT gefasst: nicht "Normalbereich für einen
-// gesunden 25-Jährigen", sondern "plausibler Wertebereich für einen realen
-// Patienten im kardiochirurgischen Kontext". Ein Hb von 7 g/dl ist nicht
-// normal, aber plausibel (anämischer Patient); ein Hb von 50 g/dl dagegen
-// ist nie plausibel (Tippfehler).
+// The ranges are deliberately WIDE: not "normal range for a healthy
+// 25-year-old", but "plausible value range for a real patient in a
+// cardiac surgery context". An Hb of 7 g/dl is not normal, but it is
+// plausible (anemic patient); an Hb of 50 g/dl, on the other hand,
+// is never plausible (typo).
 
-/// Ein klinisch plausibler Wertebereich für ein Eingabefeld.
-/// Werte außerhalb werden in der UI als Warnung (gelber Rand) markiert,
-/// führen aber nicht zum Abbruch der Berechnung.
+/// A clinically plausible value range for an input field.
+/// Values outside it are flagged in the UI as a warning (yellow border),
+/// but do not stop the calculation.
 class Range {
   final double min;
   final double max;
   final String unit;
-  final String? note; // optionaler Hinweistext im Tooltip
+  final String? note; // optional hint text shown in the tooltip
   const Range(this.min, this.max, this.unit, {this.note});
 
-  /// true, wenn der Wert innerhalb des plausiblen Bereichs liegt.
-  /// null-Werte gelten als "nicht eingegeben" und damit nicht unplausibel.
+  /// true if the value is within the plausible range.
+  /// null values count as "not entered" and therefore not implausible.
   bool contains(double? v) {
     if (v == null) return true;
     return v >= min && v <= max;
   }
 
-  /// Für Tooltip-Anzeige: "5–20 g/dl"
+  /// For tooltip display: "5–20 g/dl"
   String get display => '$min–$max $unit';
 }
 
-/// Zentrale Sammlung aller Normbereiche, nach klinischem Kontext gruppiert.
-/// Zum Anpassen einfach die Werte hier ändern — die UI übernimmt sofort.
+/// Central collection of all normal ranges, grouped by clinical context.
+/// To adjust, just change the values here — the UI picks them up immediately.
 class Ranges {
-  // ── Anthropometrie ──────────────────────────────────────────────────────
+  // ── Anthropometry ────────────────────────────────────────────────────────
   static const height = Range(30, 230, 'cm',
       note: 'Körpergröße Säuglinge bis Riesenwuchs');
   static const weight = Range(0.5, 300, 'kg',
@@ -49,7 +49,7 @@ class Ranges {
   static const bsa = Range(0.1, 3.5, 'm²',
       note: 'Säugling bis sehr großer Erwachsener');
 
-  // ── Hämatologie ─────────────────────────────────────────────────────────
+  // ── Hematology ───────────────────────────────────────────────────────────
   static const hb = Range(4, 22, 'g/dl',
       note: 'Schwere Anämie bis Polyglobulie');
   static const hct = Range(10, 65, '%',
@@ -57,7 +57,7 @@ class Ranges {
   static const primingVolume = Range(0, 3000, 'ml',
       note: 'Typisch 1200–1800 ml Adult, 300–600 ml Pädiatrie');
 
-  // ── Sauerstofftransport ─────────────────────────────────────────────────
+  // ── Oxygen transport ─────────────────────────────────────────────────────
   static const paO2 = Range(20, 600, 'mmHg',
       note: 'Hypoxämie bis 100% O2-Beatmung');
   static const pvO2 = Range(10, 80, 'mmHg',
@@ -67,7 +67,7 @@ class Ranges {
   static const svO2 = Range(30, 90, '%',
       note: 'Normal 65–75%, kritisch <50%');
 
-  // ── Hämodynamik ─────────────────────────────────────────────────────────
+  // ── Hemodynamics ─────────────────────────────────────────────────────────
   static const co = Range(0.5, 12, 'l/min',
       note: 'Schock bis Hyperdynamie');
   static const ci = Range(0.5, 6.0, 'l/min/m²',
@@ -81,7 +81,7 @@ class Ranges {
   static const lap = Range(0, 30, 'mmHg',
       note: 'Normal 6–12');
 
-  // ── Elektrolyte / BGA ───────────────────────────────────────────────────
+  // ── Electrolytes / blood gas ─────────────────────────────────────────────
   static const natrium = Range(110, 160, 'mmol/l',
       note: 'Normal 135–145');
   static const kalium = Range(1.5, 8.0, 'mmol/l',
@@ -95,15 +95,15 @@ class Ranges {
   static const temperature = Range(15, 42, '°C',
       note: 'Tiefe Hypothermie bis Hyperthermie');
 
-  // ── Schlauchlänge ───────────────────────────────────────────────────────
+  // ── Tube length ──────────────────────────────────────────────────────────
   static const tubeLength = Range(10, 500, 'cm',
       note: 'Übliche Längen HLM-Schlauchsysteme');
 
-  // ── Charrière ───────────────────────────────────────────────────────────
+  // ── Charrière ────────────────────────────────────────────────────────────
   static const ch = Range(1, 40, 'Ch');
   static const mm = Range(0.3, 15, 'mm');
 
-  // ── Pädiatrie ───────────────────────────────────────────────────────────
+  // ── Pediatrics ───────────────────────────────────────────────────────────
   static const desiredHbIncrease = Range(0.5, 8, 'g/dl',
       note: 'Üblicher Ziel-Hb-Anstieg');
 }

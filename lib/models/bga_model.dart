@@ -1,20 +1,20 @@
-// Severinghaus-Temperaturkorrektur für Blutgasanalysen
-// ====================================================
-// Diese Klasse wurde aus hypothermia_screen.dart extrahiert, um sie
-// unit-testbar zu machen. Die Screen-Datei importiert sie weiterhin.
+// Severinghaus temperature correction for blood gas analysis
+// ============================================================
+// This class was extracted from hypothermia_screen.dart to make it
+// unit-testable. The screen file still imports it.
 //
-// Quellen:
+// Sources:
 //   Severinghaus JW. J Appl Physiol 1958; 12: 485-6.
-//     → PaO2, PaCO2, pH Temperaturkorrektur
+//     → PaO2, PaCO2, pH temperature correction
 //   Severinghaus JW. J Appl Physiol 1979; 46: 599-602.
-//     → Sauerstoffdissoziationskurve
+//     → Oxygen dissociation curve
 //   Henderson-Hasselbalch:
 //     HCO3 = 0.0307 × PaCO2 × 10^(pH - 6.105)
 //
-// Sicherheit: Alle Getter geben null zurück, wenn
-//   - Eingaben fehlen,
-//   - Eingaben außerhalb physiologischer Bereiche liegen,
-//   - das Ergebnis NaN oder Infinity wäre.
+// Safety: all getters return null if
+//   - inputs are missing,
+//   - inputs are outside physiological ranges,
+//   - the result would be NaN or Infinity.
 
 import 'dart:math';
 
@@ -24,14 +24,14 @@ class BgaModel {
   double? pH;
   double? temp;
 
-  /// Liefert v zurück, oder null wenn NaN/Infinity.
+  /// Returns v, or null if NaN/Infinity.
   static double? _safe(double v) {
     if (v.isNaN || v.isInfinite) return null;
     return v;
   }
 
-  /// Temperatur-Korrekturkoeffizient nach Severinghaus.
-  /// Wird intern von corrPaO2 und fTPercent verwendet.
+  /// Severinghaus temperature correction coefficient.
+  /// Used internally by corrPaO2 and fTPercent.
   double _fT(double po2) {
     if (po2 <= 0) return 0.013;
     final inner = 0.243 * pow(po2 / 100.0, 3.88) + 1.0;
@@ -39,10 +39,10 @@ class BgaModel {
     return 0.058 / inner + 0.013;
   }
 
-  /// Temperatur-korrigierter PaO2 (mmHg).
-  /// Physiologischer Temperaturbereich: 4°C (tiefe Hypothermie) bis 42°C
-  /// (maligne Hyperthermie). PaO2 bis 800 mmHg erlaubt (unter 100% O2
-  /// typisch max ~600).
+  /// Temperature-corrected PaO2 (mmHg).
+  /// Physiological temperature range: 4°C (deep hypothermia) to 42°C
+  /// (malignant hyperthermia). PaO2 up to 800 mmHg allowed (under 100%
+  /// O2, typically max ~600).
   double? get corrPaO2 {
     if (paO2 == null || temp == null) return null;
     if (temp! < 4 || temp! > 42) return null;
@@ -50,7 +50,7 @@ class BgaModel {
     return _safe(paO2! * exp(_fT(paO2!) * (temp! - 37.0)));
   }
 
-  /// Temperatur-korrigierter PaCO2 (mmHg).
+  /// Temperature-corrected PaCO2 (mmHg).
   double? get corrPaCO2 {
     if (paCO2 == null || temp == null) return null;
     if (temp! < 4 || temp! > 42) return null;
@@ -59,7 +59,7 @@ class BgaModel {
     return _safe(result.toDouble());
   }
 
-  /// Temperatur-korrigierter pH.
+  /// Temperature-corrected pH.
   double? get corrPH {
     if (pH == null || temp == null) return null;
     if (temp! < 4 || temp! > 42) return null;
@@ -67,8 +67,8 @@ class BgaModel {
     return _safe(pH! - 0.0147 * (temp! - 37.0));
   }
 
-  /// Sauerstoff-Sättigung in % aus (korrigiertem) PaO2.
-  /// Severinghaus-Dissoziationskurve.
+  /// Oxygen saturation in % from (corrected) PaO2.
+  /// Severinghaus dissociation curve.
   double? get satFromPaO2 {
     final p = corrPaO2 ?? paO2;
     if (p == null || p <= 0) return null;
@@ -77,15 +77,15 @@ class BgaModel {
     return _safe(100.0 / denominator);
   }
 
-  /// Korrekturfaktor in % (wie stark sich der PaO2 pro °C ändert).
+  /// Correction factor in % (how strongly PaO2 changes per °C).
   double? get fTPercent {
     final p = corrPaO2 ?? paO2;
     if (p == null || p <= 0) return null;
     return _safe(_fT(p) * 100.0);
   }
 
-  /// HCO3 nach Henderson-Hasselbalch (mmol/l).
-  /// Nutzt temperaturkorrigierte Werte, falls vorhanden.
+  /// HCO3 per Henderson-Hasselbalch (mmol/l).
+  /// Uses temperature-corrected values if available.
   double? get hco3 {
     final co2c = corrPaCO2 ?? paCO2;
     final phc  = corrPH    ?? pH;
