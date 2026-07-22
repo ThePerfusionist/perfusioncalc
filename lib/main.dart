@@ -5,7 +5,6 @@ import 'screens/o2_delivery_screen.dart';
 import 'screens/resistances_screen.dart';
 import 'screens/electrolytes_screen.dart';
 import 'screens/tube_volume_screen.dart';
-import 'screens/flow_drainage_screen.dart';
 import 'screens/zoll_chairre_screen.dart';
 import 'screens/hypothermia_screen.dart';
 import 'screens/pediatric_screen.dart';
@@ -82,7 +81,6 @@ class _MainScreenState extends State<MainScreen>
     {'key': 'tab_electrolytes', 'icon': Icons.science_outlined},
     {'key': 'tab_resistances',  'icon': Icons.compress},
     {'key': 'tab_pediatric',    'icon': Icons.child_care_outlined},
-    {'key': 'tab_flow',         'icon': Icons.water_drop_outlined},
     {'key': 'tab_tube_volume',  'icon': Icons.linear_scale},
     {'key': 'tab_zoll',         'icon': Icons.straighten},
     {'key': 'tab_reference',    'icon': Icons.table_chart_outlined},
@@ -93,10 +91,10 @@ class _MainScreenState extends State<MainScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 11, vsync: this);
+    _tabController = TabController(length: 10, vsync: this);
     // IMPORTANT for performance: the listener must NOT trigger setState on
     // every animation frame, or the entire widget tree (AppBar, TabBar, all
-    // 11 TabBarView children) would rebuild 60x/second. We only rebuild
+    // 10 TabBarView children) would rebuild 60x/second. We only rebuild
     // when the target index actually changes - that's only needed for the
     // active highlight in the drawer.
     _tabController.addListener(_onTabChanged);
@@ -560,7 +558,7 @@ class _MainScreenState extends State<MainScreen>
           children: [
             // onChanged is deliberately a no-op: each screen updates its own
             // results via a local setState. A global rebuild of MainScreen
-            // (and thus all 11 tabs) is not necessary and was the main
+            // (and thus all 10 tabs) is not necessary and was the main
             // cause of the janky typing behavior.
             BSAScreen(patientData: _patientData, onChanged: _noop),
             O2DeliveryScreen(patientData: _patientData, onChanged: _noop),
@@ -568,7 +566,6 @@ class _MainScreenState extends State<MainScreen>
             ElectrolytesScreen(patientData: _patientData, onChanged: _noop),
             ResistancesScreen(patientData: _patientData, onChanged: _noop),
             PediatricScreen(patientData: _patientData, onChanged: _noop),
-            FlowDrainageScreen(),
             TubeVolumeScreen(patientData: _patientData, onChanged: _noop),
             ZollChairreScreen(patientData: _patientData, onChanged: _noop),
             ReferencePressureScreen(),
