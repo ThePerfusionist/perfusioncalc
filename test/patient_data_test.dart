@@ -310,6 +310,65 @@ void main() {
     });
   });
 
+  group('Ultrafiltration / hemoconcentration (mass conservation)', () {
+    // Hct1 x V1 = Hct2 x V2   (equally: Hb1 x V1 = Hb2 x V2)
+    // Source: Klineberg PL, Kam CA, Johnson DC, Cartmill TB, Brown JJ.
+    // Hematocrit and blood volume control during cardiopulmonary bypass with
+    // the use of hemofiltration. Anesthesiology. 1984;60(5):478-480.
+
+    test('Hct mode: V1 4000 ml, Hct 20% -> 28% needs 1142.86 ml removed', () {
+      final pd = PatientData()
+        ..ufCurrentVolume = 4000
+        ..ufCurrentHct = 20
+        ..ufTargetHct = 28;
+      expect(pd.ufVolumeToRemove, closeTo(1142.86, 0.1));
+      expect(pd.ufFinalVolume, closeTo(2857.14, 0.1));
+    });
+
+    test('Hb mode: V1 4000 ml, Hb 7 g/dl -> 10 g/dl needs exactly 1200 ml removed', () {
+      final pd = PatientData()
+        ..ufCurrentVolume = 4000
+        ..ufCurrentHb = 7
+        ..ufTargetHb = 10;
+      expect(pd.ufVolumeToRemove, closeTo(1200, 0.01));
+      expect(pd.ufFinalVolume, closeTo(2800, 0.01));
+    });
+
+    test('Mass is conserved: metric1 x V1 equals metric2 x V2', () {
+      final pd = PatientData()
+        ..ufCurrentVolume = 4000
+        ..ufCurrentHct = 20
+        ..ufTargetHct = 28;
+      final v2 = pd.ufFinalVolume;
+      expect(20 * 4000, closeTo(28 * v2, 1));
+    });
+
+    test('Target at or below current yields 0 (UF cannot dilute)', () {
+      final pdEqual = PatientData()
+        ..ufCurrentVolume = 4000..ufCurrentHct = 24..ufTargetHct = 24;
+      final pdLower = PatientData()
+        ..ufCurrentVolume = 4000..ufCurrentHct = 30..ufTargetHct = 24;
+      expect(pdEqual.ufVolumeToRemove, 0);
+      expect(pdLower.ufVolumeToRemove, 0);
+    });
+
+    test('Mixing Hct and Hb pairs is ignored (only a fully populated pair counts)', () {
+      // Only ufCurrentHct is set, no ufTargetHct, and a stray ufTargetHb
+      // without a matching ufCurrentHb - neither pair is complete, so the
+      // result must stay 0 rather than guessing across metrics.
+      final pd = PatientData()
+        ..ufCurrentVolume = 4000
+        ..ufCurrentHct = 20
+        ..ufTargetHb = 10;
+      expect(pd.ufVolumeToRemove, 0);
+    });
+
+    test('Missing current volume yields 0', () {
+      final pd = PatientData()..ufCurrentHct = 20..ufTargetHct = 28;
+      expect(pd.ufVolumeToRemove, 0);
+    });
+  });
+
   // ════════════════════════════════════════════════════════════════════════
   // Tube volume (sizes in inches)
   // ════════════════════════════════════════════════════════════════════════

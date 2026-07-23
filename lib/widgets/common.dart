@@ -1017,4 +1017,20 @@ class AppSources {
     journal: 'WikiJournal of Medicine. 2014;1(2):10. Licensed under CC BY 3.0.',
     doi: 'doi: 10.15347/wjm/2014.010  ·  Coronary Vessels (Anterior & Posterior) und Herzanatomie-Abbildungen.',
   );
+
+  static const klineberg1984 = SourceRef(
+    num: 30,
+    authors: 'Klineberg PL, Kam CA, Johnson DC, Cartmill TB, Brown JJ.',
+    title: 'Hematocrit and blood volume control during cardiopulmonary bypass with the use of hemofiltration.',
+    journal: 'Anesthesiology. 1984;60(5):478\u2013480.',
+    doi: 'doi: 10.1097/00000542-198405000-00015  \u00b7  Massenerhaltungsprinzip (Hct \u00d7 Volumen = konstant) für Ultrafiltration/Hämokonzentration.',
+  );
+
+  static const hensley2024 = SourceRef(
+    num: 31,
+    authors: 'Hensley NB, Colao JA, Zorrilla-Vaca A, et al.',
+    title: 'Ultrafiltration in cardiac surgery: Results of a systematic review and meta-analysis.',
+    journal: 'Perfusion. 2024;39(4):743\u2013751.',
+    doi: 'doi: 10.1177/02676591231157970  \u00b7  Modifizierte Ultrafiltration (MUF) senkt intraoperative Erythrozytentransfusionen.',
+  );
 }

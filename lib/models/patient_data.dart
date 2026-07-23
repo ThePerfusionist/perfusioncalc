@@ -69,6 +69,13 @@ class PatientData {
   double? pediatricWeight;
   double? desiredHbIncrease;
 
+  // Ultrafiltration / hemoconcentration
+  double? ufCurrentVolume;
+  double? ufCurrentHct;
+  double? ufTargetHct;
+  double? ufCurrentHb;
+  double? ufTargetHb;
+
   // ── BSA/CO calculations ──────────────────────────────────────────────────
   double get bsa {
     if (height == null || weight == null) return 0;
@@ -236,5 +243,53 @@ class PatientData {
   double get transfusionVolume {
     if (pediatricWeight == null || desiredHbIncrease == null) return 0;
     return pediatricWeight! * desiredHbIncrease! * 3 / (55 * 0.01);
+  }
+
+  // ── Ultrafiltration / hemoconcentration ─────────────────────────────────
+  // Mass-conservation principle: ultrafiltration removes plasma water across
+  // the filter membrane while red blood cells (and the hemoglobin they
+  // carry) are retained in the circuit, so total red-cell mass stays
+  // constant - equally true whether expressed as hematocrit or hemoglobin:
+  //   Hct1 x V1 = Hct2 x V2       or       Hb1 x V1 = Hb2 x V2
+  // Source: Klineberg PL, Kam CA, Johnson DC, Cartmill TB, Brown JJ.
+  // Hematocrit and blood volume control during cardiopulmonary bypass with
+  // the use of hemofiltration. Anesthesiology. 1984;60(5):478-480.
+  //
+  // The UI lets the user pick Hct OR Hb as the working metric (mirroring
+  // the CO/CI toggle on the O2 delivery tab); only one pair is ever
+  // populated at a time, the other is cleared on switch. These getters
+  // don't need to know which mode is active - they simply use whichever
+  // pair has both values set.
+  ({double m1, double m2})? get _ufMetricPair {
+    if (ufCurrentHct != null && ufTargetHct != null) {
+      return (m1: ufCurrentHct!, m2: ufTargetHct!);
+    }
+    if (ufCurrentHb != null && ufTargetHb != null) {
+      return (m1: ufCurrentHb!, m2: ufTargetHb!);
+    }
+    return null;
+  }
+
+  /// How much volume must be filtered off to raise the hematocrit/
+  /// hemoglobin from its current value to the target value.
+  double get ufVolumeToRemove {
+    if (ufCurrentVolume == null || ufCurrentVolume! <= 0) return 0;
+    final pair = _ufMetricPair;
+    if (pair == null) return 0;
+    if (pair.m1 <= 0 || pair.m2 <= 0) return 0;
+    // Ultrafiltration can only concentrate blood, never dilute it - a
+    // target at or below the current value is not achievable by
+    // filtration alone.
+    if (pair.m2 <= pair.m1) return 0;
+    final result = ufCurrentVolume! * (1 - pair.m1 / pair.m2);
+    return _safe(result);
+  }
+
+  /// Resulting circulating volume after the calculated amount has been
+  /// filtered off. Only meaningful once ufVolumeToRemove is valid (>0).
+  double get ufFinalVolume {
+    final removed = ufVolumeToRemove;
+    if (removed <= 0 || ufCurrentVolume == null) return 0;
+    return _safe(ufCurrentVolume! - removed);
   }
 }

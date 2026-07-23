@@ -56,6 +56,8 @@ class Ranges {
       note: 'Schwere Anämie bis Polyglobulie');
   static const primingVolume = Range(0, 3000, 'ml',
       note: 'Typisch 1200–1800 ml Adult, 300–600 ml Pädiatrie');
+  static const circulatingVolume = Range(300, 8000, 'ml',
+      note: 'Patientenblutvolumen + Priming, pädiatrisch bis adult');
 
   // ── Oxygen transport ─────────────────────────────────────────────────────
   static const paO2 = Range(20, 600, 'mmHg',
