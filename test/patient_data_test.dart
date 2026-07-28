@@ -369,6 +369,322 @@ void main() {
     });
   });
 
+  group('Cardioplegia (Buckberg 1987 / Matte & del Nido 2012 / Calafiore 1995)', () {
+    // Buckberg: 4:1 blood:crystalloid, dose = weight x dose_per_kg (1-2 ml/kg)
+    // Source: Buckberg GD. J Thorac Cardiovasc Surg. 1987;93(1):127-139.
+    //
+    // del Nido: 4:1 crystalloid:blood, single dose capped at 1000 ml
+    // Source: Matte GS, del Nido PJ. J Extra Corpor Technol. 2012;44(3):98-103.
+
+    test('Buckberg 70 kg at 1.5 ml/kg: total 105 ml, 4:1 blood:crystalloid', () {
+      final pd = PatientData()
+        ..cardioplegiaWeight = 70
+        ..cardioplegiaDoseBuckberg = 1.5;
+      expect(pd.buckbergDoseVolume, closeTo(105, 0.01));
+      expect(pd.buckbergBloodVolume, closeTo(84, 0.01));
+      expect(pd.buckbergCrystalloidVolume, closeTo(21, 0.01));
+      expect(pd.buckbergBloodVolume / pd.buckbergCrystalloidVolume, closeTo(4.0, 0.001));
+    });
+
+    test('del Nido 40 kg at 17.5 ml/kg: 700 ml, not capped, 4:1 crystalloid:blood', () {
+      final pd = PatientData()
+        ..cardioplegiaWeight = 40
+        ..cardioplegiaDoseDelNido = 17.5;
+      expect(pd.delNidoDoseVolume, closeTo(700, 0.01));
+      expect(pd.delNidoDoseCapped, isFalse);
+      expect(pd.delNidoBloodVolume, closeTo(140, 0.01));
+      expect(pd.delNidoCrystalloidVolume, closeTo(560, 0.01));
+      expect(pd.delNidoCrystalloidVolume / pd.delNidoBloodVolume, closeTo(4.0, 0.001));
+    });
+
+    test('del Nido 70 kg at 17.5 ml/kg: raw 1225 ml is capped to the 1000 ml single-dose ceiling', () {
+      final pd = PatientData()
+        ..cardioplegiaWeight = 70
+        ..cardioplegiaDoseDelNido = 17.5;
+      expect(pd.delNidoDoseVolume, closeTo(1000, 0.01));
+      expect(pd.delNidoDoseCapped, isTrue);
+      expect(pd.delNidoBloodVolume, closeTo(200, 0.01));
+      expect(pd.delNidoCrystalloidVolume, closeTo(800, 0.01));
+    });
+
+    test('del Nido exactly at the 1000 ml boundary is NOT flagged as capped', () {
+      final pd = PatientData()
+        ..cardioplegiaWeight = 50
+        ..cardioplegiaDoseDelNido = 20;
+      expect(pd.delNidoDoseVolume, closeTo(1000, 0.01));
+      expect(pd.delNidoDoseCapped, isFalse);
+    });
+
+    test('Missing weight yields 0 for both protocols', () {
+      final pdB = PatientData()..cardioplegiaDoseBuckberg = 1.5;
+      final pdD = PatientData()..cardioplegiaDoseDelNido = 17.5;
+      expect(pdB.buckbergDoseVolume, 0);
+      expect(pdD.delNidoDoseVolume, 0);
+    });
+
+    test('The two protocols are independent - setting one does not affect the other', () {
+      final pd = PatientData()
+        ..cardioplegiaWeight = 70
+        ..cardioplegiaDoseBuckberg = 1.5;
+      expect(pd.buckbergDoseVolume, greaterThan(0));
+      expect(pd.delNidoDoseVolume, 0); // del Nido dose was never set
+    });
+
+    // Calafiore: pressure-controlled, intermittent warm blood cardioplegia.
+    // Whole blood is the carrier; a K+/Mg2+ MIXTURE (institutional syringe:
+    // 4 x 10 ml KCl 14.9% [2 mmol/ml] + 1 x 10 ml MgSO4-heptahydrate
+    // 500 mg/ml, i.e. 20 mmol per 10 ml ampoule [~2.0 mmol/ml] - confirmed
+    // by direct inspection of the institutional ampoule; an earlier version
+    // of this app incorrectly assumed "10%"/~0.4 mmol/ml) is continuously
+    // titrated in via a syringe pump (Perfusor). Both the target [K+] and a
+    // SEPARATE end-of-dose Mg2+ bolus change across the dose sequence:
+    //   Dose 1: target 20 mmol/l | bolus 1000 mg
+    //   Dose 2: target 12 mmol/l | bolus  100 mg (alt. 500 mg)
+    //   Dose 3: target 12 mmol/l | bolus  100 mg
+    //   Dose 4: target 12 mmol/l (alt. 10/8) | bolus 500 mg
+    //   Dose 5: target 12 mmol/l (alt. 10/8) | bolus 100 mg
+    //   Dose 6: target 12 mmol/l (alt. 10/8) | bolus 100 mg
+    // All expected Perfusor-rate values below are computed directly from
+    // the mass-balance formula (verified in an earlier session against the
+    // institutional Excel's own worked example) applied to the resulting
+    // 1.6 mmol/ml [K+] / 0.4 mmol/ml [Mg2+] institutional syringe mixture.
+    // Source (technique origin): Calafiore AM, Teodori G, Mezzetti A,
+    // Bosco G, Verna AM, Di Giammarco G, Lapenna D. Ann Thorac Surg.
+    // 1995;59(2):398-402.
+
+    PatientData calafioreSyringe({int? dose}) => PatientData()
+      ..cardioplegiaCalafioreKclVolume = 40
+      ..cardioplegiaCalafioreKclConc = 2.0
+      ..cardioplegiaCalafioreMgVolume = 10
+      ..cardioplegiaCalafioreMgConc = 2.0
+      ..cardioplegiaCalafioreDoseNumber = dose;
+
+    test('Institutional syringe mixture (40 ml KCl 2mmol/ml + 10 ml MgSO4 2mmol/ml [500mg/ml]): 1.6 / 0.4 mmol/ml', () {
+      final pd = calafioreSyringe();
+      expect(pd.calafioreSyringeTotalVolume, closeTo(50, 0.01));
+      expect(pd.calafioreSyringeKConc, closeTo(1.6, 0.001));
+      expect(pd.calafioreSyringeMgConc, closeTo(0.4, 0.001));
+    });
+
+    test('Default target [K+] and Mg2+ bolus follow the dose-number schedule', () {
+      final expected = {
+        1: (20.0, 1000.0),
+        2: (12.0, 100.0),
+        3: (12.0, 100.0),
+        4: (12.0, 500.0),
+        5: (12.0, 100.0),
+        6: (12.0, 100.0),
+      };
+      for (final entry in expected.entries) {
+        final pd = calafioreSyringe(dose: entry.key);
+        expect(pd.calafioreTargetK, entry.value.$1, reason: 'dose ${entry.key} target');
+        expect(pd.calafioreMgBolusMg, entry.value.$2, reason: 'dose ${entry.key} bolus');
+      }
+    });
+
+    test('Dose 1, serum 4.8, flow 200 ml/min -> Perfusor rate 114.0 ml/h, Mg2+ delivery 45.6 mmol/h', () {
+      final pd = calafioreSyringe(dose: 1)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafioreDeltaK, closeTo(15.2, 0.001));
+      expect(pd.calafiorePerfusorRate, closeTo(114.0, 0.01));
+      expect(pd.calafioreMgDeliveryRate, closeTo(45.6, 0.01));
+    });
+
+    test('Dose 2 (target 12), serum 4.8, flow 200 ml/min -> Perfusor rate 54.0 ml/h', () {
+      final pd = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafiorePerfusorRate, closeTo(54.0, 0.01));
+      expect(pd.calafioreMgDeliveryRate, closeTo(21.6, 0.01));
+    });
+
+    test('Dose 4 alt target 10 mmol/l overrides the default 12 -> Perfusor rate 39.0 ml/h', () {
+      final pd = calafioreSyringe(dose: 4)
+        ..cardioplegiaCalafioreTargetKAlt = 10
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafioreTargetK, 10.0);
+      expect(pd.calafiorePerfusorRate, closeTo(39.0, 0.01));
+    });
+
+    test('Dose 4 alt target 8 mmol/l overrides the default 12 -> Perfusor rate 24.0 ml/h', () {
+      final pd = calafioreSyringe(dose: 4)
+        ..cardioplegiaCalafioreTargetKAlt = 8
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafioreTargetK, 8.0);
+      expect(pd.calafiorePerfusorRate, closeTo(24.0, 0.01));
+    });
+
+    test('Target alt override is ignored outside doses 4-6 (dose 2 stays at default 12)', () {
+      final pd = calafioreSyringe(dose: 2)..cardioplegiaCalafioreTargetKAlt = 8;
+      expect(pd.calafioreTargetK, 12.0);
+    });
+
+    test('Mg2+ bolus is fixed per dose and has no alternate-value override', () {
+      // Dose 2 may clinically be raised to 500 mg, but that is shown as a
+      // hint only - it feeds no calculation, so the model always reports
+      // the scheduled default.
+      expect(calafioreSyringe(dose: 2).calafioreMgBolusMg, 100.0);
+      expect(calafioreSyringe(dose: 4).calafioreMgBolusMg, 500.0);
+    });
+
+    test('No dose number selected defaults to dose 1 (target 20, bolus 1000 mg)', () {
+      final pd = PatientData();
+      expect(pd.calafioreTargetK, 20.0);
+      expect(pd.calafioreMgBolusMg, 1000.0);
+    });
+
+    test('Perfusor rate scales linearly with flow (same syringe/dose, flow 150 vs 200 ml/min)', () {
+      final pdBase = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreSerumK = 4.8
+        ..cardioplegiaCalafioreFlow = 200;
+      final pdLowerFlow = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreSerumK = 4.8
+        ..cardioplegiaCalafioreFlow = 150;
+      // Pressure-controlled delivery: if flow drops (e.g. higher coronary
+      // resistance at the same 90-100 mmHg line pressure), the Perfusor
+      // rate must drop proportionally to hold the same concentration.
+      expect(pdBase.calafiorePerfusorRate, closeTo(54.0, 0.01));
+      expect(pdLowerFlow.calafiorePerfusorRate, closeTo(40.5, 0.01));
+      expect(pdLowerFlow.calafiorePerfusorRate / pdBase.calafiorePerfusorRate,
+          closeTo(150 / 200, 0.001));
+    });
+
+    test('Serum K+ at or above this dose\'s target yields 0 ml/h (no negative Perfusor rate)', () {
+      final pd = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 12.0; // == dose 2's target of 12
+      expect(pd.calafioreDeltaK, 0);
+      expect(pd.calafiorePerfusorRate, 0);
+    });
+
+    test('Missing flow yields 0 even with a complete syringe mixture', () {
+      final pd = calafioreSyringe(dose: 1)..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafiorePerfusorRate, 0);
+    });
+
+    test('Magnesium is OPTIONAL: a pure-KCl syringe still computes the full K+ result', () {
+      // Previously this configuration returned 0 because magnesium was
+      // treated as a required input. Magnesium is now optional: without it
+      // the syringe is simply undiluted KCl (40 ml at 2 mmol/ml -> 2.0
+      // mmol/ml), and the K+ calculation proceeds normally.
+      // Dose 1: (20 - 4.8) x 200 / 1000 / 2.0 x 60 = 91.2 ml/h.
+      final pd = PatientData()
+        ..cardioplegiaCalafioreKclVolume = 40
+        ..cardioplegiaCalafioreKclConc = 2.0
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafioreSyringeTotalVolume, closeTo(40, 0.01));
+      expect(pd.calafioreSyringeKConc, closeTo(2.0, 0.001));
+      expect(pd.calafiorePerfusorRate, closeTo(91.2, 0.01));
+      // No magnesium in the syringe -> no continuous Mg2+ delivery, but
+      // that is a valid state, not an error.
+      expect(pd.calafioreSyringeMgConc, 0);
+      expect(pd.calafioreMgDeliveryRate, 0);
+    });
+
+    test('Missing KCl concentration still yields 0 (K+ source is genuinely required)', () {
+      final pd = PatientData()
+        ..cardioplegiaCalafioreKclVolume = 40
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafiorePerfusorRate, 0);
+    });
+
+    test('Calafiore is independent of Buckberg/del Nido fields', () {
+      final pd = calafioreSyringe(dose: 1)
+        ..cardioplegiaWeight = 70
+        ..cardioplegiaDoseBuckberg = 1.5
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.buckbergDoseVolume, closeTo(105, 0.01));
+      expect(pd.calafiorePerfusorRate, closeTo(114.0, 0.01));
+    });
+  });
+
+  group('Cardioplegia - Bretschneider (HTK/Custodiol)', () {
+    // Single-shot intracellular crystalloid solution. Institutional/teaching
+    // parameters: 5-8 C, 100-110 mmHg initially then 40-50 mmHg after
+    // arrest, 6-8 min initial perfusion / 2-3 min re-perfusion, protection
+    // up to ~180 min without re-infusion.
+    // Sources: Bretschneider HJ. Thorac Cardiovasc Surg. 1980;28(5):295-302.
+    // | Bretschneider HJ et al. J Cardiovasc Surg (Torino). 1975;16(3):241-60.
+    // | Gebhard MM, Preusse CJ, Schnabel PA, Bretschneider HJ. Thorac
+    // Cardiovasc Surg. 1984;32(5):271-6.
+
+    test('Delivered volume from pump settings = flow x time (300 ml/min x 6 min = 1800 ml)', () {
+      final pd = PatientData()
+        ..cardioplegiaBretschneiderFlow = 300
+        ..cardioplegiaBretschneiderTime = 6;
+      expect(pd.bretschneiderVolumeFromFlow, closeTo(1800, 0.01));
+    });
+
+    test('Re-perfusion phase volume (250 ml/min x 2.5 min = 625 ml)', () {
+      final pd = PatientData()
+        ..cardioplegiaBretschneiderIsReperfusion = true
+        ..cardioplegiaBretschneiderFlow = 250
+        ..cardioplegiaBretschneiderTime = 2.5;
+      expect(pd.bretschneiderVolumeFromFlow, closeTo(625, 0.01));
+    });
+
+    test('Phase defaults to initial perfusion, not re-perfusion', () {
+      expect(PatientData().cardioplegiaBretschneiderIsReperfusion, isFalse);
+    });
+
+    test('Missing inputs yield 0', () {
+      expect(PatientData().bretschneiderVolumeFromFlow, 0);
+      expect((PatientData()..cardioplegiaBretschneiderFlow = 300).bretschneiderVolumeFromFlow, 0);
+      expect((PatientData()..cardioplegiaBretschneiderTime = 6).bretschneiderVolumeFromFlow, 0);
+    });
+  });
+
+  group('Cardioplegia - re-dose interval timer', () {
+    // Pure status function, deliberately taking an elapsed Duration rather
+    // than reading the clock, so the thresholds are deterministic here.
+    // Calafiore thresholds: due at 15 min, overdue past 20 min.
+    // Bretschneider thresholds: due at 150 min, overdue past 180 min.
+
+    CardioplegiaDoseStatus calafiore(Duration d) => PatientData.cardioplegiaDoseStatus(
+        elapsed: d, dueAfterMin: 15, overdueAfterMin: 20);
+
+    test('Calafiore: fresh dose is within the interval', () {
+      expect(calafiore(const Duration(minutes: 0)), CardioplegiaDoseStatus.ok);
+      expect(calafiore(const Duration(minutes: 14, seconds: 59)), CardioplegiaDoseStatus.ok);
+    });
+
+    test('Calafiore: re-dose window opens exactly at 15 min', () {
+      expect(calafiore(const Duration(minutes: 15)), CardioplegiaDoseStatus.due);
+      expect(calafiore(const Duration(minutes: 19, seconds: 59)), CardioplegiaDoseStatus.due);
+    });
+
+    test('Calafiore: interval is exceeded from 20 min on', () {
+      expect(calafiore(const Duration(minutes: 20)), CardioplegiaDoseStatus.overdue);
+      expect(calafiore(const Duration(minutes: 45)), CardioplegiaDoseStatus.overdue);
+    });
+
+    test('Bretschneider: 180 min single-shot window with a 30 min warning lead', () {
+      CardioplegiaDoseStatus bret(Duration d) => PatientData.cardioplegiaDoseStatus(
+          elapsed: d, dueAfterMin: 150, overdueAfterMin: 180);
+      expect(bret(const Duration(minutes: 60)), CardioplegiaDoseStatus.ok);
+      expect(bret(const Duration(minutes: 150)), CardioplegiaDoseStatus.due);
+      expect(bret(const Duration(minutes: 179)), CardioplegiaDoseStatus.due);
+      expect(bret(const Duration(minutes: 180)), CardioplegiaDoseStatus.overdue);
+    });
+
+    test('Sub-minute resolution: seconds are honoured, not truncated to whole minutes', () {
+      // 14:30 must still be "ok" and 15:00 must flip to "due" - a
+      // minutes-only implementation would round 14:30 up and fire early.
+      expect(calafiore(const Duration(minutes: 14, seconds: 30)), CardioplegiaDoseStatus.ok);
+      expect(calafiore(const Duration(minutes: 15, seconds: 1)), CardioplegiaDoseStatus.due);
+    });
+
+    test('No delivery recorded by default', () {
+      expect(PatientData().cardioplegiaLastDoseAt, isNull);
+    });
+  });
+
   // ════════════════════════════════════════════════════════════════════════
   // Tube volume (sizes in inches)
   // ════════════════════════════════════════════════════════════════════════

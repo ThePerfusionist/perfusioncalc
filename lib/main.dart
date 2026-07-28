@@ -8,6 +8,7 @@ import 'screens/ultrafiltration_screen.dart';
 import 'screens/tube_volume_screen.dart';
 import 'screens/zoll_chairre_screen.dart';
 import 'screens/hypothermia_screen.dart';
+import 'screens/cardioplegia_screen.dart';
 import 'screens/pediatric_screen.dart';
 import 'screens/reference_pressure_screen.dart';
 import 'screens/heart_anatomy_screen.dart';
@@ -19,7 +20,7 @@ import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.2.5';
+const kAppVersion = '0.3.0';
 
 void main() async {
   // Load language + theme from SharedPreferences before the UI is rendered,
@@ -79,6 +80,7 @@ class _MainScreenState extends State<MainScreen>
     {'key': 'tab_bsa',          'icon': Icons.monitor_heart_outlined},
     {'key': 'tab_o2',           'icon': Icons.air},
     {'key': 'tab_hypothermia',  'icon': Icons.ac_unit},
+    {'key': 'tab_cardioplegia', 'icon': Icons.bloodtype_outlined},
     {'key': 'tab_electrolytes', 'icon': Icons.science_outlined},
     {'key': 'tab_ultrafiltration', 'icon': Icons.opacity},
     {'key': 'tab_resistances',  'icon': Icons.compress},
@@ -93,10 +95,10 @@ class _MainScreenState extends State<MainScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 11, vsync: this);
+    _tabController = TabController(length: 12, vsync: this);
     // IMPORTANT for performance: the listener must NOT trigger setState on
     // every animation frame, or the entire widget tree (AppBar, TabBar, all
-    // 11 TabBarView children) would rebuild 60x/second. We only rebuild
+    // 12 TabBarView children) would rebuild 60x/second. We only rebuild
     // when the target index actually changes - that's only needed for the
     // active highlight in the drawer.
     _tabController.addListener(_onTabChanged);
@@ -230,15 +232,15 @@ class _MainScreenState extends State<MainScreen>
 
   // ── Combined report (combined PDF export across multiple tabs) ─────────────
   //
-  // Nine tabs with an actual patient/case data connection belong in a
+  // Ten tabs with an actual patient/case data connection belong in a
   // "patient report" (BSA, O2 delivery, hypothermia/BGA correction,
-  // electrolytes, ultrafiltration, resistances, pediatrics, tube volume,
-  // Charrière). Their models (_patientData, _bgaModel) live in MainScreen
-  // and are passed down to the respective screens - which is exactly why
-  // they can be accessed directly here, without needing to know the
-  // currently visible tab widgets. Reference pressures and heart anatomy
-  // are pure, patient-independent reference tools and are excluded - which
-  // is why they have no PDF export at all.
+  // cardioplegia, electrolytes, ultrafiltration, resistances, pediatrics,
+  // tube volume, Charrière). Their models (_patientData, _bgaModel) live
+  // in MainScreen and are passed down to the respective screens - which is
+  // exactly why they can be accessed directly here, without needing to
+  // know the currently visible tab widgets. Reference pressures and heart
+  // anatomy are pure, patient-independent reference tools and are
+  // excluded - which is why they have no PDF export at all.
   //
   // "Only filled-in tabs": a tab is only included if at least one of its
   // rows has a real value (not just "—"). This keeps the report compact
@@ -249,6 +251,7 @@ class _MainScreenState extends State<MainScreen>
       PdfTabReport(tabTitle: t('tab_bsa'),          sections: buildBsaPdfSections(pd)),
       PdfTabReport(tabTitle: t('tab_o2'),           sections: buildO2PdfSections(pd)),
       PdfTabReport(tabTitle: t('tab_hypothermia'),  sections: buildHypothermiaPdfSections(_bgaModel)),
+      PdfTabReport(tabTitle: t('tab_cardioplegia'), sections: buildCardioplegiaPdfSections(pd)),
       PdfTabReport(tabTitle: t('tab_electrolytes'), sections: buildElectrolytesPdfSections(pd)),
       PdfTabReport(tabTitle: t('tab_ultrafiltration'), sections: buildUltrafiltrationPdfSections(pd)),
       PdfTabReport(tabTitle: t('tab_resistances'),  sections: buildResistancesPdfSections(pd)),
@@ -561,11 +564,12 @@ class _MainScreenState extends State<MainScreen>
           children: [
             // onChanged is deliberately a no-op: each screen updates its own
             // results via a local setState. A global rebuild of MainScreen
-            // (and thus all 11 tabs) is not necessary and was the main
+            // (and thus all 12 tabs) is not necessary and was the main
             // cause of the janky typing behavior.
             BSAScreen(patientData: _patientData, onChanged: _noop),
             O2DeliveryScreen(patientData: _patientData, onChanged: _noop),
             HypothermiaScreen(bgaModel: _bgaModel, onChanged: _noop),
+            CardioplegiaScreen(patientData: _patientData, onChanged: _noop),
             ElectrolytesScreen(patientData: _patientData, onChanged: _noop),
             UltrafiltrationScreen(patientData: _patientData, onChanged: _noop),
             ResistancesScreen(patientData: _patientData, onChanged: _noop),

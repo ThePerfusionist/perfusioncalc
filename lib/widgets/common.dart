@@ -54,6 +54,15 @@ class InputCard extends StatefulWidget {
   /// regardless).
   final Range? range;
 
+  /// Optional inline unit switcher. When both are supplied, the static unit
+  /// label in the card's top-right corner is replaced by a small tappable
+  /// chip row (one chip per entry in [unitOptions]); [unit] then selects
+  /// which chip is highlighted. Used e.g. for mmol/ml vs % concentration
+  /// entry, where the switch belongs visually inside the field it governs
+  /// rather than floating beside it.
+  final List<String>? unitOptions;
+  final ValueChanged<String>? onUnitChanged;
+
   const InputCard({
     super.key,
     required this.label,
@@ -62,6 +71,8 @@ class InputCard extends StatefulWidget {
     required this.onChanged,
     this.step = 0.1,
     this.range,
+    this.unitOptions,
+    this.onUnitChanged,
   });
 
   @override
@@ -168,7 +179,10 @@ class _InputCardState extends State<InputCard> {
                 ),
               ],
             ]),
-            Text(widget.unit,  style:  TextStyle(color: kTextSecondary, fontSize: 13)),
+            if (widget.unitOptions != null && widget.onUnitChanged != null)
+              _unitSwitcher()
+            else
+              Text(widget.unit,  style:  TextStyle(color: kTextSecondary, fontSize: 13)),
           ]),
           const SizedBox(height: 4),
           Row(children: [
@@ -212,6 +226,46 @@ class _InputCardState extends State<InputCard> {
   String _warnTooltipFor(Range r) {
     final base = 'Ungewöhnlicher Wert\nPlausibel: ${r.display}';
     return r.note != null ? '$base\n${r.note}' : base;
+  }
+
+  /// Small inline chip row that replaces the static unit label when
+  /// [InputCard.unitOptions] is supplied - lets the user switch the entry
+  /// unit right inside the field it belongs to.
+  Widget _unitSwitcher() {
+    final opts = widget.unitOptions!;
+    final chips = <Widget>[];
+    for (final opt in opts) {
+      final active = opt == widget.unit;
+      chips.add(Semantics(
+        button: true,
+        selected: active,
+        label: opt,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () => widget.onUnitChanged!(opt),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: active ? kGold : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(opt, style: TextStyle(
+              color: active ? Colors.black : kTextMuted,
+              fontSize: 11.5,
+              fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            )),
+          ),
+        ),
+      ));
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: kSurfaceWash,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: chips),
+    );
   }
 
   Widget _btn(IconData icon, VoidCallback onTap, String semanticLabel) => Semantics(
@@ -1032,5 +1086,61 @@ class AppSources {
     title: 'Ultrafiltration in cardiac surgery: Results of a systematic review and meta-analysis.',
     journal: 'Perfusion. 2024;39(4):743\u2013751.',
     doi: 'doi: 10.1177/02676591231157970  \u00b7  Modifizierte Ultrafiltration (MUF) senkt intraoperative Erythrozytentransfusionen.',
+  );
+
+  static const buckberg1987 = SourceRef(
+    num: 32,
+    authors: 'Buckberg GD.',
+    title: 'Strategies and logic of cardioplegic delivery to prevent, avoid, and reverse ischemic and reperfusion damage.',
+    journal: 'J Thorac Cardiovasc Surg. 1987;93(1):127\u2013139.',
+    doi: 'PMID: 3540457  \u00b7  4:1 Blut:Kristalloid-Kardioplegie, Erhaltungsdosis alle 15\u201320 min.',
+  );
+
+  static const matteDelNido2012 = SourceRef(
+    num: 33,
+    authors: 'Matte GS, del Nido PJ.',
+    title: 'History and use of del Nido cardioplegia solution at Boston Children\u2019s Hospital.',
+    journal: 'J Extra Corpor Technol. 2012;44(3):98\u2013103.',
+    doi: 'doi: 10.1051/ject/201244098  \u00b7  4:1 Kristalloid:Blut-Kardioplegie als Einzeldosis.',
+  );
+
+  static const calafiore1995 = SourceRef(
+    num: 34,
+    authors: 'Calafiore AM, Teodori G, Mezzetti A, Bosco G, Verna AM, Di Giammarco G, Lapenna D.',
+    title: 'Intermittent antegrade warm blood cardioplegia.',
+    journal: 'Ann Thorac Surg. 1995;59(2):398\u2013402.',
+    doi: 'doi: 10.1016/0003-4975(94)00843-V  \u00b7  Ursprungsarbeit der warmen intermittierenden Blutkardioplegie.',
+  );
+
+  static const calafiore2020 = SourceRef(
+    num: 35,
+    authors: 'Calafiore AM, Pelini P, Foschi M, Di Mauro M.',
+    title: 'Intermittent Antegrade Warm Blood Cardioplegia: What Is Next?',
+    journal: 'Thorac Cardiovasc Surg. 2020 Apr;68(3):232\u2013234. Epub 2019 Mar 5.',
+    doi: 'doi: 10.1055/s-0039-1679925  \u00b7  PMID: 30836397  \u00b7  Modifiziertes Calafiore-Protokoll (absteigende K\u207a-Dosierung).',
+  );
+
+  static const bretschneider1980 = SourceRef(
+    num: 36,
+    authors: 'Bretschneider HJ.',
+    title: 'Myocardial protection.',
+    journal: 'Thorac Cardiovasc Surg. 1980;28(5):295\u2013302.',
+    doi: 'doi: 10.1055/s-2007-1022099  \u00b7  Grundlagen der intrazellulären HTK-Kardioplegie.',
+  );
+
+  static const bretschneider1975 = SourceRef(
+    num: 37,
+    authors: 'Bretschneider HJ, Hübner G, Knoll D, Lohr B, Nordbeck H, Spieckermann PG.',
+    title: 'Myocardial resistance and tolerance to ischemia: physiological and biochemical basis.',
+    journal: 'J Cardiovasc Surg (Torino). 1975;16(3):241\u2013260.',
+    doi: 'PMID: 239002  \u00b7  Physiologische/biochemische Basis der Ischämietoleranz.',
+  );
+
+  static const gebhard1984 = SourceRef(
+    num: 38,
+    authors: 'Gebhard MM, Preusse CJ, Schnabel PA, Bretschneider HJ.',
+    title: 'Different effects of cardioplegic solution HTK during single or intermittent administration.',
+    journal: 'Thorac Cardiovasc Surg. 1984;32(5):271\u2013276.',
+    doi: 'doi: 10.1055/s-2007-1023400  \u00b7  Einmalige vs. intermittierende HTK-Gabe.',
   );
 }

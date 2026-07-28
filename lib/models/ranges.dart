@@ -108,4 +108,32 @@ class Ranges {
   // ── Pediatrics ───────────────────────────────────────────────────────────
   static const desiredHbIncrease = Range(0.5, 8, 'g/dl',
       note: 'Üblicher Ziel-Hb-Anstieg');
+
+  // ── Cardioplegia ─────────────────────────────────────────────────────────
+  static const cardioplegiaDoseBuckberg = Range(1, 2, 'ml/kg',
+      note: 'Induktions-/Erhaltungsdosis nach Buckberg 1987');
+  static const cardioplegiaDoseDelNido = Range(15, 20, 'ml/kg',
+      note: 'Einzeldosis nach Matte & del Nido 2012, max. 1000 ml');
+  static const cardioplegiaCalafioreFlow = Range(50, 500, 'ml/min',
+      note: 'Druckgesteuert (z.B. 90–100 mmHg); flusskontrolliertes Referenzprotokoll 200–300 ml/min');
+  static const cardioplegiaCalafioreKclVolume = Range(5, 100, 'ml',
+      note: 'Institutionelles Beispiel: 40 ml KCl 14,9 % (4 Ampullen à 10 ml)');
+  static const cardioplegiaCalafioreMgVolume = Range(0, 50, 'ml',
+      note: 'Optional. Institutionelles Beispiel: 10 ml MgSO4 (1 Ampulle à 10 ml)');
+  static const cardioplegiaCalafioreKclConc = Range(0.5, 3, 'mmol/ml',
+      note: 'KCl 14,9 % entspricht 2 mmol/ml');
+  static const cardioplegiaCalafioreKclConcPercent = Range(3.5, 22.5, '%',
+      note: 'KCl 14,9 % (Standard) entspricht 2 mmol/ml');
+  static const cardioplegiaCalafioreMgConc = Range(0.5, 3, 'mmol/ml',
+      note: '500 mg/ml MgSO4-Heptahydrat entspricht 20 mmol pro 10-ml-Ampulle (≈2,0 mmol/ml)');
+  static const cardioplegiaCalafioreMgConcPercent = Range(10, 60, '%',
+      note: '500 mg/ml MgSO4-Heptahydrat entspricht ca. 50 % (w/v)');
+
+  // ── Bretschneider (HTK/Custodiol) ────────────────────────────────────────
+  static const cardioplegiaBretschneiderFlow = Range(50, 600, 'ml/min',
+      note: 'Druckgesteuert: initial 100–110 mmHg, nach Herzstillstand 40–50 mmHg');
+  static const cardioplegiaBretschneiderTimeInitial = Range(6, 8, 'min',
+      note: 'Erstperfusion (Induktion) 6–8 min');
+  static const cardioplegiaBretschneiderTimeReperfusion = Range(2, 3, 'min',
+      note: 'Nachperfusion ca. 2–3 min');
 }
