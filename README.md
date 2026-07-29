@@ -43,19 +43,23 @@ calculation snapshots as PDF for documentation or sharing during training sessio
 
 ---
 
-## ✨ Features – 11 Tabs
+## ✨ Features – 12 Tabs
+
+Tab order follows clinical workflow: core calculations first, then myocardial
+protection, then downstream/derived quantities, and finally the pure reference tabs.
 
 | Tab | Calculations |
 |-----|-------------|
 | 🫀 **BSA / CO / Hb / Hct** | Body surface area (DuBois), cardiac output, blood volume ♂/♀, expected Hb & Hct after priming |
-| 💨 **O₂ Delivery** | CaO₂, CvO₂, Ca-vDO₂, DO₂, DO₂i, VO₂, VO₂i, O₂-ER, min. cardiac output, min. Hb · CO/CI toggle |
-| 🔁 **Resistances** | SVR and PVR in dyn·s·cm⁻⁵ |
-| ⚗️ **Electrolytes / Buffer** | Sodium, potassium, calcium needs · NaBic 8.4% · TRIS 36.34% |
-| 📏 **Tube Volume** | Fill volume (ml) for 3/16", 1/4", 3/8", 1/2" per entered length |
-| 💧 **Flow / Drainage Rate** | Max. flow and drainage reference table by tube size |
-| 📐 **Zoll / Charriere** | Diameter reference table · Ch ↔ mm converter |
+| 💨 **O₂ Delivery** | CaO₂, CvO₂, Ca-vDO₂, DO₂, DO₂i, VO₂, VO₂i, O₂-ER, min. cardiac output, min. Hb · CO/CI toggle · **DO₂i goal-directed-perfusion warning below 272 ml/min/m²** |
 | ❄️ **Hypothermia** | Level table (Light/Moderate/Deep/Profound) · **BGA temperature correction (Severinghaus)** |
+| 💉 **Cardioplegia** | **Calafiore** – pressure-controlled warm blood cardioplegia: live Perfusor rate that tracks the current pump flow, per-dose K⁺ schedule (dose 1–6), configurable K⁺/Mg²⁺ syringe with mmol/ml ⇄ % entry · **Bretschneider (HTK/Custodiol)** – delivered volume from flow × time · **re-dose interval stopwatch** for both protocols |
+| ⚗️ **Electrolytes / Buffer** | Sodium, potassium, calcium needs · NaBic 8.4% · TRIS 36.34% |
+| 💧 **Ultrafiltration** | Volume to remove to reach a target haematocrit **or** haemoglobin, resulting circulating volume (mass-conservation principle) |
+| 🔁 **Resistances** | SVR and PVR in dyn·s·cm⁻⁵ |
 | 👶 **Pediatric** | Tube sizes (Oldeen) · Perfusion rates (Ramakrishnan) · VA/VV cannula sizes (Finck) · Blood volume (Linderkamp) · Transfusion volume (Davies) |
+| 📏 **Tube Volume & Flow Rate** | Fill volume (ml) for 3/16", 1/4", 3/8", 1/2" per entered length · max. flow and drainage reference table by tube size |
+| 📐 **Zoll / Charrière** | Diameter reference table · Ch ↔ mm converter |
 | 📊 **Reference Values Pressure** | Haemodynamic pressure reference values with normal ranges |
 | ❤️ **Heart Anatomy** | Coronary circulation anterior/posterior · Heart cross-section · Coronary arteries schematic — tap to zoom |
 
@@ -94,6 +98,28 @@ values are highlighted with a soft orange border and warning icon, but the
 calculation continues — useful for teaching scenarios (e.g. discussing extreme
 cases in trauma or congenital defects).
 
+### 🌓 Light / Dark / System Theme
+
+A theme switcher in the burger menu offers **Light**, **Dark** and **System**
+(follows the OS setting, including automatic switching at sunset). The choice
+persists across sessions. The gold accent colour stays identical in both themes
+for brand recognition.
+
+### ♿ Accessibility
+
+Icon-only controls (± steppers, AppBar actions, image viewers, unit and protocol
+switchers) carry explicit `Semantics` labels, and selectable items report their
+selected state — so TalkBack/VoiceOver announce e.g. *"Increase: body weight"* or
+*"Light, selected"* instead of an unlabelled button.
+
+### 📑 Combined Report
+
+Beyond the per-tab export, the burger menu offers **Export combined report /
+Gesamtbericht exportieren**: a single PDF containing every patient-related tab as
+its own chapter. Only tabs that actually contain entered values are included —
+untouched tabs and fields left at their defaults are skipped, keeping the report
+compact for OR documentation.
+
 ### 📱 Progressive Web App
 
 The web version is a fully-featured PWA:
@@ -110,11 +136,16 @@ working in any browser regardless of CanvasKit availability.
 
 ### 🧪 Test Coverage
 
-**83 unit tests** verify all medical formulas against published reference values:
+**124 unit tests** verify all medical formulas against published reference values:
 - BSA (DuBois), CO, blood volume (Silbernagl/Nadler)
 - CaO₂/CvO₂/DO₂i/VO₂/O₂-ER (Hüfner/Ranucci) with goal-directed perfusion threshold
 - Electrolyte and buffer corrections (Mellemgaard/Astrup · Nahas · Adrogué/Madias)
-- Severinghaus 1979 temperature correction, Henderson-Hasselbalch
+- Severinghaus 1979 temperature correction (incl. published P50 of 26.86 mmHg),
+  Rosenthal 1948 pH coefficient, Henderson-Hasselbalch
+- Ultrafiltration mass conservation in both Hct and Hb mode (Klineberg 1984)
+- Cardioplegia: Calafiore Perfusor rate verified against the institutional
+  reference calculator, per-dose K⁺ schedule, optional magnesium, Bretschneider
+  volume, re-dose interval status thresholds
 - Pediatric transfusion volume (Davies/Howie)
 - NaN/Infinity input safety, plausibility ranges, full i18n key coverage
 
@@ -167,6 +198,45 @@ flutter test
 | HCO₃⁻ | `0.0307 × PCO₂ × 10^(pH−6.105)` |
 | SaO₂ from PaO₂ | `(23400 × (PO₂³+150 × PO₂)⁻¹ + 1)⁻¹` |
 
+### Ultrafiltration / Haemoconcentration
+
+Red-cell mass is conserved during filtration — only plasma water crosses the
+membrane — so haematocrit (or haemoglobin) × volume stays constant:
+
+| Parameter | Formula |
+|-----------|---------|
+| Volume to remove | `V₁ × (1 − Hct₁ / Hct₂)` — identically with Hb |
+| Resulting volume | `V₁ − volume removed` |
+
+### Cardioplegia
+
+**Calafiore** — warm blood cardioplegia, delivered pressure-controlled (90–100 mmHg),
+so the blood flow varies with coronary/graft resistance. The syringe-pump rate must
+track the *current* flow to keep the delivered K⁺ concentration constant:
+
+| Parameter | Formula |
+|-----------|---------|
+| Perfusor rate | `(K⁺target − K⁺serum) × flow[ml/min] × 60 / (1000 × [K⁺]syringe[mmol/ml])` |
+| Syringe [K⁺] | `V(KCl) × c(KCl) / (V(KCl) + V(MgSO₄))` |
+| Continuous Mg²⁺ | `Perfusor rate × [Mg²⁺]syringe` |
+
+Per-dose K⁺ target and end-of-dose Mg²⁺ bolus (intermittent, every 15–20 min):
+
+| Dose | Target K⁺ | Mg²⁺ bolus |
+|------|-----------|------------|
+| 1 | 20 mmol/l | 1 g |
+| 2 | 12 mmol/l | 100 mg (may be raised to 500 mg) |
+| 3 | 12 mmol/l | 100 mg |
+| 4–6 | 12 mmol/l (alt. 10 / 8) | 500 / 100 / 100 mg |
+
+**Bretschneider (HTK/Custodiol)** — single-shot intracellular crystalloid solution.
+Delivered volume = `flow × time`. Solution temperature 5–8 °C; perfusion pressure
+initially 100–110 mmHg, after cardiac arrest 40–50 mmHg; perfusion time 6–8 min
+(re-perfusion 2–3 min); organ protection up to 180 min from a single administration.
+
+> **Delivery pressure limits (all protocols):** antegrade max. 70–100 mmHg,
+> retrograde max. 50–70 mmHg.
+
 ### Pediatric
 
 | Parameter | Source |
@@ -215,6 +285,16 @@ source list is available in [`lib/widgets/common.dart`](lib/widgets/common.dart)
 | [27] | Oldeen ME, Angona RE, Hodge A, Klein T. American Society of ExtraCorporeal Technology: Development of Standards and Guidelines for Pediatric and Congenital Perfusion Practice (2019). *J Extra Corpor Technol.* 2020;52(4):319–326. doi:10.1051/ject/202052319 |
 | [28] | Finck C, et al. Extracorporeal Life Support. *Pediatric Surgery NaT*, American Pediatric Surgical Association, 2025. Pediatric Surgery Library. www.pedsurglibrary.com/apsa/view/Pediatric-Surgery-NaT/829025/all/Extracorporeal_Life_Support |
 | [29] | Blausen.com staff. Medical gallery of Blausen Medical 2014. *WikiJournal of Medicine.* 2014;1(2):10. doi:10.15347/wjm/2014.010 (CC BY 3.0). |
+| [30] | Klineberg PL, Kam CA, Johnson DC, Cartmill TB, Brown JJ. Hematocrit and blood volume control during cardiopulmonary bypass with the use of hemofiltration. *Anesthesiology.* 1984;60(5):478–480. doi:10.1097/00000542-198405000-00015 |
+| [31] | Hensley NB, Colao JA, Zorrilla-Vaca A, et al. Ultrafiltration in cardiac surgery: Results of a systematic review and meta-analysis. *Perfusion.* 2024;39(4):743–751. doi:10.1177/02676591231157970 |
+| [32] | Buckberg GD. Strategies and logic of cardioplegic delivery to prevent, avoid, and reverse ischemic and reperfusion damage. *J Thorac Cardiovasc Surg.* 1987;93(1):127–139. PMID: 3540457 |
+| [33] | Matte GS, del Nido PJ. History and use of del Nido cardioplegia solution at Boston Children's Hospital. *J Extra Corpor Technol.* 2012;44(3):98–103. doi:10.1051/ject/201244098 |
+| [34] | Calafiore AM, Teodori G, Mezzetti A, Bosco G, Verna AM, Di Giammarco G, Lapenna D. Intermittent antegrade warm blood cardioplegia. *Ann Thorac Surg.* 1995;59(2):398–402. doi:10.1016/0003-4975(94)00843-V |
+| [35] | Calafiore AM, Pelini P, Foschi M, Di Mauro M. Intermittent Antegrade Warm Blood Cardioplegia: What Is Next? *Thorac Cardiovasc Surg.* 2020;68(3):232–234. doi:10.1055/s-0039-1679925. PMID: 30836397 |
+| [36] | Bretschneider HJ. Myocardial protection. *Thorac Cardiovasc Surg.* 1980;28(5):295–302. doi:10.1055/s-2007-1022099 |
+| [37] | Bretschneider HJ, Hübner G, Knoll D, Lohr B, Nordbeck H, Spieckermann PG. Myocardial resistance and tolerance to ischemia: physiological and biochemical basis. *J Cardiovasc Surg (Torino).* 1975;16(3):241–260. PMID: 239002 |
+| [38] | Gebhard MM, Preusse CJ, Schnabel PA, Bretschneider HJ. Different effects of cardioplegic solution HTK during single or intermittent administration. *Thorac Cardiovasc Surg.* 1984;32(5):271–276. doi:10.1055/s-2007-1023400 |
+| [39] | Rosenthal TB. The effect of temperature on the pH of blood and plasma in vitro. *J Biol Chem.* 1948;173(1):25–30. |
 
 ---
 
@@ -431,23 +511,27 @@ flutter build web --release --base-href /
 
 ```
 lib/
-├── main.dart                       # App entry, navigation, drawer, language switcher
+├── main.dart                       # App entry, tabs, drawer, theme/language switcher,
+│                                   #   combined-report export
 ├── i18n/
 │   └── app_strings.dart            # All EN/DE translations + LocaleNotifier
 ├── models/
 │   ├── patient_data.dart           # All calculation formulas (single source of truth)
 │   ├── bga_model.dart              # Severinghaus BGA temperature correction
 │   └── ranges.dart                 # Plausibility ranges for input validation
+├── theme/
+│   └── app_theme.dart              # ThemeNotifier (Light/Dark/System) + ThemeData
 ├── screens/
 │   ├── bsa_screen.dart
 │   ├── o2_delivery_screen.dart
-│   ├── resistances_screen.dart
-│   ├── electrolytes_screen.dart
-│   ├── tube_volume_screen.dart
-│   ├── flow_drainage_screen.dart
-│   ├── zoll_chairre_screen.dart
 │   ├── hypothermia_screen.dart     # Includes Severinghaus BGA correction
+│   ├── cardioplegia_screen.dart    # Calafiore + Bretschneider
+│   ├── electrolytes_screen.dart
+│   ├── ultrafiltration_screen.dart
+│   ├── resistances_screen.dart
 │   ├── pediatric_screen.dart
+│   ├── tube_volume_screen.dart     # Tube volume + flow/drainage reference table
+│   ├── zoll_chairre_screen.dart
 │   ├── reference_pressure_screen.dart
 │   └── heart_anatomy_screen.dart
 ├── utils/
@@ -455,7 +539,11 @@ lib/
 │   ├── pdf_download_web.dart       # Browser download via Blob + <a download>
 │   └── pdf_download_stub.dart      # Mobile/desktop save dialog (file_picker)
 └── widgets/
-    └── common.dart                 # InputCard, ResultCard, SourceButton, PdfExportButton, BrowserSafeImage
+    └── common.dart                 # InputCard, ResultCard, SourceButton, PdfExportButton,
+                                    #   BrowserSafeImage, AppSources, theme colour tokens
+
+PROJECT_STATE.md                    # Compact maintainer context: conventions,
+                                    #   architecture, formulas, open items
 
 test/
 ├── patient_data_test.dart          # BSA, CO, BV, Hb, DO₂, electrolytes, etc.

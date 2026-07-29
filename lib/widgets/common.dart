@@ -160,25 +160,34 @@ class _InputCardState extends State<InputCard> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            // Label + optional warning icon with tooltip.
-            Row(children: [
-              Text(widget.label, style:  TextStyle(color: kText, fontSize: 14)),
-              if (outOfRange) ...[
-                const SizedBox(width: 6),
-                Tooltip(
-                  message: _warnTooltipFor(widget.range!),
-                  triggerMode: TooltipTriggerMode.tap,
-                  showDuration: const Duration(seconds: 4),
-                  child: Semantics(
-                    label: '${t('a11y_warning')}: ${_warnTooltipFor(widget.range!)}',
-                    excludeSemantics: true,
-                    child: const Icon(Icons.warning_amber_rounded,
-                        color: warnColor, size: 16),
-                  ),
+          // Label + optional warning icon on the left, unit (or unit
+          // switcher) on the right. The label side is Expanded and its Text
+          // is Flexible so a long label wraps onto a second line instead of
+          // pushing the unit/switcher out of the visible area - that used
+          // to cut off both the "%"/"mmol/ml" switch and long field titles.
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Flexible(
+                  child: Text(widget.label, style: TextStyle(color: kText, fontSize: 14)),
                 ),
-              ],
-            ]),
+                if (outOfRange) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: _warnTooltipFor(widget.range!),
+                    triggerMode: TooltipTriggerMode.tap,
+                    showDuration: const Duration(seconds: 4),
+                    child: Semantics(
+                      label: '${t('a11y_warning')}: ${_warnTooltipFor(widget.range!)}',
+                      excludeSemantics: true,
+                      child: const Icon(Icons.warning_amber_rounded,
+                          color: warnColor, size: 16),
+                    ),
+                  ),
+                ],
+              ]),
+            ),
+            const SizedBox(width: 8),
             if (widget.unitOptions != null && widget.onUnitChanged != null)
               _unitSwitcher()
             else
