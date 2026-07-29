@@ -488,11 +488,6 @@ class PatientData {
   //   Perfusion pressure: initially 100-110 mmHg, after arrest 40-50 mmHg
   //   Perfusion time:    6-8 min initial, 2-3 min on re-perfusion
   //   Ischemic tolerance: organ protection up to ~180 min single shot
-  // The delivery is split into two clinically distinct phases (initial
-  // induction vs. re-perfusion), which differ in both the expected
-  // perfusion time and the target line pressure - hence the phase flag
-  // below, which the UI uses to pick the matching plausible range and
-  // guidance text instead of showing one averaged set of numbers.
   // Sources: Bretschneider HJ. Myocardial protection. Thorac Cardiovasc
   // Surg. 1980;28(5):295-302. | Bretschneider HJ, Hubner G, Knoll D,
   // Lohr B, Nordbeck H, Spieckermann PG. Myocardial resistance and
@@ -503,9 +498,6 @@ class PatientData {
   // Cardiovasc Surg. 1984;32(5):271-6.
   double? cardioplegiaBretschneiderFlow;  // ml/min, CPL pump flow
   double? cardioplegiaBretschneiderTime;  // min, perfusion time
-  /// false = initial perfusion (induction, 6-8 min), true = re-perfusion
-  /// (2-3 min). Selects the plausible time range and the guidance shown.
-  bool cardioplegiaBretschneiderIsReperfusion = false;
 
   /// Delivered volume from pump settings: flow x time.
   double get bretschneiderVolumeFromFlow {

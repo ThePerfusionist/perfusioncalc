@@ -607,8 +607,8 @@ void main() {
   group('Cardioplegia - Bretschneider (HTK/Custodiol)', () {
     // Single-shot intracellular crystalloid solution. Institutional/teaching
     // parameters: 5-8 C, 100-110 mmHg initially then 40-50 mmHg after
-    // arrest, 6-8 min initial perfusion / 2-3 min re-perfusion, protection
-    // up to ~180 min without re-infusion.
+    // arrest, 6-8 min perfusion (2-3 min on re-perfusion), organ
+    // protection up to 180 min from a single administration.
     // Sources: Bretschneider HJ. Thorac Cardiovasc Surg. 1980;28(5):295-302.
     // | Bretschneider HJ et al. J Cardiovasc Surg (Torino). 1975;16(3):241-60.
     // | Gebhard MM, Preusse CJ, Schnabel PA, Bretschneider HJ. Thorac
@@ -621,16 +621,11 @@ void main() {
       expect(pd.bretschneiderVolumeFromFlow, closeTo(1800, 0.01));
     });
 
-    test('Re-perfusion phase volume (250 ml/min x 2.5 min = 625 ml)', () {
+    test('Short re-perfusion volume (250 ml/min x 2.5 min = 625 ml)', () {
       final pd = PatientData()
-        ..cardioplegiaBretschneiderIsReperfusion = true
         ..cardioplegiaBretschneiderFlow = 250
         ..cardioplegiaBretschneiderTime = 2.5;
       expect(pd.bretschneiderVolumeFromFlow, closeTo(625, 0.01));
-    });
-
-    test('Phase defaults to initial perfusion, not re-perfusion', () {
-      expect(PatientData().cardioplegiaBretschneiderIsReperfusion, isFalse);
     });
 
     test('Missing inputs yield 0', () {

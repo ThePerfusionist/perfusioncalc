@@ -132,8 +132,6 @@ class Ranges {
   // ── Bretschneider (HTK/Custodiol) ────────────────────────────────────────
   static const cardioplegiaBretschneiderFlow = Range(50, 600, 'ml/min',
       note: 'Druckgesteuert: initial 100–110 mmHg, nach Herzstillstand 40–50 mmHg');
-  static const cardioplegiaBretschneiderTimeInitial = Range(6, 8, 'min',
-      note: 'Erstperfusion (Induktion) 6–8 min');
-  static const cardioplegiaBretschneiderTimeReperfusion = Range(2, 3, 'min',
-      note: 'Nachperfusion ca. 2–3 min');
+  static const cardioplegiaBretschneiderTime = Range(2, 8, 'min',
+      note: 'Erstperfusion 6–8 min, Nachperfusion ca. 2–3 min');
 }

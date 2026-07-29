@@ -399,17 +399,13 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   }
 
   // ── Bretschneider (HTK/Custodiol) ───────────────────────────────────────
-  // Single-shot intracellular crystalloid cardioplegia. The delivery has
-  // two clinically distinct phases that differ in both duration and target
-  // pressure, so the section is driven by a phase switch: it picks the
-  // matching plausible time range (6-8 min induction vs. 2-3 min
-  // re-perfusion) and the matching guidance text, instead of showing one
-  // averaged set of numbers the user has to mentally filter.
+  // Single-shot intracellular crystalloid cardioplegia. The delivered
+  // volume follows directly from the pump settings (flow x time); the
+  // protocol-specific durations and pressures are shown as guidance in the
+  // info card rather than being modelled as separate modes.
   Widget _buildBretschneiderSection() {
     List<String> missing(List<({Object? v, String label})> fields) =>
         fields.where((f) => f.v == null).map((f) => f.label).toList();
-
-    final isReperfusion = patientData.cardioplegiaBretschneiderIsReperfusion;
 
     final hFlow = (v: patientData.cardioplegiaBretschneiderFlow, label: t('cardio_bret_flow'));
     final hTime = (v: patientData.cardioplegiaBretschneiderTime, label: t('cardio_bret_time'));
@@ -417,7 +413,8 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     return Column(children: [
       _protocolInfoCard(lines: [
         (Icons.science_outlined, t('cardio_bret_principle')),
-        (Icons.speed, t('cardio_pressure_limits')),
+        (Icons.speed, t('cardio_bret_pressure')),
+        (Icons.schedule, t('cardio_bret_duration')),
         (Icons.timer_outlined, t('cardio_bret_ischemia')),
       ]),
 
@@ -430,54 +427,18 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
         windowText: t('cardio_timer_window_bret'),
       ),
 
-      // ── Phase switch (induction vs. re-perfusion) ───────────────────────
-      Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(t('cardio_bret_phase'), style: TextStyle(color: kText, fontSize: 14)),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(color: kTableHeaderBg, borderRadius: const BorderRadius.all(Radius.circular(20))),
-            child: Row(children: [
-              Expanded(child: _phaseBtn(t('cardio_bret_phase_initial'), false, isReperfusion)),
-              Expanded(child: _phaseBtn(t('cardio_bret_phase_reperfusion'), true, isReperfusion)),
-            ]),
-          ),
-          const SizedBox(height: 8),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.info_outline, color: kGold, size: 14),
-            const SizedBox(width: 6),
-            Expanded(child: Text(
-              isReperfusion ? t('cardio_bret_guidance_reperfusion') : t('cardio_bret_guidance_initial'),
-              style: TextStyle(color: kTextSecondary, fontSize: 12),
-            )),
-          ]),
-        ]),
-      ),
-
       SectionHeader(t('cardio_bret_pump_section')),
       InputCard(label: t('cardio_bret_flow'), unit: 'ml/min', value: patientData.cardioplegiaBretschneiderFlow,
           range: Ranges.cardioplegiaBretschneiderFlow,
           step: 10, onChanged: (v) { patientData.cardioplegiaBretschneiderFlow = v; onChanged(); }),
       InputCard(label: t('cardio_bret_time'), unit: 'min', value: patientData.cardioplegiaBretschneiderTime,
-          // Plausible range follows the selected phase, so an entry that is
-          // fine for one phase is flagged when it belongs to the other.
-          range: isReperfusion
-              ? Ranges.cardioplegiaBretschneiderTimeReperfusion
-              : Ranges.cardioplegiaBretschneiderTimeInitial,
+          range: Ranges.cardioplegiaBretschneiderTime,
           step: 0.5, onChanged: (v) { patientData.cardioplegiaBretschneiderTime = v; onChanged(); }),
       ResultCard(label: t('cardio_bret_volume'), unit: 'ml', value: patientData.bretschneiderVolumeFromFlow,
           decimals: 0, missingInputs: missing([hFlow, hTime])),
     ]);
   }
 
-  /// Re-dose interval stopwatch. Both protocols are time-critical, only the
-  /// thresholds differ: Calafiore must be re-given every 15-20 min, while
-  /// Bretschneider's single shot protects for ~180 min. Deliberately a
-  /// manual stopwatch - it does not run in the background and does not
-  /// claim to replace the perfusion record.
   Widget _doseTimerCard({required double dueAfterMin, required double overdueAfterMin, required String windowText}) {
     final last = patientData.cardioplegiaLastDoseAt;
     final elapsed = last == null ? null : DateTime.now().difference(last);
@@ -592,36 +553,6 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
               fontWeight: filled ? FontWeight.bold : FontWeight.normal,
             )),
           ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _phaseBtn(String label, bool phaseIsReperfusion, bool current) {
-    final active = phaseIsReperfusion == current;
-    return Semantics(
-      button: true,
-      selected: active,
-      label: label,
-      excludeSemantics: true,
-      child: GestureDetector(
-        onTap: () {
-          if (active) return;
-          setState(() {
-            patientData.cardioplegiaBretschneiderIsReperfusion = phaseIsReperfusion;
-            // Clear the time so the previous phase's value isn't silently
-            // carried into a phase where it would be implausible.
-            patientData.cardioplegiaBretschneiderTime = null;
-          });
-          widget.onChanged();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: active ? kGold : Colors.transparent, borderRadius: BorderRadius.circular(20)),
-          child: Text(label, textAlign: TextAlign.center,
-              style: TextStyle(color: active ? Colors.black : kTextMuted,
-                  fontWeight: active ? FontWeight.bold : FontWeight.normal, fontSize: 12)),
         ),
       ),
     );
