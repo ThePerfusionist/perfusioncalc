@@ -4,7 +4,7 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.3.0-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.3.1-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.4-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
@@ -53,7 +53,7 @@ protection, then downstream/derived quantities, and finally the pure reference t
 | 🫀 **BSA / CO / Hb / Hct** | Body surface area (DuBois), cardiac output, blood volume ♂/♀, expected Hb & Hct after priming |
 | 💨 **O₂ Delivery** | CaO₂, CvO₂, Ca-vDO₂, DO₂, DO₂i, VO₂, VO₂i, O₂-ER, min. cardiac output, min. Hb · CO/CI toggle · **DO₂i goal-directed-perfusion warning below 272 ml/min/m²** |
 | ❄️ **Hypothermia** | Level table (Light/Moderate/Deep/Profound) · **BGA temperature correction (Severinghaus)** |
-| 💉 **Cardioplegia** | **Calafiore** – pressure-controlled warm blood cardioplegia: live Perfusor rate that tracks the current pump flow, per-dose K⁺ schedule (dose 1–6), configurable K⁺/Mg²⁺ syringe with mmol/ml ⇄ % entry · **Bretschneider (HTK/Custodiol)** – delivered volume from flow × time · **re-dose interval stopwatch** for both protocols |
+| 💉 **Cardioplegia** | **Calafiore** – pressure-controlled warm blood cardioplegia: live Perfusor rate that tracks the current pump flow, per-dose K⁺ schedule (dose 1–6), configurable K⁺/Mg²⁺ syringe with mmol/ml ⇄ % entry · **Bretschneider (HTK/Custodiol)** – delivered volume from flow × time · **del Nido** – configurable crystalloid:blood ratio (persisted), mixture, delivery time and dose per kg with the 20 ml/kg recommendation · **re-dose interval stopwatch with configurable alert** for all protocols |
 | ⚗️ **Electrolytes / Buffer** | Sodium, potassium, calcium needs · NaBic 8.4% · TRIS 36.34% |
 | 💧 **Ultrafiltration** | Volume to remove to reach a target haematocrit **or** haemoglobin, resulting circulating volume (mass-conservation principle) |
 | 🔁 **Resistances** | SVR and PVR in dyn·s·cm⁻⁵ |
@@ -98,6 +98,9 @@ values are highlighted with a soft orange border and warning icon, but the
 calculation continues — useful for teaching scenarios (e.g. discussing extreme
 cases in trauma or congenital defects).
 
+Every numeric input is range-checked, including the CO/CI field on the O₂ tab.
+The warning tooltip is fully translated (EN/DE).
+
 ### 🌓 Light / Dark / System Theme
 
 A theme switcher in the burger menu offers **Light**, **Dark** and **System**
@@ -111,6 +114,18 @@ Icon-only controls (± steppers, AppBar actions, image viewers, unit and protoco
 switchers) carry explicit `Semantics` labels, and selectable items report their
 selected state — so TalkBack/VoiceOver announce e.g. *"Increase: body weight"* or
 *"Light, selected"* instead of an unlabelled button.
+
+### ⏱️ Re-Dose Interval Alert
+
+The cardioplegia tab includes a manual stopwatch for the time since the last
+delivery, with protocol-specific thresholds. An optional alert can be enabled
+with a **freely selectable trigger time** and individual **sound** and
+**vibration** switches, plus an option to repeat every interval. All alert
+settings are persisted and restored on the next app start.
+
+The alert fires while the app is open in the foreground; it is not an
+OS-level scheduled notification and does not wake the device. Volume follows
+the device's notification volume.
 
 ### 📑 Combined Report
 
@@ -136,7 +151,7 @@ working in any browser regardless of CanvasKit availability.
 
 ### 🧪 Test Coverage
 
-**124 unit tests** verify all medical formulas against published reference values:
+**144 unit tests** verify all medical formulas against published reference values:
 - BSA (DuBois), CO, blood volume (Silbernagl/Nadler)
 - CaO₂/CvO₂/DO₂i/VO₂/O₂-ER (Hüfner/Ranucci) with goal-directed perfusion threshold
 - Electrolyte and buffer corrections (Mellemgaard/Astrup · Nahas · Adrogué/Madias)
@@ -577,6 +592,15 @@ Contributions, suggestions, and bug reports welcome. Please open an issue or pul
 
 When proposing new formulas, please include the **primary peer-reviewed source**.
 PerfusionCalc only accepts calculations with verifiable, citable origins.
+
+---
+
+## ✉️ Contact
+
+Questions, bug reports or clinical feedback: **perfusioncalc@unbox.at**
+
+For reproducible bug reports, please include the app version (burger menu →
+info button), the platform (Web/Android/iOS) and the tab concerned.
 
 ---
 

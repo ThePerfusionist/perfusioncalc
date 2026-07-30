@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
+import '../models/cardioplegia_alarm_settings.dart';
+import '../models/cardioplegia_settings.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
 import '../utils/pdf_export.dart';
@@ -36,18 +39,17 @@ class CardioplegiaScreen extends StatefulWidget {
 
 /// Which cardioplegia protocol is currently shown.
 ///
-/// Buckberg and del Nido are intentionally NOT offered in the protocol
-/// picker right now (see _kVisibleProtocols): they are not used at the
-/// institution this app is maintained for, so showing them would only
-/// invite mis-selection. Their enum values, calculation code
-/// (PatientData.buckberg*/delNido*), tests, and UI section are all kept
-/// intact so the protocols can be re-enabled by simply adding them back to
-/// _kVisibleProtocols - nothing has to be rewritten.
+/// Buckberg is intentionally NOT offered in the protocol picker right now
+/// (see _kVisibleProtocols): it is not used at the institution this app is
+/// maintained for. Its enum value, calculation code (PatientData.buckberg*),
+/// tests and UI section are kept intact, so it can be re-enabled by adding
+/// it back to _kVisibleProtocols - nothing has to be rewritten.
 enum _CardioProtocol { buckberg, delNido, calafiore, bretschneider }
 
 const List<_CardioProtocol> _kVisibleProtocols = [
   _CardioProtocol.calafiore,
   _CardioProtocol.bretschneider,
+  _CardioProtocol.delNido,
 ];
 
 String _protocolLabel(_CardioProtocol p) => switch (p) {
@@ -76,15 +78,30 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// keep firing setState on a disposed State.
   Timer? _ticker;
 
+  /// How many times the alert has already fired for the current delivery.
+  /// Compared against CardioplegiaAlarmSettings.expectedFireCount() each
+  /// tick, so a missed tick (app briefly backgrounded) still catches up
+  /// instead of silently skipping the alert.
+  int _alarmsFired = 0;
+
   @override
   void initState() {
     super.initState();
     _syncTicker();
+    // Rebuild when alarm settings change (they live in a global notifier).
+    CardioplegiaAlarmSettings.instance.addListener(_onSettingsChanged);
+    CardioplegiaSettings.instance.addListener(_onSettingsChanged);
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
+    CardioplegiaAlarmSettings.instance.removeListener(_onSettingsChanged);
+    CardioplegiaSettings.instance.removeListener(_onSettingsChanged);
     super.dispose();
   }
 
@@ -92,7 +109,9 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     final needsTicker = patientData.cardioplegiaLastDoseAt != null;
     if (needsTicker && _ticker == null) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
+        if (!mounted) return;
+        _checkAlarm();
+        setState(() {});
       });
     } else if (!needsTicker && _ticker != null) {
       _ticker!.cancel();
@@ -142,6 +161,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
         switch (_protocol) {
           _CardioProtocol.calafiore => _buildCalafioreSection(),
           _CardioProtocol.bretschneider => _buildBretschneiderSection(),
+          _CardioProtocol.delNido => _buildDelNidoSection(),
           _ => _buildWeightBasedSection(),
         },
 
@@ -170,30 +190,25 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
             AppSources.bretschneider1975,
             AppSources.gebhard1984,
           ],
+        _CardioProtocol.delNido => [AppSources.matteDelNido2012],
         _ => [
             AppSources.buckberg1987,
             AppSources.matteDelNido2012,
           ],
       };
 
-  // ── Buckberg / del Nido: weight x ml/kg -> total/blood/crystalloid ───────
-  // Currently unreachable from the UI (see _kVisibleProtocols) but kept
-  // fully intact so the protocols can be switched back on without a rewrite.
+  // ── Buckberg: weight x ml/kg -> total/blood/crystalloid ─────────────────
+  // Currently unreachable from the UI (Buckberg is not in _kVisibleProtocols)
+  // but kept intact so the protocol can be switched back on without a
+  // rewrite. del Nido used to share this section; it now has its own
+  // (_buildDelNidoSection), so the former dual-protocol branching here has
+  // been removed as dead code.
   Widget _buildWeightBasedSection() {
-    final isBuckberg = _protocol == _CardioProtocol.buckberg;
-
     List<String> missing(List<({Object? v, String label})> fields) =>
         fields.where((f) => f.v == null).map((f) => f.label).toList();
 
     final hWeight = (v: patientData.cardioplegiaWeight, label: t('bsa_body_weight'));
-    final hDose = isBuckberg
-        ? (v: patientData.cardioplegiaDoseBuckberg, label: t('cardio_dose_per_kg'))
-        : (v: patientData.cardioplegiaDoseDelNido,  label: t('cardio_dose_per_kg'));
-
-    final totalVolume = isBuckberg ? patientData.buckbergDoseVolume : patientData.delNidoDoseVolume;
-    final bloodVolume = isBuckberg ? patientData.buckbergBloodVolume : patientData.delNidoBloodVolume;
-    final crystVolume = isBuckberg ? patientData.buckbergCrystalloidVolume : patientData.delNidoCrystalloidVolume;
-    final showCappedNote = !isBuckberg && patientData.delNidoDoseCapped;
+    final hDose = (v: patientData.cardioplegiaDoseBuckberg, label: t('cardio_dose_per_kg'));
 
     return Column(children: [
       InputCard(label: t('bsa_body_weight'), unit: 'kg', value: patientData.cardioplegiaWeight,
@@ -203,32 +218,25 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
       InputCard(
         label: t('cardio_dose_per_kg'),
         unit: 'ml/kg',
-        value: isBuckberg ? patientData.cardioplegiaDoseBuckberg : patientData.cardioplegiaDoseDelNido,
-        range: isBuckberg ? Ranges.cardioplegiaDoseBuckberg : Ranges.cardioplegiaDoseDelNido,
-        step: isBuckberg ? 0.1 : 1,
-        onChanged: (v) {
-          if (isBuckberg) { patientData.cardioplegiaDoseBuckberg = v; } else { patientData.cardioplegiaDoseDelNido = v; }
-          onChanged();
-        },
+        value: patientData.cardioplegiaDoseBuckberg,
+        range: Ranges.cardioplegiaDoseBuckberg,
+        step: 0.1,
+        onChanged: (v) { patientData.cardioplegiaDoseBuckberg = v; onChanged(); },
       ),
 
       _protocolInfoCard(lines: [
-        (Icons.opacity, isBuckberg ? t('cardio_ratio_buckberg') : t('cardio_ratio_delnido')),
+        (Icons.opacity, t('cardio_ratio_buckberg')),
         (Icons.speed, t('cardio_pressure_limits')),
-        (Icons.repeat, isBuckberg ? t('cardio_interval_buckberg') : t('cardio_interval_delnido')),
+        (Icons.repeat, t('cardio_interval_buckberg')),
       ]),
 
       SectionHeader(t('cardio_section_result')),
-      ResultCard(label: t('cardio_total_volume'), unit: 'ml', value: totalVolume,
+      ResultCard(label: t('cardio_total_volume'), unit: 'ml', value: patientData.buckbergDoseVolume,
           decimals: 0, missingInputs: missing([hWeight, hDose])),
-      ResultCard(label: t('cardio_blood_volume'), unit: 'ml', value: bloodVolume,
+      ResultCard(label: t('cardio_blood_volume'), unit: 'ml', value: patientData.buckbergBloodVolume,
           decimals: 0, missingInputs: missing([hWeight, hDose])),
-      ResultCard(label: t('cardio_crystalloid_volume'), unit: 'ml', value: crystVolume,
+      ResultCard(label: t('cardio_crystalloid_volume'), unit: 'ml', value: patientData.buckbergCrystalloidVolume,
           decimals: 0, missingInputs: missing([hWeight, hDose])),
-
-      if (showCappedNote)
-        _noteRow(Icons.warning_amber_rounded, t('cardio_capped_note'),
-            color: const Color(0xFFFFA726), textColor: kTextSecondary),
     ]);
   }
 
@@ -439,6 +447,36 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     ]);
   }
 
+  /// Fires the in-app alert when the configured trigger point is reached.
+  /// Uses the pure expectedFireCount() schedule rather than an equality
+  /// check on the elapsed time, so the alert cannot be missed just because
+  /// a tick was skipped (e.g. the app was briefly backgrounded).
+  void _checkAlarm() {
+    final last = patientData.cardioplegiaLastDoseAt;
+    if (last == null) return;
+    final st = CardioplegiaAlarmSettings.instance;
+    final expected = CardioplegiaAlarmSettings.expectedFireCount(
+      elapsed: DateTime.now().difference(last),
+      enabled: st.enabled,
+      triggerMinutes: st.triggerMinutes,
+      repeat: st.repeat,
+    );
+    if (expected > _alarmsFired) {
+      _alarmsFired = expected;
+      _playAlert();
+    }
+  }
+
+  /// In-app alert using SDK built-ins only, so no extra plugin and no
+  /// per-platform permission/channel setup is required. Volume is not
+  /// settable through these APIs - it follows the device's notification
+  /// volume, which is why no volume slider is offered.
+  void _playAlert() {
+    final st = CardioplegiaAlarmSettings.instance;
+    if (st.sound) SystemSound.play(SystemSoundType.alert);
+    if (st.vibration) HapticFeedback.heavyImpact();
+  }
+
   Widget _doseTimerCard({required double dueAfterMin, required double overdueAfterMin, required String windowText}) {
     final last = patientData.cardioplegiaLastDoseAt;
     final elapsed = last == null ? null : DateTime.now().difference(last);
@@ -505,7 +543,10 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
               label: t('cardio_timer_dose_now'),
               filled: true,
               onTap: () {
-                setState(() => patientData.cardioplegiaLastDoseAt = DateTime.now());
+                setState(() {
+                  patientData.cardioplegiaLastDoseAt = DateTime.now();
+                  _alarmsFired = 0; // new delivery -> alert schedule restarts
+                });
                 _syncTicker();
                 widget.onChanged();
               },
@@ -517,7 +558,10 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
                 label: t('cardio_timer_reset'),
                 filled: false,
                 onTap: () {
-                  setState(() => patientData.cardioplegiaLastDoseAt = null);
+                  setState(() {
+                    patientData.cardioplegiaLastDoseAt = null;
+                    _alarmsFired = 0;
+                  });
                   _syncTicker();
                   widget.onChanged();
                 },
@@ -526,6 +570,186 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
           ]),
           const SizedBox(height: 6),
           Text(t('cardio_timer_hint'), style: TextStyle(color: kTextFaint, fontSize: 10.5)),
+          Divider(color: kDivider, height: 20),
+          _alarmSettings(),
+        ]),
+      ),
+    );
+  }
+
+  /// Alert configuration. Lives inside the timer card because it only ever
+  /// governs that timer; all values are persisted by
+  /// CardioplegiaAlarmSettings and restored on the next app start.
+  Widget _alarmSettings() {
+    final st = CardioplegiaAlarmSettings.instance;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(t('cardio_alarm_section'),
+          style: TextStyle(color: kTextMuted, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+      const SizedBox(height: 6),
+      _switchRow(t('cardio_alarm_enabled'), st.enabled, (v) => st.setEnabled(v)),
+
+      // Sub-settings only matter once the alert is on - hiding them keeps
+      // the card compact instead of showing controls with no effect.
+      if (st.enabled) ...[
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: Text(t('cardio_alarm_trigger'),
+              style: TextStyle(color: kText, fontSize: 13))),
+          Text('${st.triggerMinutes.toStringAsFixed(0)} min',
+              style: TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.w500)),
+        ]),
+        Slider(
+          value: st.triggerMinutes.clamp(1, 240),
+          min: 1, max: 240, divisions: 239,
+          activeColor: kGold,
+          inactiveColor: kSurfaceWash,
+          label: '${st.triggerMinutes.toStringAsFixed(0)} min',
+          onChanged: (v) => st.setTriggerMinutes(v),
+        ),
+        _switchRow(t('cardio_alarm_sound'), st.sound, (v) => st.setSound(v)),
+        _switchRow(t('cardio_alarm_vibration'), st.vibration, (v) => st.setVibration(v)),
+        _switchRow(t('cardio_alarm_repeat'), st.repeat, (v) => st.setRepeat(v)),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _timerBtn(
+            icon: Icons.notifications_active_outlined,
+            label: t('cardio_alarm_test'),
+            filled: false,
+            onTap: _playAlert,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(t('cardio_alarm_scope_hint'), style: TextStyle(color: kTextFaint, fontSize: 10.5)),
+        const SizedBox(height: 4),
+        Text(t('cardio_alarm_saved_hint'), style: TextStyle(color: kTextFaint, fontSize: 10.5)),
+      ],
+    ]);
+  }
+
+  Widget _switchRow(String label, bool value, ValueChanged<bool> onChanged) {
+    return Semantics(
+      toggled: value,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(children: [
+            Expanded(child: Text(label, style: TextStyle(color: kText, fontSize: 13))),
+            // No explicit colour: ThemeData.colorScheme.primary is already
+            // kGold, and naming the thumb colour explicitly would tie this
+            // to a Flutter version that renamed the parameter.
+            Switch(value: value, onChanged: onChanged),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  // ── del Nido: ratio, mixture, delivery time and dose per kg ─────────────
+  // The institutional setup drives both pumps from one setting: crystalloid
+  // at 100%, blood following at a fraction of it, which reproduces the
+  // configured ratio mechanically. The ratio itself is a persisted
+  // institutional setting (CardioplegiaSettings), not per-case data.
+  Widget _buildDelNidoSection() {
+    List<String> missing(List<({Object? v, String label})> fields) =>
+        fields.where((f) => f.v == null).map((f) => f.label).toList();
+
+    final cfg = CardioplegiaSettings.instance;
+    final pct = cfg.delNidoCrystalloidPercent;
+
+    final hCryst = (v: patientData.cardioplegiaDelNidoCrystalloid, label: t('cardio_dn_crystalloid'));
+    final hFlow = (v: patientData.cardioplegiaDelNidoPumpFlow, label: t('cardio_dn_pump_flow'));
+    final hWeight = (v: patientData.cardioplegiaWeight, label: t('bsa_body_weight'));
+
+    return Column(children: [
+      _protocolInfoCard(lines: [
+        (Icons.opacity, t('cardio_ratio_delnido')),
+        (Icons.speed, t('cardio_pressure_limits')),
+        (Icons.repeat, t('cardio_interval_delnido')),
+      ]),
+
+      // Re-dose stopwatch: del Nido is a single dose effective for ~90 min,
+      // warn 15 min ahead of that.
+      _doseTimerCard(
+        dueAfterMin: 75,
+        overdueAfterMin: 90,
+        windowText: t('cardio_interval_delnido'),
+      ),
+
+      // ── Persisted mixing ratio ──────────────────────────────────────────
+      SectionHeader(t('cardio_dn_ratio_section')),
+      InputCard(
+        label: t('cardio_dn_cryst_percent'),
+        unit: '%',
+        value: pct,
+        range: Ranges.cardioplegiaDelNidoCrystPercent,
+        step: 1,
+        onChanged: (v) { if (v != null) cfg.setDelNidoCrystalloidPercent(v); },
+      ),
+      // Blood share and ratio are derived, so they are shown read-only -
+      // offering both as inputs would allow contradictory entries.
+      _readOnlyRow(t('cardio_dn_blood_percent'), '${cfg.delNidoBloodPercent.toStringAsFixed(0)} %'),
+      _readOnlyRow(t('cardio_dn_ratio_result'), '${cfg.delNidoRatio.toStringAsFixed(2)} : 1'),
+      _readOnlyRow(t('cardio_dn_follower_pct'),
+          '${patientData.delNidoFollowerPercent(pct).toStringAsFixed(1)} %'),
+      _noteRow(Icons.info_outline, t('cardio_dn_ratio_hint')),
+
+      // ── Mixture and delivery time ───────────────────────────────────────
+      SectionHeader(t('cardio_dn_mix_section')),
+      InputCard(label: t('cardio_dn_crystalloid'), unit: 'ml', value: patientData.cardioplegiaDelNidoCrystalloid,
+          range: Ranges.cardioplegiaDelNidoCrystalloid,
+          step: 50, onChanged: (v) { patientData.cardioplegiaDelNidoCrystalloid = v; onChanged(); }),
+      InputCard(label: t('cardio_dn_pump_flow'), unit: 'ml/min', value: patientData.cardioplegiaDelNidoPumpFlow,
+          range: Ranges.cardioplegiaDelNidoPumpFlow,
+          step: 10, onChanged: (v) { patientData.cardioplegiaDelNidoPumpFlow = v; onChanged(); }),
+      _noteRow(Icons.info_outline, t('cardio_dn_follower_hint')),
+
+      ResultCard(label: t('cardio_dn_blood_label'), unit: 'ml', value: patientData.delNidoBloodFromCrystalloid(pct),
+          decimals: 0, missingInputs: missing([hCryst])),
+      ResultCard(label: t('cardio_dn_total'), unit: 'ml', value: patientData.delNidoTotalFromCrystalloid(pct),
+          decimals: 0, missingInputs: missing([hCryst])),
+      // Follower share is shown in the label so it always matches the
+      // configured ratio instead of a hard-coded 25 %.
+      ResultCard(
+          label: '${t('cardio_dn_blood_flow')} '
+              '(${t('cardio_dn_follower_word')} ${patientData.delNidoFollowerPercent(pct).toStringAsFixed(1)} %)',
+          unit: 'ml/min', value: patientData.delNidoBloodPumpFlow(pct),
+          decimals: 0, missingInputs: missing([hFlow])),
+      ResultCard(label: t('cardio_dn_total_flow'), unit: 'ml/min', value: patientData.delNidoTotalFlow(pct),
+          decimals: 0, missingInputs: missing([hFlow])),
+      ResultCard(label: t('cardio_dn_time'), unit: 'min', value: patientData.delNidoDeliveryTimeMin,
+          decimals: 1, missingInputs: missing([hCryst, hFlow])),
+
+      // ── Dose per body weight ────────────────────────────────────────────
+      SectionHeader(t('cardio_dn_perkg_section')),
+      InputCard(label: t('bsa_body_weight'), unit: 'kg', value: patientData.cardioplegiaWeight,
+          range: Ranges.weight,
+          onChanged: (v) { patientData.cardioplegiaWeight = v; onChanged(); }),
+      ResultCard(label: t('cardio_dn_ideal_total'), unit: 'ml', value: patientData.delNidoRecommendedTotal,
+          decimals: 0, missingInputs: missing([hWeight])),
+      if (patientData.delNidoRecommendedExceedsMax)
+        _noteRow(Icons.warning_amber_rounded, t('cardio_dn_ideal_capped'),
+            color: const Color(0xFFFFA726), textColor: kTextSecondary),
+      ResultCard(label: t('cardio_dn_per_kg'), unit: 'ml/kg', value: patientData.delNidoTotalPerKg(pct),
+          decimals: 1, missingInputs: missing([hCryst, hWeight])),
+      _noteRow(Icons.info_outline, t('cardio_dn_per_kg_hint')),
+    ]);
+  }
+
+  /// A derived value shown read-only, styled like a compact result row.
+  Widget _readOnlyRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
+        child: Row(children: [
+          Expanded(child: Text(label, style: TextStyle(color: kTextSecondary, fontSize: 13))),
+          const SizedBox(width: 8),
+          Text(value, style: TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.w500)),
         ]),
       ),
     );
@@ -735,6 +959,10 @@ bool _hasCalafioreInput(PatientData pd) =>
     pd.cardioplegiaCalafioreSerumK != null ||
     pd.cardioplegiaCalafioreDoseNumber != null;
 
+bool _hasDelNidoInput(PatientData pd) =>
+    pd.cardioplegiaDelNidoCrystalloid != null ||
+    pd.cardioplegiaDelNidoPumpFlow != null;
+
 bool _hasBretschneiderInput(PatientData pd) =>
     pd.cardioplegiaBretschneiderFlow != null ||
     pd.cardioplegiaBretschneiderTime != null;
@@ -742,6 +970,9 @@ bool _hasBretschneiderInput(PatientData pd) =>
 List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
   final calafiore = _hasCalafioreInput(pd);
   final bretschneider = _hasBretschneiderInput(pd);
+  final delNido = _hasDelNidoInput(pd);
+  // Ratio is an institutional setting, read from the persisted singleton.
+  final dnPct = CardioplegiaSettings.instance.delNidoCrystalloidPercent;
 
   return [
     PdfSection(title: t('pdf_inputs'), rows: [
@@ -759,6 +990,11 @@ List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
         PdfRow.numeric(label: '${t('cardio_bret_flow')} (Bretschneider)', value: pd.cardioplegiaBretschneiderFlow, unit: 'ml/min'),
         PdfRow.numeric(label: '${t('cardio_bret_time')} (Bretschneider)', value: pd.cardioplegiaBretschneiderTime, unit: 'min', decimals: 1),
       ],
+      if (delNido) ...[
+        PdfRow.numeric(label: '${t('cardio_dn_crystalloid')} (del Nido)', value: pd.cardioplegiaDelNidoCrystalloid, unit: 'ml', decimals: 0),
+        PdfRow.numeric(label: '${t('cardio_dn_pump_flow')} (del Nido)', value: pd.cardioplegiaDelNidoPumpFlow, unit: 'ml/min', decimals: 0),
+        PdfRow.numeric(label: '${t('cardio_dn_cryst_percent')} (del Nido)', value: dnPct, unit: '%', decimals: 0),
+      ],
     ]),
     PdfSection(title: t('pdf_results'), rows: [
       if (calafiore) ...[
@@ -773,6 +1009,14 @@ List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
       ],
       if (bretschneider)
         PdfRow.numeric(label: '${t('cardio_bret_volume')} (Bretschneider)', value: pd.bretschneiderVolumeFromFlow, unit: 'ml', decimals: 0),
+      if (delNido) ...[
+        PdfRow.numeric(label: '${t('cardio_dn_blood_label')} (del Nido)', value: pd.delNidoBloodFromCrystalloid(dnPct), unit: 'ml', decimals: 0),
+        PdfRow.numeric(label: '${t('cardio_dn_total')} (del Nido)', value: pd.delNidoTotalFromCrystalloid(dnPct), unit: 'ml', decimals: 0),
+        PdfRow.numeric(label: '${t('cardio_dn_blood_flow')} (del Nido)', value: pd.delNidoBloodPumpFlow(dnPct), unit: 'ml/min', decimals: 0),
+        PdfRow.numeric(label: '${t('cardio_dn_total_flow')} (del Nido)', value: pd.delNidoTotalFlow(dnPct), unit: 'ml/min', decimals: 0),
+        PdfRow.numeric(label: '${t('cardio_dn_time')} (del Nido)', value: pd.delNidoDeliveryTimeMin, unit: 'min', decimals: 1),
+        PdfRow.numeric(label: '${t('cardio_dn_per_kg')} (del Nido)', value: pd.delNidoTotalPerKg(dnPct), unit: 'ml/kg', decimals: 1),
+      ],
     ]),
   ];
 }

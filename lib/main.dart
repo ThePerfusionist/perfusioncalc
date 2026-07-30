@@ -14,13 +14,15 @@ import 'screens/reference_pressure_screen.dart';
 import 'screens/heart_anatomy_screen.dart';
 import 'models/patient_data.dart';
 import 'models/bga_model.dart';
+import 'models/cardioplegia_alarm_settings.dart';
+import 'models/cardioplegia_settings.dart';
 import 'i18n/app_strings.dart';
 import 'theme/app_theme.dart';
 import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.3.0';
+const kAppVersion = '0.3.1';
 
 void main() async {
   // Load language + theme from SharedPreferences before the UI is rendered,
@@ -28,6 +30,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocaleNotifier.instance.load();
   await ThemeNotifier.instance.load();
+  await CardioplegiaAlarmSettings.instance.load();
+  await CardioplegiaSettings.instance.load();
   runApp(const PerfusionCalcApp());
 }
 
@@ -209,6 +213,8 @@ class _MainScreenState extends State<MainScreen>
           _iRow(Icons.smart_toy_outlined,  t('info_created'), t('info_created_value')),
           const SizedBox(height: 10),
           _iRow(Icons.code,                t('info_github'),  'github.com/ThePerfusionist/perfusioncalc'),
+          const SizedBox(height: 10),
+          _iRow(Icons.mail_outline,        t('info_contact'), 'perfusioncalc@unbox.at'),
         ]),
         actions: [TextButton(
           onPressed: () => Navigator.pop(ctx),

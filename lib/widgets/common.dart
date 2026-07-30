@@ -41,6 +41,18 @@ Color get kTableHeaderBg => ThemeNotifier.instance.isDark ? const Color(0xFF2A2A
 Color get kRowStripeA    => ThemeNotifier.instance.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAFA);
 Color get kRowStripeB    => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
 
+/// Tooltip text shown next to an out-of-range value.
+///
+/// Shared by [InputCard] and by custom inputs that do their own range
+/// checking (e.g. the CO/CI card on the O2 tab), so the wording stays
+/// identical everywhere. Previously this lived inside InputCard with
+/// hard-coded German strings, which meant the tooltip stayed German even
+/// with the app set to English - it now goes through t().
+String warnTooltipFor(Range r) {
+  final base = '${t('plausibility_warning')}\n${t('plausibility_plausible')}: ${r.display}';
+  return r.note != null ? '$base\n${r.note}' : base;
+}
+
 class InputCard extends StatefulWidget {
   final String label;
   final String unit;
@@ -232,10 +244,7 @@ class _InputCardState extends State<InputCard> {
 
   /// Builds the tooltip text for the warning icon.
   /// Format: "Unusual value - plausible: 5–20 g/dl\nSevere anemia to polycythemia"
-  String _warnTooltipFor(Range r) {
-    final base = 'Ungewöhnlicher Wert\nPlausibel: ${r.display}';
-    return r.note != null ? '$base\n${r.note}' : base;
-  }
+  String _warnTooltipFor(Range r) => warnTooltipFor(r);
 
   /// Small inline chip row that replaces the static unit label when
   /// [InputCard.unitOptions] is supplied - lets the user switch the entry

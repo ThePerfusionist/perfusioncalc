@@ -14,6 +14,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:perfusion_calc/models/patient_data.dart';
+import 'package:perfusion_calc/models/cardioplegia_alarm_settings.dart';
 
 void main() {
   // ════════════════════════════════════════════════════════════════════════
@@ -632,6 +633,175 @@ void main() {
       expect(PatientData().bretschneiderVolumeFromFlow, 0);
       expect((PatientData()..cardioplegiaBretschneiderFlow = 300).bretschneiderVolumeFromFlow, 0);
       expect((PatientData()..cardioplegiaBretschneiderTime = 6).bretschneiderVolumeFromFlow, 0);
+    });
+  });
+
+  group('Cardioplegia - del Nido mixture, delivery time & dose per kg', () {
+    // Institutional setup: crystalloid pump at 100% of the set flow, blood
+    // pump following at a fraction of it -> reproduces the configured
+    // crystalloid:blood ratio mechanically. The ratio is passed in as the
+    // crystalloid SHARE in percent (80 % = the classic 4:1).
+    //   blood = crystalloid x (100-p)/p | total = crystalloid x 100/p
+    //   blood flow = flow x (100-p)/p   | total flow = flow x 100/p
+    //   time  = crystalloid / flow      (ratio-independent)
+    // Source: Matte GS, del Nido PJ. J Extra Corpor Technol. 2012;44(3):98-103.
+
+    test('Default 80 % share reproduces the classic 4:1 numbers', () {
+      final pd = PatientData()
+        ..cardioplegiaDelNidoCrystalloid = 800
+        ..cardioplegiaDelNidoPumpFlow = 200;
+      expect(pd.delNidoBloodFromCrystalloid(80), closeTo(200, 0.01));
+      expect(pd.delNidoTotalFromCrystalloid(80), closeTo(1000, 0.01));
+      expect(pd.delNidoBloodPumpFlow(80), closeTo(50, 0.01));
+      expect(pd.delNidoTotalFlow(80), closeTo(250, 0.01));
+      expect(pd.delNidoFollowerPercent(80), closeTo(25, 0.01));
+      expect(pd.delNidoDeliveryTimeMin, closeTo(4.0, 0.01));
+    });
+
+    test('A different share changes the mixture but not the delivery time', () {
+      final pd = PatientData()
+        ..cardioplegiaDelNidoCrystalloid = 800
+        ..cardioplegiaDelNidoPumpFlow = 200;
+      // 75 % share = 3:1
+      expect(pd.delNidoBloodFromCrystalloid(75), closeTo(266.67, 0.01));
+      expect(pd.delNidoTotalFromCrystalloid(75), closeTo(1066.67, 0.01));
+      expect(pd.delNidoFollowerPercent(75), closeTo(33.33, 0.01));
+      // Volume and flow scale by the same factor -> time is unchanged.
+      expect(pd.delNidoDeliveryTimeMin, closeTo(4.0, 0.01));
+    });
+
+    test('The configured share is actually reflected in the mixture', () {
+      final pd = PatientData()..cardioplegiaDelNidoCrystalloid = 900;
+      for (final share in [50.0, 66.0, 80.0, 90.0]) {
+        final total = pd.delNidoTotalFromCrystalloid(share);
+        // crystalloid must make up exactly `share` percent of the total
+        expect(900 / total * 100, closeTo(share, 0.001), reason: 'share $share');
+      }
+    });
+
+    test('Delivery time is consistent whether derived from crystalloid or totals', () {
+      final pd = PatientData()
+        ..cardioplegiaDelNidoCrystalloid = 1000
+        ..cardioplegiaDelNidoPumpFlow = 250;
+      expect(pd.delNidoDeliveryTimeMin,
+          closeTo(pd.delNidoTotalFromCrystalloid(80) / pd.delNidoTotalFlow(80), 0.001));
+    });
+
+    test('Total cardioplegia per kg body weight', () {
+      final pd = PatientData()
+        ..cardioplegiaDelNidoCrystalloid = 800
+        ..cardioplegiaWeight = 70;
+      // total 1000 ml / 70 kg = 14.29 ml/kg
+      expect(pd.delNidoTotalPerKg(80), closeTo(14.29, 0.01));
+    });
+
+    test('Dose per kg follows the configured share', () {
+      final pd = PatientData()
+        ..cardioplegiaDelNidoCrystalloid = 800
+        ..cardioplegiaWeight = 70;
+      // A smaller crystalloid share means more blood, so more total volume.
+      expect(pd.delNidoTotalPerKg(75), greaterThan(pd.delNidoTotalPerKg(80)));
+    });
+
+    test('Ideal total volume from the 20 ml/kg recommendation', () {
+      final pd = PatientData()..cardioplegiaWeight = 40;
+      expect(pd.delNidoRecommendedTotal, closeTo(800, 0.01));
+      expect(pd.delNidoRecommendedExceedsMax, isFalse);
+    });
+
+    test('Ideal total volume is NOT capped - the hypothetical figure is shown', () {
+      final pd = PatientData()..cardioplegiaWeight = 70;
+      // 70 kg x 20 = 1400 ml: reported in full, only flagged as exceeding
+      // the protocol's 1000 ml single dose.
+      expect(pd.delNidoRecommendedTotal, closeTo(1400, 0.01));
+      expect(pd.delNidoRecommendedExceedsMax, isTrue);
+    });
+
+    test('Exactly at the 1000 ml boundary is not flagged as exceeding', () {
+      final pd = PatientData()..cardioplegiaWeight = 50;
+      expect(pd.delNidoRecommendedTotal, closeTo(1000, 0.01));
+      expect(pd.delNidoRecommendedExceedsMax, isFalse);
+    });
+
+    test('Ideal total volume scales linearly with body weight', () {
+      expect((PatientData()..cardioplegiaWeight = 100).delNidoRecommendedTotal, closeTo(2000, 0.01));
+      expect((PatientData()..cardioplegiaWeight = 3.5).delNidoRecommendedTotal, closeTo(70, 0.01));
+    });
+
+    test('Ideal total volume needs a weight', () {
+      expect(PatientData().delNidoRecommendedTotal, 0);
+      expect(PatientData().delNidoRecommendedExceedsMax, isFalse);
+    });
+
+    test('Follower percentage matches the configured share', () {
+      final pd = PatientData();
+      expect(pd.delNidoFollowerPercent(80), closeTo(25, 0.01));   // 4:1
+      expect(pd.delNidoFollowerPercent(75), closeTo(33.33, 0.01)); // 3:1
+      expect(pd.delNidoFollowerPercent(50), closeTo(100, 0.01));   // 1:1
+    });
+
+    test('Invalid shares yield 0 instead of dividing by zero', () {
+      final pd = PatientData()
+        ..cardioplegiaDelNidoCrystalloid = 800
+        ..cardioplegiaDelNidoPumpFlow = 200
+        ..cardioplegiaWeight = 70;
+      for (final bad in [0.0, 100.0, -10.0, 150.0]) {
+        expect(pd.delNidoBloodFromCrystalloid(bad), 0, reason: 'share $bad');
+        expect(pd.delNidoTotalFromCrystalloid(bad), 0, reason: 'share $bad');
+        expect(pd.delNidoTotalFlow(bad), 0, reason: 'share $bad');
+        expect(pd.delNidoFollowerPercent(bad), 0, reason: 'share $bad');
+        expect(pd.delNidoTotalPerKg(bad), 0, reason: 'share $bad');
+      }
+    });
+
+    test('Missing inputs yield 0', () {
+      expect(PatientData().delNidoBloodFromCrystalloid(80), 0);
+      expect(PatientData().delNidoTotalFromCrystalloid(80), 0);
+      expect(PatientData().delNidoBloodPumpFlow(80), 0);
+      expect(PatientData().delNidoTotalFlow(80), 0);
+      expect(PatientData().delNidoDeliveryTimeMin, 0);
+      expect(PatientData().delNidoTotalPerKg(80), 0);
+      expect((PatientData()..cardioplegiaDelNidoCrystalloid = 800).delNidoDeliveryTimeMin, 0);
+      // Total per kg needs the weight as well as the volume
+      expect((PatientData()..cardioplegiaDelNidoCrystalloid = 800).delNidoTotalPerKg(80), 0);
+    });
+  });
+
+  group('Cardioplegia - alarm fire schedule', () {
+    // Pure schedule function, so the firing behaviour is testable without a
+    // clock or a real alarm.
+    int fires(Duration d, {bool enabled = true, double trigger = 15, bool repeat = false}) =>
+        CardioplegiaAlarmSettings.expectedFireCount(
+            elapsed: d, enabled: enabled, triggerMinutes: trigger, repeat: repeat);
+
+    test('Disabled alarm never fires', () {
+      expect(fires(const Duration(minutes: 60), enabled: false), 0);
+    });
+
+    test('Does not fire before the trigger point', () {
+      expect(fires(const Duration(minutes: 14, seconds: 59)), 0);
+    });
+
+    test('Fires once at the trigger point and stays at one without repeat', () {
+      expect(fires(const Duration(minutes: 15)), 1);
+      expect(fires(const Duration(minutes: 90)), 1);
+    });
+
+    test('With repeat enabled it fires once per completed interval', () {
+      expect(fires(const Duration(minutes: 15), repeat: true), 1);
+      expect(fires(const Duration(minutes: 30), repeat: true), 2);
+      expect(fires(const Duration(minutes: 44), repeat: true), 2);
+      expect(fires(const Duration(minutes: 45), repeat: true), 3);
+    });
+
+    test('A custom trigger time is honoured', () {
+      expect(fires(const Duration(minutes: 20), trigger: 25), 0);
+      expect(fires(const Duration(minutes: 25), trigger: 25), 1);
+    });
+
+    test('Zero or negative trigger time never fires (guards against div/0)', () {
+      expect(fires(const Duration(minutes: 60), trigger: 0), 0);
+      expect(fires(const Duration(minutes: 60), trigger: -5), 0);
     });
   });
 

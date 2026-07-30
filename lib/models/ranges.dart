@@ -114,6 +114,12 @@ class Ranges {
       note: 'Induktions-/Erhaltungsdosis nach Buckberg 1987');
   static const cardioplegiaDoseDelNido = Range(15, 20, 'ml/kg',
       note: 'Einzeldosis nach Matte & del Nido 2012, max. 1000 ml');
+  static const cardioplegiaDelNidoCrystalloid = Range(100, 1600, 'ml',
+      note: 'Kristalloidanteil (4 Teile); Blut folgt mit 1 Teil');
+  static const cardioplegiaDelNidoPumpFlow = Range(50, 600, 'ml/min',
+      note: 'Kristalloidpumpe 100 %; Blutpumpe folgt anteilig');
+  static const cardioplegiaDelNidoCrystPercent = Range(50, 95, '%',
+      note: 'Kristalloidanteil der fertigen Lösung; 80 % entspricht 4:1');
   static const cardioplegiaCalafioreFlow = Range(50, 500, 'ml/min',
       note: 'Druckgesteuert (z.B. 90–100 mmHg); flusskontrolliertes Referenzprotokoll 200–300 ml/min');
   static const cardioplegiaCalafioreKclVolume = Range(5, 100, 'ml',

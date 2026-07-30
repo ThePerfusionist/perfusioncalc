@@ -341,6 +341,112 @@ class PatientData {
   double get delNidoBloodVolume => _safe(delNidoDoseVolume * 1 / 5);
   double get delNidoCrystalloidVolume => _safe(delNidoDoseVolume * 4 / 5);
 
+  // ── del Nido: mixing, delivery time and dose per kg ─────────────────────
+  // Institutional delivery setup: the crystalloid pump runs at 100% of the
+  // set flow and the blood pump follows at a fixed fraction of it, which
+  // reproduces the configured crystalloid:blood ratio mechanically.
+  //
+  // The ratio is expressed as the crystalloid SHARE of the finished
+  // cardioplegia in percent (80% = the classic 4:1). It is passed in as a
+  // parameter rather than read from the settings singleton, so these
+  // formulas stay pure and testable:
+  //   blood        = crystalloid x (100 - p) / p
+  //   total        = crystalloid x 100 / p
+  //   blood flow   = set flow x (100 - p) / p        (follower fraction)
+  //   total flow   = set flow x 100 / p
+  //   delivery time = crystalloid / set flow  -- independent of the ratio,
+  //                   because volume and flow scale by the same factor
+  // Source: Matte GS, del Nido PJ. History and use of del Nido cardioplegia
+  // solution at Boston Children's Hospital. J Extra Corpor Technol.
+  // 2012;44(3):98-103.
+  double? cardioplegiaDelNidoCrystalloid; // ml, crystalloid volume to prepare
+  double? cardioplegiaDelNidoPumpFlow;    // ml/min, crystalloid pump at 100%
+
+  /// Guard shared by all ratio-dependent results: outside 0-100 (exclusive)
+  /// the blood share would be zero or negative and the ratio undefined.
+  static bool _validShare(double p) => p > 0 && p < 100;
+
+  /// Blood component the follower pump adds to the entered crystalloid
+  /// volume, at the configured crystalloid share [crystalloidPercent].
+  double delNidoBloodFromCrystalloid(double crystalloidPercent) {
+    final c = cardioplegiaDelNidoCrystalloid;
+    if (c == null || c <= 0 || !_validShare(crystalloidPercent)) return 0;
+    return _safe(c * (100 - crystalloidPercent) / crystalloidPercent);
+  }
+
+  /// Resulting total cardioplegia volume (crystalloid + blood).
+  double delNidoTotalFromCrystalloid(double crystalloidPercent) {
+    final c = cardioplegiaDelNidoCrystalloid;
+    if (c == null || c <= 0 || !_validShare(crystalloidPercent)) return 0;
+    return _safe(c * 100 / crystalloidPercent);
+  }
+
+  /// Blood pump flow under the follower principle.
+  double delNidoBloodPumpFlow(double crystalloidPercent) {
+    final f = cardioplegiaDelNidoPumpFlow;
+    if (f == null || f <= 0 || !_validShare(crystalloidPercent)) return 0;
+    return _safe(f * (100 - crystalloidPercent) / crystalloidPercent);
+  }
+
+  /// Combined delivery flow of both pumps.
+  double delNidoTotalFlow(double crystalloidPercent) {
+    final f = cardioplegiaDelNidoPumpFlow;
+    if (f == null || f <= 0 || !_validShare(crystalloidPercent)) return 0;
+    return _safe(f * 100 / crystalloidPercent);
+  }
+
+  /// Follower fraction the blood pump has to be set to, in percent of the
+  /// crystalloid pump (80% share -> 25%).
+  double delNidoFollowerPercent(double crystalloidPercent) {
+    if (!_validShare(crystalloidPercent)) return 0;
+    return _safe((100 - crystalloidPercent) / crystalloidPercent * 100);
+  }
+
+  /// Time needed to deliver the prepared volume at the set flow (minutes).
+  /// Ratio-independent: crystalloid volume and crystalloid flow are both
+  /// unscaled, and scaling both sides by 100/p cancels out.
+  double get delNidoDeliveryTimeMin {
+    final c = cardioplegiaDelNidoCrystalloid;
+    final f = cardioplegiaDelNidoPumpFlow;
+    if (c == null || f == null || c <= 0 || f <= 0) return 0;
+    return _safe(c / f);
+  }
+
+  /// Protocol recommendation for del Nido: ~20 ml/kg as a single dose,
+  /// capped at 1000 ml. Source: Matte GS, del Nido PJ. J Extra Corpor
+  /// Technol. 2012;44(3):98-103.
+  static const double kDelNidoRecommendedMlPerKg = 20;
+  static const double kDelNidoMaxSingleDoseMl = 1000;
+
+  /// Ideal total cardioplegia volume from the 20 ml/kg recommendation.
+  ///
+  /// Deliberately NOT capped: the raw weight-based figure is shown so the
+  /// user sees the hypothetical requirement for heavy patients rather than
+  /// a silently truncated 1000 ml. The protocol ceiling is communicated
+  /// separately via [delNidoRecommendedExceedsMax] and a UI hint - showing
+  /// a capped number without saying so would hide the very case where the
+  /// limit matters.
+  double get delNidoRecommendedTotal {
+    final w = cardioplegiaWeight;
+    if (w == null || w <= 0) return 0;
+    return _safe(w * kDelNidoRecommendedMlPerKg);
+  }
+
+  /// True once the weight-based recommendation exceeds the 1000 ml single
+  /// dose the del Nido protocol provides for.
+  bool get delNidoRecommendedExceedsMax =>
+      delNidoRecommendedTotal > kDelNidoMaxSingleDoseMl;
+
+  /// Total cardioplegia volume per kg body weight (ml/kg) - lets the
+  /// prepared volume be checked against the protocol's weight-based dose
+  /// (del Nido standard ~20 ml/kg, capped at 1000 ml).
+  double delNidoTotalPerKg(double crystalloidPercent) {
+    final w = cardioplegiaWeight;
+    final total = delNidoTotalFromCrystalloid(crystalloidPercent);
+    if (w == null || w <= 0 || total <= 0) return 0;
+    return _safe(total / w);
+  }
+
   // Calafiore intermittent warm blood cardioplegia, adapted for
   // pressure-controlled delivery (e.g. 90-100 mmHg antegrade line
   // pressure): instead of a fixed blood flow, flow varies with coronary/

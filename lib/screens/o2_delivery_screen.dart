@@ -248,6 +248,15 @@ class _CoCiCardState extends State<_CoCiCard> {
   @override
   Widget build(BuildContext context) {
     final isCo = widget.mode == _CoMode.co;
+
+    // Plausibility check, matching InputCard's behaviour: the range follows
+    // the active mode, an out-of-range value gets an orange border plus a
+    // warning icon with a tap tooltip, and the calculation still proceeds.
+    // This field used to be the only numeric input in the app without one.
+    final range = isCo ? Ranges.co : Ranges.ci;
+    final outOfRange = !range.contains(_val);
+    const warnColor = Color(0xFFFFA726); // material orange 400
+
     String? hint;
     if (isCo && widget.coValue != null && widget.bsaValue != null && widget.bsaValue! > 0) {
       hint = 'CI = ${(widget.coValue! / widget.bsaValue!).toStringAsFixed(2)} l/min/m\u00b2';
@@ -259,14 +268,33 @@ class _CoCiCardState extends State<_CoCiCard> {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: kCardColor, borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: kGold.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: outOfRange ? warnColor : kGold.withValues(alpha: 0.3),
+          width: outOfRange ? 1.5 : 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(isCo ? t('o2_co_label') : t('o2_ci_label'),
-                style:  TextStyle(color: kText, fontSize: 14)),
+            Flexible(child: Row(children: [
+              Flexible(child: Text(isCo ? t('o2_co_label') : t('o2_ci_label'),
+                  style: TextStyle(color: kText, fontSize: 14))),
+              if (outOfRange) ...[
+                const SizedBox(width: 6),
+                Tooltip(
+                  message: warnTooltipFor(range),
+                  triggerMode: TooltipTriggerMode.tap,
+                  showDuration: const Duration(seconds: 4),
+                  child: Semantics(
+                    label: '${t('a11y_warning')}: ${warnTooltipFor(range)}',
+                    excludeSemantics: true,
+                    child: const Icon(Icons.warning_amber_rounded, color: warnColor, size: 16),
+                  ),
+                ),
+              ],
+            ])),
+            const SizedBox(width: 8),
             Container(
               decoration:  BoxDecoration(color: kTableHeaderBg, borderRadius: BorderRadius.all(Radius.circular(20))),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -282,7 +310,7 @@ class _CoCiCardState extends State<_CoCiCard> {
               controller: _ctrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
-              style:  TextStyle(color: kTextSecondary, fontSize: 22),
+              style: TextStyle(color: outOfRange ? warnColor : kTextSecondary, fontSize: 22),
               decoration: InputDecoration(border: InputBorder.none, hintText: t('o2_enter_value'),
                   hintStyle:  TextStyle(color: kTextGhost2, fontSize: 18)),
               onTap: () => setState(() => _editing = true),

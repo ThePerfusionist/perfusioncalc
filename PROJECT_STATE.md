@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.0+7 · 12 Tabs · 80 Unit-Tests · i18n 250/250 (EN+DE)
+**Stand:** v0.3.1+8 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 280/280 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -29,6 +29,14 @@ grep -o "AppLocale.en:" lib/i18n/app_strings.dart | wc -l   # muss == de sein
 grep -c "'key': 'tab_" lib/main.dart                        # muss == TabController(length:)
 ```
 
+> ⚠️ **Testzahl immer über ALLE Dateien zählen**, nicht nur `patient_data_test.dart`:
+> `grep -chE "^\s*test\(" test/*.dart | paste -sd+ | bc`
+> (Eine frühere Angabe war zu niedrig, weil nur eine Datei gezählt wurde.)
+>
+> ⚠️ **Bei jedem `python3`-Patch `assert <anchor> in s` setzen.** Ein
+> Replacement ohne Assert ist stillschweigend fehlgeschlagen (Anker existierte
+> nicht) – die Methode fehlte anschließend im File.
+>
 > ⚠️ **`check_symbols.py` ist Pflicht nach jedem Löschen von Codeblöcken.**
 > Beim Entfernen von `_phaseBtn` per Index-Slice wurden versehentlich zwei
 > benachbarte Methoden (`_noteRow`, `_doseChip`) mitgelöscht – die
@@ -116,8 +124,8 @@ vom Nutzer gelöscht.
 ## 4. Kardioplegie-Tab (aktuellster Arbeitsschwerpunkt)
 
 Protokoll-Auswahl über `_kVisibleProtocols` in `cardioplegia_screen.dart`.
-**Sichtbar: Calafiore, Bretschneider.** Buckberg + del Nido sind ausgeblendet,
-Code/Tests/Formeln bleiben vollständig erhalten → Reaktivierung = Eintrag in
+**Sichtbar: Calafiore, Bretschneider, del Nido.** Nur Buckberg ist ausgeblendet,
+Code/Tests/Formeln bleiben erhalten → Reaktivierung = Eintrag in
 `_kVisibleProtocols` zurückschreiben.
 
 ### Calafiore (druckgesteuert, warme Blutkardioplegie)
@@ -154,11 +162,46 @@ bis zu 180 min.
 *(Herzgewichts-/Zielvolumen-Rechner und Phasen-Umschalter wurden auf
 Nutzerwunsch wieder entfernt.)*
 
+### del Nido (Mischung + Gabezeit)
+Followerprinzip: Kristalloidpumpe 100 %, Blutpumpe 25 % ⇒ mechanisch 4:1.
+`Blut = Kristalloid/4` · `Gesamt = Kristalloid×1,25` · `Blutfluss = Fluss×0,25`
+`Gesamtfluss = Fluss×1,25` · `Zeit = Kristalloid/Fluss` (= Gesamt/Gesamtfluss).
+Die alte gewichtsbasierte Dosis (20 ml/kg, Deckelung 1000 ml) liegt weiterhin
+im Modell + Tests, wird aber nicht angezeigt.
+
+**Mischungsverhältnis** ist eine *persistierte institutionelle Einstellung*
+(`models/cardioplegia_settings.dart`), kein Falldatum. Eingabe als
+Kristalloid-Anteil in % (50–95, Default 80 = 4:1); Blutanteil, Verhältnis und
+Follower-% sind abgeleitet und werden read-only gezeigt.
+Die del-Nido-Formeln in `PatientData` sind deshalb **Methoden mit Anteil-Parameter**
+statt Getter – so bleibt `PatientData` frei von Singleton-Abhängigkeiten und
+testbar. Bei 80 % ergeben sich exakt die alten 4:1-Zahlen (Rückwärtskompatibilität
+per Test abgesichert).
+`delNidoTotalPerKg(share)` = Gesamtvolumen / `cardioplegiaWeight` → Gegenprobe zur
+Protokolldosis (~20 ml/kg, max. 1000 ml).
+
+`delNidoRecommendedTotal` = Gewicht × 20 ml/kg, **bewusst ungedeckelt** (zeigt den
+hypothetischen Bedarf); `delNidoRecommendedExceedsMax` signalisiert nur, dass die
+Protokollgrenze von 1000 ml Einzeldosis überschritten ist.
+
 ### Intervall-Timer
 Manuelle Stoppuhr, Zeitstempel in `PatientData.cardioplegiaLastDoseAt`.
 Statuslogik ist **pure Funktion** `PatientData.cardioplegiaDoseStatus(elapsed, dueAfterMin, overdueAfterMin)`
 → deterministisch testbar. Schwellen: Calafiore 15/20 min, Bretschneider 150/180 min.
 1-s-Ticker nur aktiv, wenn Zeitstempel gesetzt; in `dispose()` gecancelt.
+
+**Alarm** (`models/cardioplegia_alarm_settings.dart`, Muster wie ThemeNotifier,
+in `main()` geladen): Ein/Aus, freie Triggerzeit (1–240 min), Ton, Vibration,
+Wiederholung – alles in SharedPreferences persistiert.
+Auslösung über die pure Funktion `expectedFireCount(elapsed, enabled,
+triggerMinutes, repeat)`, verglichen mit einem Zähler `_alarmsFired` → ein
+verpasster Tick holt nach statt zu überspringen.
+Umsetzung nur mit SDK-Built-ins (`SystemSound.play`, `HapticFeedback`) → **keine
+neue Dependency, keine Plattform-Konfiguration**.
+⚠️ Nur Vordergrund-Alarm. **Lautstärke bewusst NICHT als Einstellung** – weder
+SystemSound noch HapticFeedback erlauben programmatische Lautstärke; ein Regler
+wäre eine Attrappe. Für Hintergrund-Benachrichtigung + Lautstärke bräuchte es
+`flutter_local_notifications` (+ Kanäle/Permissions) bzw. `audioplayers` (+ Asset).
 
 ### Applikationsdruck (protokollübergreifend, Key `cardio_pressure_limits`)
 Antegrad max. 70–100 mmHg, retrograd max. 50–70 mmHg.
