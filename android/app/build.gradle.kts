@@ -21,6 +21,9 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // Required by flutter_local_notifications (it uses java.time APIs
+        // that need desugaring on older Android API levels).
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -56,10 +59,23 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // R8 strips the generic signatures that Gson's TypeToken needs,
+            // which made every SCHEDULED notification crash the app with
+            // "Missing type parameter" the moment it fired. proguard-rules.pro
+            // keeps those signatures and the plugin's model classes.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Needed for flutter_local_notifications' java.time usage on older APIs.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

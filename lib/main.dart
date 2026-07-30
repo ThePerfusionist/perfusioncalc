@@ -16,13 +16,14 @@ import 'models/patient_data.dart';
 import 'models/bga_model.dart';
 import 'models/cardioplegia_alarm_settings.dart';
 import 'models/cardioplegia_settings.dart';
+import 'utils/notification_service.dart';
 import 'i18n/app_strings.dart';
 import 'theme/app_theme.dart';
 import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.3.1';
+const kAppVersion = '0.3.2';
 
 void main() async {
   // Load language + theme from SharedPreferences before the UI is rendered,
@@ -32,6 +33,7 @@ void main() async {
   await ThemeNotifier.instance.load();
   await CardioplegiaAlarmSettings.instance.load();
   await CardioplegiaSettings.instance.load();
+  await CardioplegiaNotifications.instance.initialise();
   runApp(const PerfusionCalcApp());
 }
 

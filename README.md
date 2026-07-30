@@ -4,7 +4,7 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.3.1-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.3.2-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.4-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
@@ -123,9 +123,16 @@ with a **freely selectable trigger time** and individual **sound** and
 **vibration** switches, plus an option to repeat every interval. All alert
 settings are persisted and restored on the next app start.
 
-The alert fires while the app is open in the foreground; it is not an
-OS-level scheduled notification and does not wake the device. Volume follows
-the device's notification volume.
+The reminder is registered as a **scheduled OS notification**, so it also
+fires when the app is in the background or the screen is off, and can wake
+the device (high-importance channel, exact alarm).
+
+On Android 13+ the app asks for notification permission (and, separately,
+for permission to schedule exact alarms); if either is missing, the
+cardioplegia tab shows a prompt. Should exact alarms be denied, the reminder
+falls back to inexact delivery rather than being lost. On devices with aggressive battery
+management (notably Samsung), also exclude PerfusionCalc from battery
+optimisation, otherwise the system may delay or suppress the reminder.
 
 ### 📑 Combined Report
 
@@ -141,6 +148,12 @@ The web version is a fully-featured PWA:
 - **Offline capable:** custom service worker caches all assets after first load
 - **Installable:** add to home screen on iOS, install button in Chrome/Edge on desktop
 - **App-like:** runs in standalone window, no browser chrome
+
+### 🔒 Release Build Notes
+
+Android release builds run R8. `android/app/proguard-rules.pro` keeps the
+generic signatures Gson needs, without which scheduled notifications crash
+when they fire. Keep those rules if you change the build configuration.
 
 ### 🔬 Browser Compatibility
 

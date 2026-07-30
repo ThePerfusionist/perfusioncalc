@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.1+8 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 280/280 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.3.2+11 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 280/280 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -185,6 +185,10 @@ hypothetischen Bedarf); `delNidoRecommendedExceedsMax` signalisiert nur, dass di
 Protokollgrenze von 1000 ml Einzeldosis überschritten ist.
 
 ### Intervall-Timer
+Alarm-Einstellungen sind **standardmäßig eingeklappt** (Kopfzeile mit Ein/Aus-Switch
++ Kurzfassung „15 min · Ton · Vibration"). Fehler-/Berechtigungshinweise bleiben
+auch eingeklappt sichtbar, weil sie Handlung erfordern. Triggerzeit über
+Stepper + Presets statt Slider (Platz).
 Manuelle Stoppuhr, Zeitstempel in `PatientData.cardioplegiaLastDoseAt`.
 Statuslogik ist **pure Funktion** `PatientData.cardioplegiaDoseStatus(elapsed, dueAfterMin, overdueAfterMin)`
 → deterministisch testbar. Schwellen: Calafiore 15/20 min, Bretschneider 150/180 min.
@@ -196,12 +200,64 @@ Wiederholung – alles in SharedPreferences persistiert.
 Auslösung über die pure Funktion `expectedFireCount(elapsed, enabled,
 triggerMinutes, repeat)`, verglichen mit einem Zähler `_alarmsFired` → ein
 verpasster Tick holt nach statt zu überspringen.
-Umsetzung nur mit SDK-Built-ins (`SystemSound.play`, `HapticFeedback`) → **keine
-neue Dependency, keine Plattform-Konfiguration**.
-⚠️ Nur Vordergrund-Alarm. **Lautstärke bewusst NICHT als Einstellung** – weder
-SystemSound noch HapticFeedback erlauben programmatische Lautstärke; ein Regler
-wäre eine Attrappe. Für Hintergrund-Benachrichtigung + Lautstärke bräuchte es
-`flutter_local_notifications` (+ Kanäle/Permissions) bzw. `audioplayers` (+ Asset).
+**Benachrichtigung** (`utils/notification_service.dart`): geplante OS-Notification
+via `flutter_local_notifications` + `timezone`, dadurch auch aus dem Hintergrund
+und bei ausgeschaltetem Bildschirm. Kanal `Importance.max`, `fullScreenIntent`,
+`AndroidScheduleMode.exactAllowWhileIdle`.
+Geplant wird beim Erfassen der Gabe (nicht beim Ablauf!) – deshalb `_rescheduleReminder()`
+bei jeder Änderung von Zeitstempel *oder* Einstellungen aufrufen.
+⚠️ **`SystemSound.play()` ist auf Android wirkungslos** – war die Ursache, dass der
+frühere In-App-Alarm auf einem Samsung S23+ stumm blieb. Nicht wieder verwenden.
+Vordergrund gibt es nur noch `HapticFeedback` als Ergänzung.
+**Lautstärke** weiterhin keine App-Einstellung: folgt dem Benachrichtigungskanal.
+Plattform-Konfiguration liegt in `AndroidManifest.xml` (6 Permissions + 2 Receiver)
+und `android/app/build.gradle.kts` (core library desugaring).
+`zonedSchedule()` braucht in **flutter_local_notifications 18.x** zusätzlich den
+Pflichtparameter `uiLocalNotificationDateInterpretation` (in neueren Majors entfernt)
+– beim Anheben der Plugin-Version prüfen.
+
+⚠️ **Absturz-Fallen bei Android-Notifications** (beide bereits ausgeräumt):
+1. **Small Icon muss monochrom sein.** `@mipmap/ic_launcher` (adaptives Icon) als
+   Small Icon führt zu `Bad notification posted … Couldn't create icon` – und zwar
+   nur bei *geplanten* Benachrichtigungen (Zustellung aus dem BroadcastReceiver),
+   während die Sofort-Benachrichtigung funktioniert. Deshalb eigenes
+   `res/drawable/ic_notification.xml` (weißer Vektor).
+2. **`fullScreenIntent: true` nicht ohne `USE_FULL_SCREEN_INTENT`.** Startet beim
+   Auslösen eine Activity; ab Android 14 rechtebeschränkt. Im Vordergrund wird der
+   Pfad unterdrückt → Test läuft, geplante Zustellung stürzt ab. Entfernt;
+   `Importance.max` + `category: alarm` reichen für Heads-up mit Ton/Vibration.
+3. **Exakte Alarme** können verweigert werden → `PlatformException`. Es gibt jetzt
+   einen Fallback auf `inexactAllowWhileIdle` statt eines verlorenen Reminders.
+4. **Icon-Name OHNE `@drawable/`-Präfix** an `AndroidInitializationSettings`.
+   Das Plugin löst über `Resources.getIdentifier(name, "drawable", pkg)` auf; mit
+   Präfix schlägt der Lookup fehl, `initialize()` wirft, und danach sind **alle**
+   Methoden stille No-Ops → Button reagiert nicht, keine Benachrichtigung, kein
+   Hinweis. Deshalb gibt es jetzt `lastError`, `ensureReady()` (Selbstheilung) und
+   eine eigene UI-Meldung für „Dienst nicht gestartet" vs. „Recht fehlt".
+   **Regel:** Fehler in Plattformdiensten nie still schlucken – sonst ist ein
+   Ausfall von einer verweigerten Berechtigung nicht unterscheidbar.
+5. **R8/ProGuard bricht geplante Benachrichtigungen im Release-Build.**
+   Absturz beim Auslösen mit
+   `RuntimeException: Missing type parameter` in
+   `ScheduledNotificationReceiver.onReceive`. Ursache: Das Plugin legt die
+   Notification-Details als JSON ab und liest sie im Receiver per Gson-`TypeToken`
+   – R8 verwirft die dafür nötigen generischen Signaturen.
+   Fix: `android/app/proguard-rules.pro` (v. a. `-keepattributes Signature` +
+   `-keep class com.dexterous.** { *; }`), eingebunden über `proguardFiles(...)`
+   im `release`-Block von `build.gradle.kts`.
+   **Diagnostisch wichtig:** Sofort-Benachrichtigung funktioniert, *geplante*
+   stürzt ab → immer zuerst an R8/Serialisierung denken, nicht an Kanal/Icon.
+   Verkürzte Klassennamen (`q0.a`) im Stacktrace sind das Erkennungszeichen.
+6. **Icon-Name wird von `initialize()` VALIDIERT** – ist er nicht über
+   `getIdentifier` auflösbar, wirft die Methode und der komplette Dienst bleibt
+   tot. Deshalb jetzt eine Kandidatenliste mit Fallback auf `@mipmap/ic_launcher`
+   statt eines einzelnen Namens.
+7. **Build-Nummer bei JEDEM Testbuild erhöhen** (`+N` in `pubspec.yaml`).
+   v29–v32 trugen alle `0.3.2+9`; dadurch war aus einem Gerätedump nicht
+   feststellbar, welcher Stand installiert war – das hat eine Debugging-Runde
+   gekostet.
+**Windows-Build:** Plugins brauchen Symlink-Support → Entwicklermodus aktivieren
+(`start ms-settings:developers`), sonst schlägt der Build fehl.
 
 ### Applikationsdruck (protokollübergreifend, Key `cardio_pressure_limits`)
 Antegrad max. 70–100 mmHg, retrograd max. 50–70 mmHg.

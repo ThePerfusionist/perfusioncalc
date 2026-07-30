@@ -6,6 +6,7 @@ import '../widgets/common.dart';
 import '../models/patient_data.dart';
 import '../models/cardioplegia_alarm_settings.dart';
 import '../models/cardioplegia_settings.dart';
+import '../utils/notification_service.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
 import '../utils/pdf_export.dart';
@@ -84,16 +85,68 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// instead of silently skipping the alert.
   int _alarmsFired = 0;
 
+  /// Whether the OS currently permits notifications. Checked on init and
+  /// after a permission request, so the UI can point the user at the
+  /// system setting instead of silently failing to alert.
+  bool _notificationsAllowed = true;
+
+  /// Whether the notification service itself came up. Distinguished from
+  /// [_notificationsAllowed] so a failed service start is reported as such
+  /// instead of masquerading as a denied permission.
+  bool _notificationsAvailable = true;
+
+  /// The alarm settings are collapsed by default: this tab is about
+  /// cardioplegia, and the reminder is a side feature that should not
+  /// dominate the screen. Expanded state is per-session only - it is a view
+  /// preference, not a clinical setting worth persisting.
+  bool _alarmExpanded = false;
+
   @override
   void initState() {
     super.initState();
     _syncTicker();
+    _refreshPermission();
     // Rebuild when alarm settings change (they live in a global notifier).
     CardioplegiaAlarmSettings.instance.addListener(_onSettingsChanged);
     CardioplegiaSettings.instance.addListener(_onSettingsChanged);
   }
 
+  Future<void> _refreshPermission() async {
+    final svc = CardioplegiaNotifications.instance;
+    await svc.ensureReady();
+    final ok = await svc.areNotificationsEnabled();
+    if (mounted) {
+      setState(() {
+        _notificationsAllowed = ok;
+        _notificationsAvailable = svc.isAvailable;
+      });
+    }
+  }
+
+  /// (Re-)schedules the OS-level reminder for the current delivery.
+  /// Called whenever the delivery timestamp or any alarm setting changes,
+  /// so what the OS holds always matches what the UI shows.
+  Future<void> _rescheduleReminder() async {
+    final st = CardioplegiaAlarmSettings.instance;
+    final last = patientData.cardioplegiaLastDoseAt;
+    if (!st.enabled || last == null) {
+      await CardioplegiaNotifications.instance.cancelAll();
+      return;
+    }
+    await CardioplegiaNotifications.instance.scheduleReminders(
+      from: last,
+      intervalMinutes: st.triggerMinutes,
+      repeat: st.repeat,
+      sound: st.sound,
+      vibration: st.vibration,
+      title: t('cardio_alarm_notif_title'),
+      body: t('cardio_alarm_notif_body'),
+    );
+  }
+
   void _onSettingsChanged() {
+    // Settings changed -> the scheduled reminder has to follow.
+    _rescheduleReminder();
     if (mounted) setState(() {});
   }
 
@@ -148,12 +201,22 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(t('cardio_protocol_label'), style: TextStyle(color: kText, fontSize: 14)),
             const SizedBox(height: 8),
+            // Wrap instead of Row+Expanded: with three protocols the longest
+            // label ("Bretschneider") no longer fits on narrow screens and
+            // used to break mid-word. Wrap sizes each chip to its content
+            // and moves whatever does not fit onto a centred second line.
             Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               decoration: BoxDecoration(color: kTableHeaderBg, borderRadius: const BorderRadius.all(Radius.circular(20))),
-              child: Row(children: [
-                for (final p in _kVisibleProtocols)
-                  Expanded(child: _toggleBtn(_protocolLabel(p), p)),
-              ]),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  for (final p in _kVisibleProtocols) _toggleBtn(_protocolLabel(p), p),
+                ],
+              ),
             ),
           ]),
         ),
@@ -467,14 +530,26 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     }
   }
 
-  /// In-app alert using SDK built-ins only, so no extra plugin and no
-  /// per-platform permission/channel setup is required. Volume is not
-  /// settable through these APIs - it follows the device's notification
-  /// volume, which is why no volume slider is offered.
+  /// Supplementary in-app feedback when the trigger point passes while the
+  /// app happens to be open. The actual alert is the scheduled OS
+  /// notification (see CardioplegiaNotifications) - this only adds a haptic
+  /// nudge. SystemSound.play() is deliberately NOT used: it is a no-op on
+  /// Android and was the reason the old in-app alert stayed silent.
   void _playAlert() {
+    if (CardioplegiaAlarmSettings.instance.vibration) HapticFeedback.heavyImpact();
+  }
+
+  /// Posts an immediate notification so the user can verify that sound and
+  /// vibration actually come through on their device.
+  Future<void> _testAlert() async {
     final st = CardioplegiaAlarmSettings.instance;
-    if (st.sound) SystemSound.play(SystemSoundType.alert);
-    if (st.vibration) HapticFeedback.heavyImpact();
+    _playAlert();
+    await CardioplegiaNotifications.instance.showTest(
+      sound: st.sound,
+      vibration: st.vibration,
+      title: t('cardio_alarm_notif_title'),
+      body: t('cardio_alarm_notif_body'),
+    );
   }
 
   Widget _doseTimerCard({required double dueAfterMin, required double overdueAfterMin, required String windowText}) {
@@ -548,6 +623,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
                   _alarmsFired = 0; // new delivery -> alert schedule restarts
                 });
                 _syncTicker();
+                _rescheduleReminder();
                 widget.onChanged();
               },
             )),
@@ -563,6 +639,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
                     _alarmsFired = 0;
                   });
                   _syncTicker();
+                  _rescheduleReminder();
                   widget.onChanged();
                 },
               )),
@@ -582,71 +659,198 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// CardioplegiaAlarmSettings and restored on the next app start.
   Widget _alarmSettings() {
     final st = CardioplegiaAlarmSettings.instance;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(t('cardio_alarm_section'),
-          style: TextStyle(color: kTextMuted, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-      const SizedBox(height: 6),
-      _switchRow(t('cardio_alarm_enabled'), st.enabled, (v) => st.setEnabled(v)),
 
-      // Sub-settings only matter once the alert is on - hiding them keeps
-      // the card compact instead of showing controls with no effect.
-      if (st.enabled) ...[
-        const SizedBox(height: 8),
-        Row(children: [
-          Expanded(child: Text(t('cardio_alarm_trigger'),
-              style: TextStyle(color: kText, fontSize: 13))),
-          Text('${st.triggerMinutes.toStringAsFixed(0)} min',
-              style: TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.w500)),
-        ]),
-        Slider(
-          value: st.triggerMinutes.clamp(1, 240),
-          min: 1, max: 240, divisions: 239,
-          activeColor: kGold,
-          inactiveColor: kSurfaceWash,
-          label: '${st.triggerMinutes.toStringAsFixed(0)} min',
-          onChanged: (v) => st.setTriggerMinutes(v),
+    // One-line summary so the collapsed state still shows what is armed.
+    final summary = st.enabled
+        ? '${st.triggerMinutes.toStringAsFixed(0)} min'
+            '${st.sound ? " · ${t('cardio_alarm_sound')}" : ""}'
+            '${st.vibration ? " · ${t('cardio_alarm_vibration')}" : ""}'
+        : t('cardio_alarm_off');
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Header row doubles as the expand/collapse control.
+      InkWell(
+        onTap: () => setState(() => _alarmExpanded = !_alarmExpanded),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(children: [
+            Icon(st.enabled ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
+                size: 16, color: st.enabled ? kGold : kTextMuted),
+            const SizedBox(width: 8),
+            Text(t('cardio_alarm_section'), style: TextStyle(color: kText, fontSize: 13)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(summary,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: st.enabled ? kGold : kTextFaint, fontSize: 12))),
+            Switch(value: st.enabled, onChanged: (v) {
+              st.setEnabled(v);
+              if (v) setState(() => _alarmExpanded = true);
+            }),
+            Icon(_alarmExpanded ? Icons.expand_less : Icons.expand_more,
+                size: 18, color: kTextMuted),
+          ]),
         ),
-        _switchRow(t('cardio_alarm_sound'), st.sound, (v) => st.setSound(v)),
-        _switchRow(t('cardio_alarm_vibration'), st.vibration, (v) => st.setVibration(v)),
-        _switchRow(t('cardio_alarm_repeat'), st.repeat, (v) => st.setRepeat(v)),
-        const SizedBox(height: 6),
+      ),
+
+      // Problems stay visible even when collapsed - they need action.
+      if (!_notificationsAvailable) ...[
+        _noteRow(Icons.error_outline, t('cardio_alarm_unavailable'),
+            color: const Color(0xFFE57373), textColor: kTextSecondary),
+        if (CardioplegiaNotifications.instance.lastError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: SelectableText(
+              CardioplegiaNotifications.instance.lastError!,
+              style: TextStyle(color: kTextFaint, fontSize: 10.5),
+            ),
+          ),
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _timerBtn(
+            icon: Icons.refresh,
+            label: t('cardio_alarm_retry'),
+            filled: false,
+            onTap: () async {
+              await CardioplegiaNotifications.instance.initialise();
+              await _refreshPermission();
+              await _rescheduleReminder();
+            },
+          ),
+        ),
+      ],
+      if (_notificationsAvailable && !_notificationsAllowed && st.enabled) ...[
+        _noteRow(Icons.notifications_off_outlined, t('cardio_alarm_perm_missing'),
+            color: const Color(0xFFFFA726), textColor: kTextSecondary),
+        const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerLeft,
           child: _timerBtn(
             icon: Icons.notifications_active_outlined,
-            label: t('cardio_alarm_test'),
-            filled: false,
-            onTap: _playAlert,
+            label: t('cardio_alarm_grant'),
+            filled: true,
+            onTap: () async {
+              await CardioplegiaNotifications.instance.requestPermission();
+              await _refreshPermission();
+              await _rescheduleReminder();
+            },
           ),
         ),
-        const SizedBox(height: 6),
-        Text(t('cardio_alarm_scope_hint'), style: TextStyle(color: kTextFaint, fontSize: 10.5)),
+      ],
+
+      if (st.enabled && _alarmExpanded) ...[
+        const SizedBox(height: 8),
+        // Trigger time: stepper plus presets instead of a full-width slider,
+        // which took a disproportionate amount of vertical space.
+        Row(children: [
+          Expanded(child: Text(t('cardio_alarm_trigger'),
+              style: TextStyle(color: kTextSecondary, fontSize: 12))),
+          _stepBtn(Icons.remove, () => st.setTriggerMinutes(st.triggerMinutes - 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text('${st.triggerMinutes.toStringAsFixed(0)} min',
+                style: TextStyle(color: kGold, fontSize: 14, fontWeight: FontWeight.w500)),
+          ),
+          _stepBtn(Icons.add, () => st.setTriggerMinutes(st.triggerMinutes + 1)),
+        ]),
         const SizedBox(height: 4),
-        Text(t('cardio_alarm_saved_hint'), style: TextStyle(color: kTextFaint, fontSize: 10.5)),
+        Wrap(spacing: 4, runSpacing: 4, children: [
+          for (final m in const [5.0, 10.0, 15.0, 20.0, 30.0, 60.0])
+            _presetChip(m, st.triggerMinutes == m, () => st.setTriggerMinutes(m)),
+        ]),
+        const SizedBox(height: 8),
+        // Three toggles as chips in one wrapped row instead of three
+        // full-width switch rows.
+        Wrap(spacing: 4, runSpacing: 4, children: [
+          _optionChip(t('cardio_alarm_sound'), st.sound, (v) => st.setSound(v)),
+          _optionChip(t('cardio_alarm_vibration'), st.vibration, (v) => st.setVibration(v)),
+          _optionChip(t('cardio_alarm_repeat'), st.repeat, (v) => st.setRepeat(v)),
+          _plainChip(Icons.play_arrow_rounded, t('cardio_alarm_test'), _testAlert),
+        ]),
+        const SizedBox(height: 6),
+        Text(t('cardio_alarm_scope_hint'), style: TextStyle(color: kTextFaint, fontSize: 10)),
       ],
     ]);
   }
 
-  Widget _switchRow(String label, bool value, ValueChanged<bool> onChanged) {
+  Widget _stepBtn(IconData icon, VoidCallback onTap) => Semantics(
+    button: true,
+    excludeSemantics: true,
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 26, height: 26,
+        decoration: BoxDecoration(color: kSurfaceWash, shape: BoxShape.circle),
+        child: Icon(icon, size: 15, color: kTextSecondary),
+      ),
+    ),
+  );
+
+  Widget _presetChip(double minutes, bool active, VoidCallback onTap) {
     return Semantics(
-      toggled: value,
+      button: true,
+      selected: active,
+      label: '${minutes.toStringAsFixed(0)} min',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: active ? kGold.withValues(alpha: 0.18) : kSurfaceWash,
+            border: Border.all(color: active ? kGold : Colors.transparent, width: 1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text('${minutes.toStringAsFixed(0)}',
+              style: TextStyle(color: active ? kGold : kTextSecondary, fontSize: 11.5,
+                  fontWeight: active ? FontWeight.bold : FontWeight.normal)),
+        ),
+      ),
+    );
+  }
+
+  Widget _optionChip(String label, bool active, ValueChanged<bool> onChanged) {
+    return Semantics(
+      toggled: active,
       label: label,
       excludeSemantics: true,
-      child: InkWell(
-        onTap: () => onChanged(!value),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(children: [
-            Expanded(child: Text(label, style: TextStyle(color: kText, fontSize: 13))),
-            // No explicit colour: ThemeData.colorScheme.primary is already
-            // kGold, and naming the thumb colour explicitly would tie this
-            // to a Flutter version that renamed the parameter.
-            Switch(value: value, onChanged: onChanged),
+      child: GestureDetector(
+        onTap: () => onChanged(!active),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            color: active ? kGold.withValues(alpha: 0.18) : kSurfaceWash,
+            border: Border.all(color: active ? kGold : Colors.transparent, width: 1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(active ? Icons.check : Icons.close, size: 12,
+                color: active ? kGold : kTextMuted),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(color: active ? kGold : kTextSecondary, fontSize: 11.5)),
           ]),
         ),
       ),
     );
   }
+
+  Widget _plainChip(IconData icon, String label, VoidCallback onTap) => Semantics(
+    button: true,
+    label: label,
+    excludeSemantics: true,
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(color: kTableHeaderBg, borderRadius: BorderRadius.circular(12)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: kTextSecondary),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(color: kTextSecondary, fontSize: 11.5)),
+        ]),
+      ),
+    ),
+  );
 
   // ── del Nido: ratio, mixture, delivery time and dose per kg ─────────────
   // The institutional setup drives both pumps from one setting: crystalloid
@@ -927,7 +1131,10 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(color: active ? kGold : Colors.transparent, borderRadius: BorderRadius.circular(20)),
-          child: Text(label, textAlign: TextAlign.center,
+          child: Text(label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
               style: TextStyle(color: active ? Colors.black : kTextMuted,
                   fontWeight: active ? FontWeight.bold : FontWeight.normal, fontSize: 12)),
         ),
