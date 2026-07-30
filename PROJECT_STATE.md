@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.2+11 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 280/280 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.3.2+12 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 280/280 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -29,6 +29,13 @@ grep -o "AppLocale.en:" lib/i18n/app_strings.dart | wc -l   # muss == de sein
 grep -c "'key': 'tab_" lib/main.dart                        # muss == TabController(length:)
 ```
 
+> ⚠️ **CI ist strenger als die lokale Analyse.** `flutter analyze --no-fatal-warnings`
+> lässt Warnungen durchgehen, bricht aber bei **info**-Lints ab (Exit 1) – und die
+> CI nutzt eine neuere Flutter-Version (aktuell 3.44.8) als die lokale Installation.
+> Lokal „No issues found" ist daher **keine** Garantie. Typischer Kandidat:
+> `unnecessary_string_interpolations` bei `Text('${expr}')`, wenn `expr` schon
+> ein String ist → Anführungszeichen weglassen.
+>
 > ⚠️ **Testzahl immer über ALLE Dateien zählen**, nicht nur `patient_data_test.dart`:
 > `grep -chE "^\s*test\(" test/*.dart | paste -sd+ | bc`
 > (Eine frühere Angabe war zu niedrig, weil nur eine Datei gezählt wurde.)

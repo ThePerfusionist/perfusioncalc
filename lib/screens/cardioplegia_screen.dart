@@ -801,7 +801,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
             border: Border.all(color: active ? kGold : Colors.transparent, width: 1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text('${minutes.toStringAsFixed(0)}',
+          child: Text(minutes.toStringAsFixed(0),
               style: TextStyle(color: active ? kGold : kTextSecondary, fontSize: 11.5,
                   fontWeight: active ? FontWeight.bold : FontWeight.normal)),
         ),
