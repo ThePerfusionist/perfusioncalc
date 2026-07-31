@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/common.dart';
@@ -536,7 +537,18 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// nudge. SystemSound.play() is deliberately NOT used: it is a no-op on
   /// Android and was the reason the old in-app alert stayed silent.
   void _playAlert() {
-    if (CardioplegiaAlarmSettings.instance.vibration) HapticFeedback.heavyImpact();
+    final st = CardioplegiaAlarmSettings.instance;
+    if (st.vibration) HapticFeedback.heavyImpact();
+    // On web there is no scheduled OS notification, so the ticker itself has
+    // to raise it at the trigger point (see web_notifications_web.dart).
+    if (kIsWeb) {
+      CardioplegiaNotifications.instance.showNow(
+        sound: st.sound,
+        vibration: st.vibration,
+        title: t('cardio_alarm_notif_title'),
+        body: t('cardio_alarm_notif_body'),
+      );
+    }
   }
 
   /// Posts an immediate notification so the user can verify that sound and
@@ -544,7 +556,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   Future<void> _testAlert() async {
     final st = CardioplegiaAlarmSettings.instance;
     _playAlert();
-    await CardioplegiaNotifications.instance.showTest(
+    await CardioplegiaNotifications.instance.showNow(
       sound: st.sound,
       vibration: st.vibration,
       title: t('cardio_alarm_notif_title'),
@@ -768,7 +780,8 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
           _plainChip(Icons.play_arrow_rounded, t('cardio_alarm_test'), _testAlert),
         ]),
         const SizedBox(height: 6),
-        Text(t('cardio_alarm_scope_hint'), style: TextStyle(color: kTextFaint, fontSize: 10)),
+        Text(kIsWeb ? t('cardio_alarm_scope_web') : t('cardio_alarm_scope_hint'),
+            style: TextStyle(color: kTextFaint, fontSize: 10)),
       ],
     ]);
   }

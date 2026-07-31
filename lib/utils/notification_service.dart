@@ -38,6 +38,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'web_notifications_stub.dart'
+    if (dart.library.js_interop) 'web_notifications_web.dart';
+
 class CardioplegiaNotifications {
   static final CardioplegiaNotifications instance = CardioplegiaNotifications._();
   CardioplegiaNotifications._();
@@ -85,9 +88,22 @@ class CardioplegiaNotifications {
 
   Future<void> initialise() async {
     if (_initialised) return;
-    // Local notifications are mobile-only here; on web the plugin has no
-    // implementation, so skip rather than crash at startup.
-    if (kIsWeb) return;
+
+    // Web uses the browser Notification API instead of the plugin, which has
+    // no web implementation. Nothing to initialise beyond checking that the
+    // API exists - permission is requested on demand.
+    if (kIsWeb) {
+      if (WebNotifications.isSupported) {
+        _initialised = true;
+        activeIcon = 'web';
+        lastError = null;
+      } else {
+        lastError = 'Browser Notification API unavailable '
+            '(${WebNotifications.permission}). A secure context (https or '
+            'localhost) is required.';
+      }
+      return;
+    }
 
     // Timezone setup is guarded separately: if it fails we can still post
     // immediate notifications, only scheduling would be affected.
@@ -174,6 +190,7 @@ class CardioplegiaNotifications {
     // transient init failure permanently disables the button.
     if (!_initialised) await initialise();
     if (!_initialised) return false;
+    if (kIsWeb) return WebNotifications.requestPermission();
     try {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -201,6 +218,7 @@ class CardioplegiaNotifications {
   Future<bool> areNotificationsEnabled() async {
     if (!_initialised) await initialise();
     if (!_initialised) return false;
+    if (kIsWeb) return WebNotifications.isGranted;
     try {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -263,6 +281,10 @@ class CardioplegiaNotifications {
   }) async {
     await ensureReady();
     if (!_initialised || intervalMinutes <= 0) return;
+    // Web cannot schedule ahead of time (see web_notifications_web.dart);
+    // there the running ticker raises the notification when the moment
+    // arrives, so there is nothing to register here.
+    if (kIsWeb) return;
     await cancelAll();
     try {
       final occurrences = repeat ? maxScheduledOccurrences : 1;
@@ -311,7 +333,7 @@ class CardioplegiaNotifications {
 
   /// Cancels every reminder this feature owns.
   Future<void> cancelAll() async {
-    if (!_initialised) return;
+    if (!_initialised || kIsWeb) return;
     try {
       for (var i = 1; i <= maxScheduledOccurrences; i++) {
         await _plugin.cancel(_baseId + i);
@@ -321,9 +343,10 @@ class CardioplegiaNotifications {
     }
   }
 
-  /// Posts an immediate notification - used by the "test alert" button so
-  /// the user can verify sound/vibration without waiting for an interval.
-  Future<void> showTest({
+  /// Posts an immediate notification. Used by the "test alert" button on
+  /// every platform, and on web additionally by the ticker when the trigger
+  /// point is reached, since web cannot schedule ahead.
+  Future<void> showNow({
     required bool sound,
     required bool vibration,
     required String title,
@@ -331,6 +354,10 @@ class CardioplegiaNotifications {
   }) async {
     await ensureReady();
     if (!_initialised) return;
+    if (kIsWeb) {
+      WebNotifications.show(title, body);
+      return;
+    }
     try {
       await _plugin.show(_baseId, title, body, _details(sound: sound, vibration: vibration));
     } catch (e) {

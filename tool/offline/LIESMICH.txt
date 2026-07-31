@@ -1,0 +1,51 @@
+PerfusionCalc - Offline-Nutzung unter Windows
+=============================================
+
+SO WIRD GESTARTET
+  1. Diesen Ordner auf die Festplatte kopieren
+     (z. B. nach C:\PerfusionCalc) - nicht vom USB-Stick starten.
+  2. start.bat doppelklicken.
+  3. Der Browser oeffnet sich automatisch.
+
+  Zum Beenden das schwarze Fenster schliessen.
+
+
+WARUM EIN SERVER NOETIG IST
+  Ein Doppelklick auf web\index.html fuehrt zu einer weissen Seite:
+  Browser blockieren das Nachladen von Programmteilen ueber file://.
+  start.bat startet daher einen kleinen Webserver - nur auf diesem
+  Rechner, ohne Internetverbindung.
+
+
+FALLS ETWAS NICHT FUNKTIONIERT
+  Windows-Firewall fragt nach
+      "Abbrechen" genuegt - fuer localhost ist keine Freigabe noetig.
+
+  caddy.exe wird blockiert
+      start.bat weicht automatisch auf PowerShell aus. Passiert das
+      nicht, caddy.exe loeschen und start.bat erneut ausfuehren.
+
+  Weisse Seite trotz Server
+      Im Browser Strg+Umschalt+R druecken (Zwischenspeicher umgehen).
+
+  Port belegt
+      start.bat sucht selbst einen freien Port (8080-8090).
+
+
+HINWEISE
+  Als App einrichten
+      Im Browser (Chrome/Edge) ueber das Installationssymbol in der
+      Adresszeile - laeuft dann im eigenen Fenster ohne Adressleiste.
+      Der Server muss weiterhin laufen.
+
+  Kardioplegie-Timer
+      Benachrichtigungen funktionieren, solange der Tab geoffnet
+      bleibt. Wird der Browser geschlossen, entfaellt die Erinnerung.
+      Die Android-App meldet sich dagegen auch im Hintergrund.
+
+  Aktualisieren
+      Neues Paket herunterladen und den Ordner ersetzen.
+
+
+Nur zu Ausbildungszwecken. Keine klinische Verwendung.
+Kontakt: perfusioncalc@unbox.at

@@ -4,7 +4,7 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.3.2-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.3.3-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.4-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
@@ -126,6 +126,11 @@ settings are persisted and restored on the next app start.
 The reminder is registered as a **scheduled OS notification**, so it also
 fires when the app is in the background or the screen is off, and can wake
 the device (high-importance channel, exact alarm).
+
+**Web:** the browser Notification API is used instead. Because a browser
+cannot schedule a notification ahead of time without a push server, the
+reminder is raised by the running app — the **tab has to stay open**. Requires
+a secure context (https or localhost).
 
 On Android 13+ the app asks for notification permission (and, separately,
 for permission to schedule exact alarms); if either is missing, the
@@ -522,6 +527,17 @@ flutter build ipa --release
 ```
 
 ---
+
+### 💾 Offline Use on a Windows PC (no internet)
+
+A ready-to-run bundle is built by the **Offline Windows Bundle** workflow —
+download it from the workflow run's artifacts or from the release assets, copy
+the folder to the offline machine and run `start.bat`. It contains the app, a
+portable web server and a PowerShell fallback for machines where running an
+unknown `.exe` is blocked.
+
+See **[OFFLINE_WINDOWS.md](OFFLINE_WINDOWS.md)** for details and for building
+the bundle by hand.
 
 ### 🌐 WebApp – Self-Hosted Deployment
 

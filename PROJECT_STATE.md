@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.2+12 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 280/280 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.3.3+15 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -192,6 +192,16 @@ hypothetischen Bedarf); `delNidoRecommendedExceedsMax` signalisiert nur, dass di
 Protokollgrenze von 1000 ml Einzeldosis überschritten ist.
 
 ### Intervall-Timer
+**Web-Benachrichtigungen** über `utils/web_notifications_{stub,web}.dart`
+(bedingter Import wie bei `pdf_download_*`). Browser können **nicht vorplanen**
+→ der 1-s-Ticker löst am Triggerpunkt selbst aus (`showNow()`), Tab muss offen
+bleiben. Auf Android bleibt es bei der geplanten OS-Notification.
+Offline-Paket für Windows: Workflow `.github/workflows/offline-bundle.yml`
+baut Web + portablen Server (Caddy, Apache-2.0) + PowerShell-Fallback +
+`start.bat` aus `tool/offline/`. Für Offline zwingend:
+`--no-web-resources-cdn` (sonst wird CanvasKit vom CDN geladen).
+`--base-href /` ist bereits der Stand in `deploy.yml` (CNAME perfusioncalc.de),
+die frühere Angabe `/perfusioncalc/` ist überholt.
 Alarm-Einstellungen sind **standardmäßig eingeklappt** (Kopfzeile mit Ein/Aus-Switch
 + Kurzfassung „15 min · Ton · Vibration"). Fehler-/Berechtigungshinweise bleiben
 auch eingeklappt sichtbar, weil sie Handlung erfordern. Triggerzeit über

@@ -375,6 +375,8 @@ class Strings {
                                AppLocale.de: 'Bei jedem Intervall wiederholen'},
     'cardio_alarm_test':       {AppLocale.en: 'Test alert',
                                AppLocale.de: 'Benachrichtigung testen'},
+    'cardio_alarm_scope_web':  {AppLocale.en: 'In the browser the tab must stay open \u2013 closing it stops the reminder. The Android app also alerts in the background.',
+                               AppLocale.de: 'Im Browser muss der Tab geöffnet bleiben \u2013 wird er geschlossen, entfällt die Erinnerung. Die Android-App meldet sich auch im Hintergrund.'},
     'cardio_alarm_scope_hint': {AppLocale.en: 'Also fires in the background. On devices with strict battery management, exclude the app from battery optimisation.',
                                AppLocale.de: 'Wird auch im Hintergrund ausgelöst. Bei striktem Energiesparen die App von der Akku-Optimierung ausnehmen.'},
     'cardio_alarm_retry':      {AppLocale.en: 'Retry', AppLocale.de: 'Erneut versuchen'},
