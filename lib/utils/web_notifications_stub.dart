@@ -6,6 +6,8 @@
 // service can call these without conditional code at every call site.
 
 class WebNotifications {
+  static String? lastError;
+
   /// Whether the browser exposes the Notification API at all.
   static bool get isSupported => false;
 
@@ -17,5 +19,5 @@ class WebNotifications {
 
   static Future<bool> requestPermission() async => false;
 
-  static void show(String title, String body) {}
+  static Future<void> show(String title, String body) async {}
 }

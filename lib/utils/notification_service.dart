@@ -190,7 +190,11 @@ class CardioplegiaNotifications {
     // transient init failure permanently disables the button.
     if (!_initialised) await initialise();
     if (!_initialised) return false;
-    if (kIsWeb) return WebNotifications.requestPermission();
+    if (kIsWeb) {
+      final ok = await WebNotifications.requestPermission();
+      lastError = ok ? null : WebNotifications.lastError;
+      return ok;
+    }
     try {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -355,7 +359,9 @@ class CardioplegiaNotifications {
     await ensureReady();
     if (!_initialised) return;
     if (kIsWeb) {
-      WebNotifications.show(title, body);
+      await WebNotifications.show(title, body);
+      // Propagate so the UI can show why nothing appeared.
+      lastError = WebNotifications.lastError;
       return;
     }
     try {

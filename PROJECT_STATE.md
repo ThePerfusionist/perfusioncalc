@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.3+15 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.3.3+17 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -199,6 +199,16 @@ hypothetischen Bedarf); `delNidoRecommendedExceedsMax` signalisiert nur, dass di
 Protokollgrenze von 1000 ml Einzeldosis überschritten ist.
 
 ### Intervall-Timer
+⚠️ **Chrome für Android wirft bei `new Notification()`** ("Illegal
+constructor") – dort ist `ServiceWorkerRegistration.showNotification()` Pflicht.
+Reihenfolge: **Konstruktor zuerst** (Desktop, kostenlos), Service Worker als
+Fallback mit 2-s-Timeout (sonst hängt `ready` ewig, wenn keiner registriert ist).
+Umgekehrte Reihenfolge kostet auf Desktop unnötig Wartezeit.
+⚠️ **Firefox unter Windows reicht Benachrichtigungen an das Betriebssystem
+durch** – sind sie dort für Firefox deaktiviert oder ist „Fokusassistent" aktiv,
+erscheint nichts, ohne dass die Web-API einen Fehler meldet.
+⚠️ **Ergebnis des Konstruktors in einer Variablen halten** – sonst kann dart2js
+den Aufruf im Release-Build als toten Code entfernen.
 **Web-Benachrichtigungen** über `utils/web_notifications_{stub,web}.dart`
 (bedingter Import wie bei `pdf_download_*`). Browser können **nicht vorplanen**
 → der 1-s-Ticker löst am Triggerpunkt selbst aus (`showNow()`), Tab muss offen

@@ -143,6 +143,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
       title: t('cardio_alarm_notif_title'),
       body: t('cardio_alarm_notif_body'),
     );
+    if (mounted) setState(() {});
   }
 
   void _onSettingsChanged() {
@@ -555,13 +556,16 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// vibration actually come through on their device.
   Future<void> _testAlert() async {
     final st = CardioplegiaAlarmSettings.instance;
-    _playAlert();
+    if (st.vibration) HapticFeedback.heavyImpact();
     await CardioplegiaNotifications.instance.showNow(
       sound: st.sound,
       vibration: st.vibration,
       title: t('cardio_alarm_notif_title'),
       body: t('cardio_alarm_notif_body'),
     );
+    // Rebuild so a failure message appears right after pressing the button
+    // instead of only on the next repaint.
+    if (mounted) setState(() {});
   }
 
   Widget _doseTimerCard({required double dueAfterMin, required double overdueAfterMin, required String windowText}) {
@@ -705,17 +709,20 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
       ),
 
       // Problems stay visible even when collapsed - they need action.
+      // The raw platform message is shown whenever there is one, not only
+      // when the service failed to start: a notification that silently does
+      // not appear is just as broken, and the message names the reason.
+      if (CardioplegiaNotifications.instance.lastError != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: SelectableText(
+            CardioplegiaNotifications.instance.lastError!,
+            style: TextStyle(color: kTextFaint, fontSize: 10.5),
+          ),
+        ),
       if (!_notificationsAvailable) ...[
         _noteRow(Icons.error_outline, t('cardio_alarm_unavailable'),
             color: const Color(0xFFE57373), textColor: kTextSecondary),
-        if (CardioplegiaNotifications.instance.lastError != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            child: SelectableText(
-              CardioplegiaNotifications.instance.lastError!,
-              style: TextStyle(color: kTextFaint, fontSize: 10.5),
-            ),
-          ),
         const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerLeft,
