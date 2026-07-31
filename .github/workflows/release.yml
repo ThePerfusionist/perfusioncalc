@@ -111,7 +111,49 @@ jobs:
       - name: Build release AAB
         run: flutter build appbundle --release
 
-      # ── 8. Artefakte umbenennen (Tag-Version in Dateinamen) ───────────
+      # ── 8. Offline-Webapp für Windows-PCs ohne Internet ───────────────
+      # Bewusst im selben Job wie APK/AAB: ein zweiter Workflow, der
+      # parallel dasselbe Release anlegen will, ist ein Wettlauf – dabei
+      # ging das Paket verloren. Ein Job, ein Release, alle Dateien.
+      #
+      # --no-web-resources-cdn ist für den Offline-Betrieb zwingend, sonst
+      # lädt die App CanvasKit von einem CDN und bleibt ohne Internet leer.
+      - name: Build offline web app
+        run: |
+          flutter build web --release \
+            --no-web-resources-cdn \
+            --base-href / \
+            --pwa-strategy offline-first
+
+      - name: Assemble offline Windows bundle
+        run: |
+          set -euo pipefail
+          mkdir -p bundle/web
+          cp -r build/web/. bundle/web/
+
+          # Portablen Webserver beilegen (Apache-2.0). Die Download-URL wird
+          # aus dem Release-Feed gelesen statt fest verdrahtet.
+          CADDY_URL=$(curl -sSL https://api.github.com/repos/caddyserver/caddy/releases/latest \
+            | grep -o 'https://[^"]*windows_amd64\.zip' | head -1)
+          if [ -z "$CADDY_URL" ]; then
+            echo "::error::Keine Caddy-Windows-Download-URL gefunden"
+            exit 1
+          fi
+          echo "Caddy: $CADDY_URL"
+          curl -sSL "$CADDY_URL" -o caddy.zip
+          unzip -o -j caddy.zip caddy.exe -d bundle/
+          unzip -o -j caddy.zip LICENSE -d bundle/ || true
+          if [ -f bundle/LICENSE ]; then mv bundle/LICENSE bundle/LICENSE-caddy.txt; fi
+
+          cp tool/offline/start.bat  bundle/
+          cp tool/offline/serve.ps1  bundle/
+          cp tool/offline/LIESMICH.txt bundle/
+          cp OFFLINE_WINDOWS.md bundle/
+
+          test -f bundle/caddy.exe   || { echo "::error::caddy.exe fehlt"; exit 1; }
+          test -f bundle/web/index.html || { echo "::error::Web-Build fehlt"; exit 1; }
+
+      # ── 9. Artefakte umbenennen (Tag-Version in Dateinamen) ───────────
       - name: Rename artifacts with version
         run: |
           VERSION="${{ github.ref_name }}"
@@ -119,11 +161,13 @@ jobs:
              "PerfusionCalc-${VERSION}.apk"
           cp build/app/outputs/bundle/release/app-release.aab \
              "PerfusionCalc-${VERSION}.aab"
+          (cd bundle && zip -rq "../PerfusionCalc-Offline-Windows-${VERSION}.zip" .)
           echo "APK_PATH=PerfusionCalc-${VERSION}.apk" >> $GITHUB_ENV
           echo "AAB_PATH=PerfusionCalc-${VERSION}.aab" >> $GITHUB_ENV
+          echo "OFFLINE_PATH=PerfusionCalc-Offline-Windows-${VERSION}.zip" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      # ── 9. GitHub-Release erstellen + APK & AAB hochladen ─────────────
+      # ── 10. GitHub-Release erstellen + alle Artefakte hochladen ───────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -132,6 +176,7 @@ jobs:
           files: |
             ${{ env.APK_PATH }}
             ${{ env.AAB_PATH }}
+            ${{ env.OFFLINE_PATH }}
           body: |
             ## Download
 
@@ -139,6 +184,7 @@ jobs:
             |-------|-------------|
             | `PerfusionCalc-${{ env.VERSION }}.apk` | Android-App (Direktinstall / Sideloading) |
             | `PerfusionCalc-${{ env.VERSION }}.aab` | Android App Bundle (Google Play Store Upload) |
+            | `PerfusionCalc-Offline-Windows-${{ env.VERSION }}.zip` | Webapp für Windows-PCs **ohne Internetzugang** |
 
             ### Installation
             1. APK download

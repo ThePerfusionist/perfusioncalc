@@ -70,8 +70,15 @@ git status --short | while IFS= read -r line; do
   if [ -d "$f" ]; then mkdir -p "/home/claude/out/$f"; cp -r "$f"/* "/home/claude/out/$f/" 2>/dev/null
   else mkdir -p "/home/claude/out/$(dirname "$f")"; cp "$f" "/home/claude/out/$f"; fi
 done
-cd /home/claude/out && zip -rq /mnt/user-data/outputs/perfusioncalc_COMPLETE.zip . -x ".*"
+cd /home/claude/out && zip -rq /mnt/user-data/outputs/perfusioncalc_COMPLETE.zip . -x "*.git/*"
 ```
+
+> ⚠️ **NIE `-x ".*"` verwenden.** Das schließt `.github/` mit aus – dadurch
+> fehlten die Workflow-Dateien in jedem gelieferten Paket, ohne dass es
+> auffiel. Nur `*.git/*` ausschließen.
+>
+> ⚠️ **Immer den ZIP-Inhalt prüfen, nicht den Quellordner:**
+> `unzip -l <zip> | grep -i workflow`
 
 ---
 
@@ -196,9 +203,13 @@ Protokollgrenze von 1000 ml Einzeldosis überschritten ist.
 (bedingter Import wie bei `pdf_download_*`). Browser können **nicht vorplanen**
 → der 1-s-Ticker löst am Triggerpunkt selbst aus (`showNow()`), Tab muss offen
 bleiben. Auf Android bleibt es bei der geplanten OS-Notification.
-Offline-Paket für Windows: Workflow `.github/workflows/offline-bundle.yml`
-baut Web + portablen Server (Caddy, Apache-2.0) + PowerShell-Fallback +
-`start.bat` aus `tool/offline/`. Für Offline zwingend:
+Offline-Paket für Windows: wird in **`release.yml`** gebaut und ans Release
+gehängt (neben APK/AAB). `offline-bundle.yml` ist nur noch **manuell** und
+erzeugt ausschließlich ein Artefakt.
+⚠️ **Nur ein Workflow darf `action-gh-release` nutzen** – zwei Workflows am
+selben Tag sind ein Wettlauf, dabei ging das Offline-Paket verloren.
+Inhalt: Web-Build + portabler Server (Caddy, Apache-2.0) + PowerShell-Fallback
++ `start.bat` aus `tool/offline/`. Für Offline zwingend:
 `--no-web-resources-cdn` (sonst wird CanvasKit vom CDN geladen).
 `--base-href /` ist bereits der Stand in `deploy.yml` (CNAME perfusioncalc.de),
 die frühere Angabe `/perfusioncalc/` ist überholt.

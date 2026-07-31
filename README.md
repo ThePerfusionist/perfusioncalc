@@ -530,9 +530,9 @@ flutter build ipa --release
 
 ### 💾 Offline Use on a Windows PC (no internet)
 
-A ready-to-run bundle is built by the **Offline Windows Bundle** workflow —
-download it from the workflow run's artifacts or from the release assets, copy
-the folder to the offline machine and run `start.bat`. It contains the app, a
+A ready-to-run bundle is attached to every **release**, next to the Android
+APK: `PerfusionCalc-Offline-Windows-vX.Y.Z.zip`. Copy the folder to the offline
+machine and run `start.bat`. It contains the app, a
 portable web server and a PowerShell fallback for machines where running an
 unknown `.exe` is blocked.
 

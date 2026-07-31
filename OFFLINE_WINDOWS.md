@@ -9,13 +9,14 @@ Kurzanleitung, um die Webapp von einem PC **mit** Internet auf einen PC
 
 Es muss **nichts gebaut werden**. GitHub Actions erzeugt ein fertiges Paket:
 
-1. Im Repo auf **Actions → „Offline Windows Bundle"**
-2. Den jüngsten erfolgreichen Lauf öffnen (oder über **„Run workflow"** einen
-   neuen starten)
-3. Unter **Artifacts** `PerfusionCalc-Offline-Windows-x.y.z` herunterladen
+1. Im Repo auf **Releases** gehen
+2. Beim gewünschten Release unter **Assets** die Datei
+   `PerfusionCalc-Offline-Windows-vX.Y.Z.zip` herunterladen
 
-Bei veröffentlichten Versionen hängt dasselbe Paket zusätzlich direkt am
-**Release**.
+Sie liegt dort direkt neben der Android-APK.
+
+> Für einen Zwischenstand ohne Release: **Actions → „Offline Windows Bundle
+> (manual)" → Run workflow**, danach das Paket unter *Artifacts* laden.
 
 Danach: ZIP entpacken, Ordner auf den Zielrechner kopieren, **`start.bat`**
 doppelklicken. Der Browser öffnet sich, ein Webserver ist bereits enthalten.

@@ -1,0 +1,98 @@
+# Builds a ready-to-run offline bundle of the web app for Windows PCs
+# without internet access.
+#
+# WHY THIS EXISTS
+# The manual route (see OFFLINE_WINDOWS.md) requires a Flutter toolchain on
+# the machine doing the build. Clinical staff who just need the app on an
+# offline workstation should not have to install Flutter - they download one
+# ZIP here, copy it to a USB stick, and run start.bat.
+#
+# WHAT THE BUNDLE CONTAINS
+#   web\        the compiled app (CanvasKit bundled locally, no CDN)
+#   caddy.exe   a portable static web server (Apache-2.0, licence included)
+#   serve.ps1   a PowerShell fallback server for machines where running an
+#               unknown .exe is blocked by policy - common on hospital PCs
+#   start.bat   picks whichever server works and opens the browser
+#
+# MANUAL ONLY. On release tags the bundle is built by release.yml and
+# attached to the release next to the APK/AAB - having a second workflow
+# also create that release was a race, and the bundle went missing.
+# This workflow exists to produce a bundle from an arbitrary commit without
+# cutting a release; it only ever publishes a workflow artifact.
+
+name: Offline Windows Bundle (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # --base-href / so the app works when served from the root of a local
+      # server. --no-web-resources-cdn is what actually makes it offline
+      # capable: CanvasKit is bundled instead of fetched from a CDN.
+      # No --wasm here: the plain CanvasKit build has the widest browser
+      # support, which matters more than speed on locked-down workstations.
+      - name: Build Flutter Web (offline capable)
+        run: |
+          flutter build web --release \
+            --no-web-resources-cdn \
+            --base-href / \
+            --pwa-strategy offline-first
+
+      - name: Assemble bundle
+        run: |
+          set -euo pipefail
+          mkdir -p bundle/web
+          cp -r build/web/. bundle/web/
+
+          # Portable web server: resolve the current Caddy Windows build from
+          # the official release feed rather than pinning a URL that rots.
+          CADDY_URL=$(curl -sSL https://api.github.com/repos/caddyserver/caddy/releases/latest \
+            | grep -o 'https://[^"]*windows_amd64\.zip' | head -1)
+          if [ -z "$CADDY_URL" ]; then
+            echo "::error::Could not resolve a Caddy Windows download URL"
+            exit 1
+          fi
+          echo "Using $CADDY_URL"
+          curl -sSL "$CADDY_URL" -o caddy.zip
+          unzip -o -j caddy.zip caddy.exe -d bundle/
+          unzip -o -j caddy.zip LICENSE -d bundle/ || true
+          if [ -f bundle/LICENSE ]; then mv bundle/LICENSE bundle/LICENSE-caddy.txt; fi
+
+          test -f bundle/caddy.exe || { echo "::error::caddy.exe fehlt"; exit 1; }
+          cp tool/offline/start.bat bundle/
+          cp tool/offline/serve.ps1 bundle/
+          cp tool/offline/LIESMICH.txt bundle/
+          cp OFFLINE_WINDOWS.md bundle/
+
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          echo "BUNDLE_NAME=PerfusionCalc-Offline-Windows-${VERSION}" >> "$GITHUB_ENV"
+          (cd bundle && zip -rq ../offline-bundle.zip .)
+
+      - name: Rename bundle
+        run: mv offline-bundle.zip "${BUNDLE_NAME}.zip"
+
+      # The bundle is published as a workflow artifact only - releases are
+      # handled by release.yml.
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BUNDLE_NAME }}
+          path: ${{ env.BUNDLE_NAME }}.zip
+          retention-days: 90
