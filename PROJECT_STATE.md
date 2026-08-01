@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.3+25 · 12 Tabs · **186 Unit-Tests** (7 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.4+26 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -550,3 +550,50 @@ davon gewesen:
 **Lehre:** `--no-web-resources-cdn` deckt Schriften nicht ab. Und: einen
 Befund, der eine Ressource für „ungenutzt" erklärt, nicht ohne einen Build
 umsetzen, der es zeigt.
+
+### v0.4.4 — EK-Hämatokrit als Einstellung
+
+Aus Stufe 4 des Prüfplans wurde statt einer einmaligen Entscheidung ein
+Eingabefeld: `TransfusionSettings` (persistiertes Singleton wie
+`CardioplegiaSettings`), Schlüssel `tx_rbc_unit_hct_percent`, Default 55 %,
+geklemmt auf 40–80 %.
+
+- `PatientData.transfusionVolume` ist **keine Getter-Property mehr**, sondern
+  `transfusionVolume(double rbcUnitHematocritPercent)`. Damit bleibt die
+  Formel rein und testbar; die Einstellung wird an der Aufrufstelle gelesen —
+  dasselbe Muster wie beim del-Nido-Verhältnis.
+- Der Wert steht **im PDF als Eingabezeile und als Fußnote am Ergebnis**. Ohne
+  ihn ist das Transfusionsvolumen nicht reproduzierbar: ein Leser sieht
+  sonst nicht, für welches Präparat gerechnet wurde.
+- Solange der Auslieferungswert unverändert ist, weist ein Hinweis darauf hin
+  (`ped_hct_ek_default`). Nach der ersten Bestätigung verschwindet er.
+- Datenschutzerklärung ergänzt: der Wert ist eine weitere lokal gespeicherte
+  Einstellung.
+
+**Adresse in der Datenschutzerklärung:** Platzhalter auf Wunsch entfernt.
+Statt einer Anschrift steht dort jetzt der Satz, dass eine Postanschrift auf
+Anfrage mitgeteilt wird. Art. 13 Abs. 1 lit. a DSGVO verlangt formal die
+Angabe; der Verzicht ist eine bewusste Entscheidung des Verantwortlichen.
+
+### Dependabot-Nachjustierung
+
+Die erste Woche hat gezeigt, dass die Konfiguration aus Block B das Gegenteil
+dessen vorschlug, was dort entschieden wurde: vier von fünf PRs waren
+Major-Sprünge (checkout 6→7, setup-java 4→5, gh-release 2→3,
+upload-artifact 4→**7**).
+
+- `github-actions`: **Major-Updates ignoriert** (`dependency-name: "*"`).
+  Innerhalb der Major werden die SHAs weiter automatisch nachgezogen — das
+  war der Sicherheitszweck des Pinnens. Major-Wechsel gehören einzeln
+  gemacht, mit Testlauf, am besten gemeinsam mit dem nächsten Anheben von
+  `FLUTTER_VERSION`. Sicherheits-Updates meldet Dependabot Alerts unabhängig
+  davon.
+- Patch- und Minor-Updates von Actions laufen jetzt **gruppiert** in einem PR
+  pro Woche statt fünf einzelnen.
+- `pub`: unverändert. Major-PRs sind hier als Erinnerung erwünscht, gesperrt
+  bleiben nur `flutter_local_notifications` und `pdf`.
+
+**Offene PRs im Repo:** #2–#5 (Actions, Major) können geschlossen werden —
+Dependabot öffnet sie mit dieser Konfiguration nicht erneut. #6
+(`pdf` 3.12.0 → 3.13.0) ist ein Minor innerhalb von `^3.11.1` und kann nach
+einem lokalen `flutter test` gemergt werden.

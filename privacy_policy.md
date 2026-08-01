@@ -11,8 +11,9 @@ Online-Fassung / online version: **https://perfusioncalc.de/privacy.html**
 ## 1. Verantwortlicher
 
 Nils Röder
-
 E-Mail: perfusioncalc@unbox.at
+
+Anfragen zum Datenschutz werden über diese E-Mail-Adresse beantwortet. Eine Postanschrift wird auf Anfrage mitgeteilt.
 
 ## 2. Kurzfassung
 
@@ -34,6 +35,7 @@ In der geräteeigenen Ablage (Android/iOS: `SharedPreferences`; Web: `localStora
 | Design (Hell/Dunkel/System) | Darstellung |
 | Kardioplegie-Alarmeinstellungen (Intervall, Ton, Vibration, Wiederholung) | Erinnerungsfunktion |
 | del-Nido-Mischungsverhältnis | zuletzt genutztes Protokoll |
+| Hämatokrit des Erythrozytenkonzentrats | Einstellung der Einrichtung für die pädiatrische Transfusionsberechnung |
 
 Diese Einträge enthalten keine personenbezogenen Daten. Sie lassen sich durch Deinstallation der App bzw. durch Löschen der Websitedaten im Browser vollständig entfernen.
 
@@ -96,8 +98,9 @@ PerfusionCalc ist ein Werkzeug für Ausbildung und persönliche Nutzung. Es ist 
 ## 1. Controller
 
 Nils Röder
-
 E-mail: perfusioncalc@unbox.at
+
+Data protection enquiries are answered at this e-mail address. A postal address is supplied on request.
 
 ## 2. Summary
 
@@ -119,6 +122,7 @@ Only application settings are written to device storage (Android/iOS: `SharedPre
 | Theme (light/dark/system) | appearance |
 | Cardioplegia alarm settings (interval, sound, vibration, repeat) | reminder feature |
 | del Nido mixing ratio | last protocol used |
+| Hematocrit of the RBC concentrate | institutional setting for the pediatric transfusion calculation |
 
 None of these contain personal data. They are removed completely by uninstalling the app or clearing site data in the browser.
 

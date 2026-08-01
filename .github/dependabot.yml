@@ -7,6 +7,7 @@ version: 2
 # Sicherheitsgewinn plus Wartungsschuld; mit ihr nur der Sicherheitsgewinn.
 
 updates:
+  # ── GitHub Actions ────────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -18,6 +19,39 @@ updates:
       - "dependencies"
       - "github-actions"
 
+    # Ein PR pro Woche statt fuenf: Patch- und Minor-Updates von Actions sind
+    # fast immer unkritisch und lassen sich gesammelt lesen. Major-Spruenge
+    # sind unten ausgenommen, also enthaelt die Gruppe nur Harmloses.
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+    # KEINE automatischen Major-Spruenge.
+    #
+    # In Block B wurde bewusst INNERHALB der bestehenden Major-Version
+    # gepinnt - Pinnen und Major-Wechsel gehoeren nicht in denselben Commit.
+    # Ohne diese Regel hat Dependabot sofort das Gegenteil vorgeschlagen:
+    # checkout 6->7, setup-java 4->5, gh-release 2->3 und upload-artifact
+    # 4->7 (drei Majors auf einmal).
+    #
+    # Diese Actions laufen im selben Job wie KEYSTORE_BASE64 bzw. bauen das
+    # Artefakt, das im Play Store landet. Ein Major-Wechsel aendert dort
+    # Verhalten, nicht nur Versionsnummern - upload-artifact v5 etwa bei
+    # gleichnamigen Artefakten, checkout v7 bei der Runner-Node-Version.
+    # Solche Wechsel gehoeren einzeln gemacht, mit einem Testlauf dahinter,
+    # sinnvollerweise gemeinsam mit dem naechsten Anheben von FLUTTER_VERSION.
+    #
+    # Der Sicherheitszweck bleibt vollstaendig erhalten: innerhalb der Major
+    # werden die SHAs weiter automatisch nachgezogen, und
+    # Sicherheits-Updates meldet Dependabot Alerts unabhaengig von dieser
+    # Regel.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # ── Dart/Flutter-Pakete ───────────────────────────────────────────────────
   - package-ecosystem: "pub"
     directory: "/"
     schedule:
@@ -27,11 +61,16 @@ updates:
       prefix: "deps"
     labels:
       - "dependencies"
-    # Klinische App: Major-Spruenge bei den Kernpaketen werden bewusst und
-    # einzeln gemacht (die 18 -> 22 Migration von flutter_local_notifications
-    # war ein eigener Release), nicht automatisiert.
+
+    # Hier bewusst NICHT pauschal alle Majors gesperrt: bei einer App mit
+    # wenigen, gut ueberschaubaren Abhaengigkeiten ist ein Major-PR eine
+    # nuetzliche Erinnerung. Ausgenommen sind nur die zwei Pakete, deren
+    # Major-Wechsel erfahrungsgemaess ein eigenes Release kostet.
     ignore:
+      # Die Migration 18 -> 22 war ein eigener Release inklusive
+      # Icon-Naming-, R8- und Desktop-Registrierungs-Folgefehlern.
       - dependency-name: "flutter_local_notifications"
         update-types: ["version-update:semver-major"]
+      # Traegt den kompletten PDF-Export; ein Major bricht dort die API.
       - dependency-name: "pdf"
         update-types: ["version-update:semver-major"]

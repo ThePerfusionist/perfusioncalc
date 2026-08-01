@@ -304,17 +304,23 @@ class PatientData {
   // assumed here the result is 5.45 ml/kg per g/dl versus 5.0 at a UK unit;
   // Davies measured an empirical transfusion factor of 5.02 ml/kg.
   //
-  // 0.55 is an institutional assumption, and it is the one number in this
-  // formula that varies between blood services: German RBC concentrates in
-  // additive solution are specified at Hct 0.50-0.70. Erring low yields a
-  // slightly larger volume, so check it against the unit label before use -
-  // in neonates the difference is clinically relevant.
-  static const double kRbcUnitHematocrit = 0.55;
-
-  double get transfusionVolume {
+  // The hematocrit is the one number here that varies between blood
+  // services - German RBC concentrates in additive solution are specified at
+  // 0.50-0.70, Davies worked with the UK standard of 0.60. It is therefore
+  // NOT a constant but a parameter, fed from the persisted
+  // TransfusionSettings so the user can match it to the unit label.
+  //
+  // Passed in rather than read from the singleton so this class keeps no
+  // external dependencies and the formula stays pure and unit-testable.
+  //
+  /// [rbcUnitHematocritPercent] is the hematocrit of the transfused red cell
+  /// concentrate in PERCENT (e.g. 55), converted to the fraction Davies'
+  /// formula divides by.
+  double transfusionVolume(double rbcUnitHematocritPercent) {
     if (pediatricWeight == null || desiredHbIncrease == null) return 0;
-    return _safe(
-        pediatricWeight! * desiredHbIncrease! * 3 / kRbcUnitHematocrit);
+    final hct = rbcUnitHematocritPercent / 100.0;
+    if (hct <= 0) return 0;
+    return _safe(pediatricWeight! * desiredHbIncrease! * 3 / hct);
   }
 
   // ── Ultrafiltration / hemoconcentration ─────────────────────────────────

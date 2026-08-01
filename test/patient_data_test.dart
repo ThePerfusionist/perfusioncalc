@@ -952,11 +952,11 @@ void main() {
     // volume (ml) = kg × ΔHb (g/dl) × 3 / Hct(RBC unit, as a FRACTION)
     // Davies P et al. Transfusion. 2007;47(2):212-216.
 
-    test('15 kg, ΔHb +3 → approx. 245 ml packed red cells', () {
+    test('15 kg, ΔHb +3 at Hct 55 % → approx. 245 ml packed red cells', () {
       final pd = PatientData()
         ..pediatricWeight = 15
         ..desiredHbIncrease = 3;
-      expect(pd.transfusionVolume, closeTo(245.45, 0.02));
+      expect(pd.transfusionVolume(55), closeTo(245.45, 0.02));
     });
 
     test("Reproduces Davies' own worked example at a UK unit (Hct 0.60)", () {
@@ -965,27 +965,37 @@ void main() {
       // Guards the SHAPE of the formula independently of the institutional
       // hematocrit constant - the audit suspected a double correction here,
       // and this is what rules it out.
-      const weight = 20.0;
-      const deltaHb = 2.0;
-      final volumeAtUkUnit = weight * deltaHb * 3 / 0.60;
-      expect(volumeAtUkUnit, closeTo(200, 0.001));
-      expect(volumeAtUkUnit / weight, closeTo(10, 0.001));
+      final pd = PatientData()
+        ..pediatricWeight = 20
+        ..desiredHbIncrease = 2;
+      expect(pd.transfusionVolume(60), closeTo(200, 0.001));
+      expect(pd.transfusionVolume(60) / 20, closeTo(10, 0.001));
     });
 
-    test('The assumed RBC unit hematocrit is the only tunable', () {
-      // Documents the institutional assumption so a change to it is a
-      // conscious, reviewed act rather than a silent edit.
-      expect(PatientData.kRbcUnitHematocrit, 0.55);
+    test('The RBC unit hematocrit scales the result linearly', () {
+      // This is why it became a configurable setting instead of a constant:
+      // between the ends of the German specification band the calculated
+      // volume differs by 40 %.
       final pd = PatientData()
         ..pediatricWeight = 10
         ..desiredHbIncrease = 1;
-      // 10 × 1 × 3 / 0.55 = 54.5 ml = 5.45 ml/kg per g/dl
-      expect(pd.transfusionVolume / 10, closeTo(5.4545, 0.001));
+      expect(pd.transfusionVolume(55) / 10, closeTo(5.4545, 0.001));
+      expect(pd.transfusionVolume(60) / 10, closeTo(5.0, 0.001));
+      expect(pd.transfusionVolume(50) / pd.transfusionVolume(70),
+          closeTo(70 / 50, 1e-9));
+    });
+
+    test('A nonsensical hematocrit yields 0 rather than infinity', () {
+      final pd = PatientData()
+        ..pediatricWeight = 10
+        ..desiredHbIncrease = 1;
+      expect(pd.transfusionVolume(0), 0);
+      expect(pd.transfusionVolume(-5), 0);
     });
 
     test('No weight → 0', () {
       final pd = PatientData()..desiredHbIncrease = 3;
-      expect(pd.transfusionVolume, 0);
+      expect(pd.transfusionVolume(55), 0);
     });
   });
 
@@ -1050,7 +1060,7 @@ void main() {
       expect(pd.pvr, 0);
       expect(pd.natriumBedarf, 0);
       expect(pd.tubeVol12, 0);
-      expect(pd.transfusionVolume, 0);
+      expect(pd.transfusionVolume(55), 0);
     });
 
     test('No result is NaN', () {

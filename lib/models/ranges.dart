@@ -120,6 +120,12 @@ class Ranges {
   static const mm = Range(0.3, 15, 'mm');
 
   // ── Pediatrics ───────────────────────────────────────────────────────────
+  /// Hematocrit of a red cell concentrate. German products in additive
+  /// solution are specified at 50-70 %; the band here is a little wider so
+  /// unusual products can still be entered.
+  static const rbcUnitHematocrit = Range(40, 80, '%',
+      noteKey: 'range_note_rbc_unit_hematocrit');
+
   static const desiredHbIncrease = Range(0.5, 8, 'g/dl',
       noteKey: 'range_note_desired_hb_increase');
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../models/patient_data.dart';
+import '../models/transfusion_settings.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
 import '../utils/pdf_export.dart';
@@ -19,6 +20,26 @@ class _PediatricScreenState extends State<PediatricScreen> {
   void onChanged() {
     if (mounted) setState(() {});
     widget.onChanged();
+  }
+
+  TransfusionSettings get tx => TransfusionSettings.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // The setting can also be changed from elsewhere later on; listening
+    // keeps the field and the result in step either way.
+    tx.addListener(_onSettingsChanged);
+  }
+
+  @override
+  void dispose() {
+    tx.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -72,8 +93,36 @@ class _PediatricScreenState extends State<PediatricScreen> {
           InputCard(label: t('ped_desired_hb'), unit: 'g/dl', value: patientData.desiredHbIncrease,
               range: Ranges.desiredHbIncrease,
               onChanged: (v) { patientData.desiredHbIncrease = v; onChanged(); }),
-          ResultCard(label: t('ped_transfusion_vol'), unit: 'ml', value: patientData.transfusionVolume,
-              rangeHint: t('ped_hct_in_ek'), decimals: 0,
+
+          // ── Persisted institutional setting ────────────────────────────
+          // Davies' formula divides by this, so the result scales directly
+          // with it: 50 % versus 70 % is a 40 % difference in volume. It
+          // used to be a hard-coded 0.55 that nobody could see or check.
+          const SizedBox(height: 12),
+          _sectionTitle(t('ped_hct_ek_section')),
+          const SizedBox(height: 8),
+          InputCard(
+            label: t('ped_hct_in_ek'),
+            unit: '%',
+            value: tx.rbcUnitHematocritPercent,
+            range: Ranges.rbcUnitHematocrit,
+            step: 1,
+            onChanged: (v) {
+              if (v != null) tx.setRbcUnitHematocritPercent(v);
+              onChanged();
+            },
+          ),
+          _hintRow(Icons.save_outlined, t('ped_hct_ek_hint')),
+          // Only while untouched: a value the user has confirmed once needs
+          // no further nagging.
+          if (tx.isDefault) _hintRow(Icons.info_outline, t('ped_hct_ek_default')),
+          const SizedBox(height: 8),
+
+          ResultCard(label: t('ped_transfusion_vol'), unit: 'ml',
+              value: patientData.transfusionVolume(tx.rbcUnitHematocritPercent),
+              rangeHint: '${t('ped_hct_in_ek')}: '
+                  '${tx.rbcUnitHematocritPercent.toStringAsFixed(0)} %',
+              decimals: 0,
               missingInputs: [
                 if (patientData.pediatricWeight == null) t('bsa_body_weight'),
                 if (patientData.desiredHbIncrease == null) t('ped_desired_hb'),
@@ -97,6 +146,20 @@ class _PediatricScreenState extends State<PediatricScreen> {
       ),
     );
   }
+
+  /// Small explanatory line under an input - same visual weight as the
+  /// note rows on the cardioplegia tab.
+  Widget _hintRow(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.only(left: 4, top: 6, bottom: 2, right: 4),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, size: 14, color: kTextMuted),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(color: kTextMuted, fontSize: 11.5, height: 1.35)),
+          ),
+        ]),
+      );
 
   Widget _sectionTitle(String title) =>
       Text(title, style: const TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.bold));
@@ -146,13 +209,22 @@ class _PediatricScreenState extends State<PediatricScreen> {
 }
 
 // ── PDF sections (extracted, for the single-tab export and the combined report) ─
-List<PdfSection> buildPediatricPdfSections(PatientData pd) => [
-  PdfSection(title: t('pdf_inputs'), rows: [
-    PdfRow.numeric(label: t('bsa_body_weight'), value: pd.pediatricWeight,    unit: 'kg'),
-    PdfRow.numeric(label: t('ped_desired_hb'),  value: pd.desiredHbIncrease, unit: 'g/dl', decimals: 1),
-  ]),
-  PdfSection(title: t('pdf_results'), rows: [
-    PdfRow.numeric(label: t('ped_transfusion_vol'), value: pd.transfusionVolume, unit: 'ml', decimals: 0,
-        note: t('ped_hct_in_ek')),
-  ]),
-];
+List<PdfSection> buildPediatricPdfSections(PatientData pd) {
+  // Read here rather than passed in, like the del Nido ratio in the
+  // cardioplegia export. The hematocrit MUST appear in the PDF: without it
+  // the transfusion volume is not reproducible, and a reader six months
+  // later cannot tell which product it was calculated for.
+  final hctPercent = TransfusionSettings.instance.rbcUnitHematocritPercent;
+  return [
+    PdfSection(title: t('pdf_inputs'), rows: [
+      PdfRow.numeric(label: t('bsa_body_weight'), value: pd.pediatricWeight,   unit: 'kg'),
+      PdfRow.numeric(label: t('ped_desired_hb'),  value: pd.desiredHbIncrease, unit: 'g/dl', decimals: 1),
+      PdfRow.numeric(label: t('ped_hct_in_ek'),   value: hctPercent,           unit: '%', decimals: 0),
+    ]),
+    PdfSection(title: t('pdf_results'), rows: [
+      PdfRow.numeric(label: t('ped_transfusion_vol'),
+          value: pd.transfusionVolume(hctPercent), unit: 'ml', decimals: 0,
+          note: '${t('ped_hct_in_ek')}: ${hctPercent.toStringAsFixed(0)} %'),
+    ]),
+  ];
+}
