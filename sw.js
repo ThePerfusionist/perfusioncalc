@@ -58,7 +58,7 @@
 //     dadurch auf CPU-Rendering zurückfiel -> langsamer als ohne. GPU-Rendering
 //     ist der größere Hebel. Diese Version verwirft die mit COI-Headern
 //     gecachten Responses aus v5.
-const BUILD_ID = '78cb32d0493e4eb95ca82c0a55e395efe9409af1';
+const BUILD_ID = '9746d9b1256932822acfa8af1020df4ac47b85fb';
 const VERSION = `pcalc-${BUILD_ID}`;
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
@@ -136,22 +136,14 @@ const BUILD_ASSETS = [
   "./assets/shaders/stretch_effect.frag",
   "./cannulas.html",
   "./canvaskit/canvaskit.js",
-  "./canvaskit/canvaskit.js.symbols",
   "./canvaskit/canvaskit.wasm",
   "./canvaskit/chromium/canvaskit.js",
-  "./canvaskit/chromium/canvaskit.js.symbols",
   "./canvaskit/chromium/canvaskit.wasm",
-  "./canvaskit/experimental_webparagraph/canvaskit.js",
-  "./canvaskit/experimental_webparagraph/canvaskit.js.symbols",
-  "./canvaskit/experimental_webparagraph/canvaskit.wasm",
   "./canvaskit/skwasm.js",
-  "./canvaskit/skwasm.js.symbols",
   "./canvaskit/skwasm.wasm",
   "./canvaskit/skwasm_heavy.js",
-  "./canvaskit/skwasm_heavy.js.symbols",
   "./canvaskit/skwasm_heavy.wasm",
   "./canvaskit/wimp.js",
-  "./canvaskit/wimp.js.symbols",
   "./canvaskit/wimp.wasm",
   "./flutter.js",
   "./flutter_bootstrap.js",
