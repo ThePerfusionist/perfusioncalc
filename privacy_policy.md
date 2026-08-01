@@ -57,7 +57,7 @@ Die Erinnerungsfunktion ist optional und wird ausschließlich lokal auf dem Ger�
 
 Die Web-App wird als statische Seite über GitHub Pages ausgeliefert (GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA). Beim Abruf verarbeitet GitHub als Hosting-Dienstleister technisch notwendige Verbindungsdaten — insbesondere IP-Adresse, Zeitpunkt, angeforderte Ressource und User-Agent — in Server-Logfiles. Auf diese Verarbeitung besteht kein Einfluss; sie ist für die Auslieferung jeder Webseite unvermeidbar. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse am technischen Betrieb). Einzelheiten: [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement) und [GitHub Pages Data Collection](https://docs.github.com/pages/getting-started-with-github-pages/about-github-pages#data-collection).
 
-Die Anwendung selbst lädt **keine** externen Ressourcen: keine CDNs, keine Schriftarten von Drittanbietern, keine Analyse-Skripte, keine Cookies. Ein Service Worker legt die Programmdateien im Browser-Cache ab, damit die Anwendung offline funktioniert; dabei werden keine Eingabedaten gespeichert.
+Die Anwendung selbst lädt **keine** externen Ressourcen: keine CDNs, keine Schriftarten von Drittanbietern, keine Analyse-Skripte, keine Cookies. Die verwendete Schriftart (Roboto, Apache-2.0) ist seit Version 0.4.3 im Programm enthalten und wird nicht von einem Google-Server nachgeladen. Ein Service Worker legt die Programmdateien im Browser-Cache ab, damit die Anwendung offline funktioniert; dabei werden keine Eingabedaten gespeichert.
 
 Der Browser fragt beim Aktivieren der Erinnerungsfunktion nach der Berechtigung für Benachrichtigungen. Diese wird lokal erteilt und lokal ausgewertet.
 
@@ -142,7 +142,7 @@ The reminder is optional and is scheduled locally on the device. There is no pus
 
 The web app is served as a static site via GitHub Pages (GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA). As hosting provider, GitHub processes technically necessary connection data in server log files — IP address, timestamp, requested resource and user agent. This processing is outside our control and is unavoidable for the delivery of any web page. The legal basis is Art. 6(1)(f) GDPR (legitimate interest in technical operation). Details: [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement) and [GitHub Pages Data Collection](https://docs.github.com/pages/getting-started-with-github-pages/about-github-pages#data-collection).
 
-The application itself loads **no** external resources: no CDNs, no third-party fonts, no analytics scripts, no cookies. A service worker caches the program files in the browser so the app works offline; no entered data is cached.
+The application itself loads **no** external resources: no CDNs, no third-party fonts, no analytics scripts, no cookies. The typeface used (Roboto, Apache-2.0) has been bundled with the program since version 0.4.3 and is not fetched from a Google server. A service worker caches the program files in the browser so the app works offline; no entered data is cached.
 
 When the reminder feature is enabled, the browser asks for notification permission. It is granted locally and evaluated locally.
 

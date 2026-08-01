@@ -25,7 +25,7 @@ import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.4.2';
+const kAppVersion = '0.4.3';
 
 void main() async {
   // Load language + theme from SharedPreferences before the UI is rendered,

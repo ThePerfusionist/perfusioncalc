@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.2+24 · 12 Tabs · **186 Unit-Tests** (7 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.3+25 · 12 Tabs · **186 Unit-Tests** (7 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -517,3 +517,36 @@ Dart-Code und sind daher ohne Toolchain verantwortbar; D und E brauchen
   Web wirkungslos und auf iOS ein Ablehnungsgrund).
 - **`formatElapsed` nach `lib/utils/duration_format.dart` extrahiert**, damit
   die Zeitanzeige von Timer-Karte und Banner testbar identisch bleibt.
+
+### Hotfix v0.4.3 — Web-Version rendert ohne Text
+
+**Symptom:** Nach dem Deploy von v0.4.2 zeigte perfusioncalc.de Layout, Karten,
++/−-Buttons und Material-Icons, aber **keine einzige Beschriftung**.
+
+**Ursache:** Auditbefund 2.6 hatte `gstatic.com` in der CSP für ungenutzt
+gehalten, weil beide Builds mit `--no-web-resources-cdn` laufen. Das Flag holt
+aber nur `canvaskit.js`/`.wasm` vom eigenen Origin — **nicht die Schrift**.
+CanvasKit lädt Roboto zur Laufzeit von `fonts.gstatic.com`; die verschärfte CSP
+sperrte den Abruf, und ohne Schrift rendert Flutter Web gar keinen Text. Die
+Material-Icons blieben sichtbar, weil sie ein gebündeltes Asset sind — das
+machte den Fehler wie ein Layout-, nicht wie ein Schriftproblem aussehen.
+
+**Behebung, zweistufig:**
+1. `font-src` und `connect-src` erlauben `https://fonts.gstatic.com` wieder.
+   `script-src` bleibt ohne `www.gstatic.com` — dieser Teil des Befundes war
+   richtig.
+2. Roboto ist jetzt als `fonts:`-Familie in `pubspec.yaml` gebündelt und in
+   `buildAppTheme()` als `fontFamily` gesetzt. Die App braucht den Netzabruf
+   damit gar nicht mehr.
+
+**Der zweite Punkt ist der eigentliche Fund.** Die Schrift hing die ganze Zeit
+an einem Abruf zu Google — auch vor der CSP-Verschärfung. Betroffen wären
+davon gewesen:
+- die **Offline-Windows-Distribution** (per Definition ohne Internet)
+- jedes Klinik-Netz, das `fonts.gstatic.com` sperrt
+- der Datenschutz: bei jedem Aufruf ging eine Verbindung zu Google, was die
+  Datenschutzerklärung so nicht abbildete („keine externen Ressourcen")
+
+**Lehre:** `--no-web-resources-cdn` deckt Schriften nicht ab. Und: einen
+Befund, der eine Ressource für „ungenutzt" erklärt, nicht ohne einen Build
+umsetzen, der es zeigt.

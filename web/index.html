@@ -16,11 +16,22 @@
       - worker-src 'self' blob: erlaubt den skwasm-Render-Worker.
       - child-src spiegelt worker-src für Browser, die worker-src (noch) nicht
         unterstützen (z. B. ältere Safari) und auf child-src zurückfallen.
-      - gstatic.com wurde ENTFERNT (Audit 2.6): beide Builds laufen mit
-        --no-web-resources-cdn, CanvasKit kommt vom eigenen Origin. Die
-        Einträge weiteten die erlaubten Script-Quellen auf, ohne je benutzt
-        zu werden. Falls --no-web-resources-cdn je entfällt, müssen sie
-        zusammen mit dem Build-Flag zurückkommen.
+      - fonts.gstatic.com in font-src UND connect-src ist ZWINGEND, solange
+        CanvasKit seine Standardschrift zur Laufzeit nachlädt.
+        --no-web-resources-cdn holt nur canvaskit.js/.wasm lokal, NICHT die
+        Roboto-Schrift. Wird die Quelle gesperrt, rendert die App vollständig
+        OHNE TEXT: Layout, Karten und Material-Icons (gebündeltes Asset)
+        erscheinen, jede Beschriftung fehlt. Genau das ist mit v0.4.2
+        passiert - der Auditbefund 2.6 hatte die Einträge für ungenutzt
+        gehalten.
+        Zusätzlich ist Roboto seit v0.4.3 als Schriftfamilie mitgebündelt
+        (pubspec fonts:), damit die Anwendung ohne diesen Abruf auskommt -
+        Voraussetzung für die Offline-Windows-Distribution. Die CSP-Einträge
+        bleiben trotzdem als Rückfallweg stehen; einen zweiten stummen
+        Textausfall ist das nicht wert.
+      - www.gstatic.com in script-src ist dagegen tatsächlich entbehrlich:
+        CanvasKit selbst kommt durch --no-web-resources-cdn vom eigenen
+        Origin. Bleibt entfernt.
   -->
   <!--
     Welche Security-Header als <meta> überhaupt wirken:
@@ -43,8 +54,8 @@
     script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval';
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob:;
-    font-src 'self' data:;
-    connect-src 'self';
+    font-src 'self' data: https://fonts.gstatic.com;
+    connect-src 'self' https://fonts.gstatic.com;
     worker-src 'self' blob:;
     child-src 'self' blob:;
     object-src 'none';

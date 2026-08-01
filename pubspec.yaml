@@ -9,7 +9,7 @@ description: >-
 
 publish_to: 'none'
 
-version: 0.4.2+24
+version: 0.4.3+25
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
@@ -54,7 +54,28 @@ flutter:
     - assets/heart_posterior.jpg
     - assets/heart_cross_section.jpg
     - assets/coronary_arteries.jpg
-    # Roboto fuer PDF-Export (Standard-PDF-Schriften unterstuetzen kein Unicode)
+    # Roboto fuer PDF-Export (Standard-PDF-Schriften unterstuetzen kein Unicode).
+    # Muss AUSSERDEM unter assets: stehen, weil pdf_export.dart die Dateien
+    # ueber rootBundle.load() liest - fonts: allein reicht dafuer nicht.
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
     - assets/fonts/Roboto-Italic.ttf
+
+  # Dieselben Dateien zusaetzlich als Schriftfamilie der App.
+  #
+  # Ohne diesen Block laedt CanvasKit seine Standardschrift zur Laufzeit von
+  # fonts.gstatic.com. Das ist an drei Stellen ein Problem:
+  #   1. eine strengere CSP sperrt den Abruf - die App rendert dann ganz ohne
+  #      Text (v0.4.2, siehe web/index.html)
+  #   2. die Offline-Windows-Distribution hat per Definition kein Internet
+  #   3. eine Klinik-Firewall kann fonts.gstatic.com blockieren
+  # Gebuendelt ist die Schrift Teil des Builds und keiner der drei Faelle
+  # tritt ein. Kosten: rund 480 KB im Web-Bundle.
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Roboto-Italic.ttf
+          style: italic
