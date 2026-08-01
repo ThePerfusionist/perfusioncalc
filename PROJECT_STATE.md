@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.4+18 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.3.4+19 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -29,6 +29,10 @@ grep -o "AppLocale.en:" lib/i18n/app_strings.dart | wc -l   # muss == de sein
 grep -c "'key': 'tab_" lib/main.dart                        # muss == TabController(length:)
 ```
 
+> ⚠️ **Kein Feld anlegen, nur um Wegoptimieren zu verhindern.** Ein
+> write-only-Feld löst `unused_field` aus. Stattdessen dem Objekt eine echte
+> Verwendung geben (z. B. `Notification.onclick`) – das erfüllt beide Ziele.
+>
 > ⚠️ **CI ist strenger als die lokale Analyse.** `flutter analyze --no-fatal-warnings`
 > lässt Warnungen durchgehen, bricht aber bei **info**-Lints ab (Exit 1) – und die
 > CI nutzt eine neuere Flutter-Version (aktuell 3.44.8) als die lokale Installation.

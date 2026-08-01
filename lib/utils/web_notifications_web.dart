@@ -20,6 +20,10 @@
 // throttle those to roughly once per minute, fine for a minute-resolution
 // reminder). Closing the browser stops the reminder; Android schedules with
 // the OS and is unaffected.
+//
+// Note that a system notification can still be suppressed by OS settings or
+// "do not disturb" without any error surfacing here - which is why the app
+// also shows its own in-app banner (widgets/in_app_alert.dart).
 
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
@@ -28,11 +32,6 @@ class WebNotifications {
   /// Last failure, surfaced in the UI. Swallowing these silently previously
   /// made a broken notification indistinguishable from a working one.
   static String? lastError;
-
-  /// Holds the most recent notification object. Without a live reference,
-  /// dart2js may treat the constructor call as dead code in release builds
-  /// and optimise it away - the notification then simply never appears.
-  static web.Notification? _last;
 
   static bool get isSupported {
     try {
@@ -81,10 +80,15 @@ class WebNotifications {
     // needs no service worker, so it is tried first - going through the
     // service worker there would only add its timeout for no benefit.
     try {
-      // The result is kept in a field on purpose: without a live reference
-      // dart2js may treat this constructor call as dead code in a release
-      // build and drop it, and the notification then never appears.
-      _last = web.Notification(title, options);
+      final n = web.Notification(title, options);
+      // Clicking the notification brings the app's window to the front.
+      // This also gives the object a genuine use: a write-only field would
+      // be flagged as unused by the analyzer, and an unused result could in
+      // principle be dropped by the compiler.
+      n.onclick = ((web.Event _) {
+        web.window.focus();
+        n.close();
+      }).toJS;
       lastError = null;
       return;
     } catch (e) {
