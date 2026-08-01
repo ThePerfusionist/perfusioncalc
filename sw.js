@@ -58,7 +58,7 @@
 //     dadurch auf CPU-Rendering zurückfiel -> langsamer als ohne. GPU-Rendering
 //     ist der größere Hebel. Diese Version verwirft die mit COI-Headern
 //     gecachten Responses aus v5.
-const BUILD_ID = '8dd4e507b0beedb88e0a9fcbc4b62b7bec9bc12a';
+const BUILD_ID = '9d0d905ff907ca18e94774b7e1524b069e273338';
 const VERSION = `pcalc-${BUILD_ID}`;
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
