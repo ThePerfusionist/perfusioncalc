@@ -91,8 +91,18 @@ jobs:
         # --no-web-resources-cdn: Engine-Assets lokal vom eigenen Origin statt
         # gstatic.com (kein externer Roundtrip, voll offline-fähig).
         # --release: Minification, Tree-Shaking, Dead-Code-Elimination.
-        # --pwa-strategy offline-first: SW bedient Assets sofort aus dem Cache.
-        run: flutter build web --wasm --release --no-web-resources-cdn --base-href / --pwa-strategy offline-first
+        # --pwa-strategy=none ist ZWINGEND und nicht optional:
+        # 'offline-first' laesst Flutter ein eigenes flutter_service_worker.js
+        # erzeugen, das flutter_bootstrap.js beim Start registriert - im
+        # selben Scope '/' wie unser web/sw.js. Zwei Registrierungen fuer
+        # einen Scope koennen nicht koexistieren, die spaetere ersetzt die
+        # fruehere. Online faellt das nicht auf, weil beide aus dem Netz
+        # liefern; OFFLINE bricht die App ab (ERR_INTERNET_DISCONNECTED,
+        # main.dart.js und canvaskit bleiben 'pending', weil unser gerade
+        # verdraengter Worker seine respondWith-Promises nie aufloest).
+        # Unser sw.js uebernimmt das Caching vollstaendig - Flutter braucht
+        # dafuer keinen zweiten Worker.
+        run: flutter build web --wasm --release --no-web-resources-cdn --base-href / --pwa-strategy=none
 
       # Koppelt den Service-Worker-Cache an den Commit (Audit 4.1). Ohne
       # diesen Schritt bleibt BUILD_ID auf 'DEV' und der Cache-Name aendert

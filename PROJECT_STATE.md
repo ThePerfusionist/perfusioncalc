@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.4+26 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.5+27 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -607,7 +607,7 @@ einem lokalen `flutter test` gemergt werden.
 | 3 | Klinische Rechenwege am laufenden System | **verifiziert** |
 | 4 | EK-Hämatokrit | aus der Entscheidung wurde ein persistiertes Eingabefeld (v0.4.4) |
 | 5 | Benachrichtigungen im Release-Build, Android | **verifiziert** — geplante Benachrichtigung feuert und stürzt nicht ab |
-| 6 | Web / Service Worker | offen, hängt am nächsten Deploy |
+| 6 | Web / Service Worker | Cache-Name ✔, Fontfix ✔ (0 gstatic-Requests), **Offline-Laden war defekt → v0.4.5** |
 | 7 | CI | offen, hängt am nächsten Push/Tag |
 
 **Was Stufe 5 nebenbei beantwortet hat:** Die ProGuard-`-keep`-Regeln greifen
@@ -619,3 +619,42 @@ ist damit ohne Funktionsverlust weg.
 (Framework-Revision 058e0af2c2, 23.07.2026). `FLUTTER_VERSION` in allen drei
 Workflows steht jetzt auf demselben Wert — vorher 3.44.7, was bedeutet hätte,
 dass lokal gegen eine andere Toolchain getestet wird als die CI baut.
+
+### Hotfix v0.4.5 — zwei Service Worker um denselben Scope
+
+**Symptom:** Online lief alles. Mit DevTools → Network → Offline brach die App
+ab: Dokument und `flutter_bootstrap.js` kamen noch aus dem Cache, dann blieben
+`main.dart.js`, `canvaskit.js` und `canvaskit.wasm` auf *pending* stehen, und
+der Reload endete in `ERR_INTERNET_DISCONNECTED`.
+
+**Ursache:** Alle drei Web-Builds liefen mit `--pwa-strategy offline-first`.
+Flutter erzeugt damit ein eigenes `flutter_service_worker.js`, das
+`flutter_bootstrap.js` beim Start registriert — **im selben Scope `/` wie
+unser `web/sw.js`**. Ein Service Worker wird pro Scope registriert, nicht pro
+Dateiname; die spätere Registrierung ersetzt die frühere. Unser gerade
+verdrängter Worker löste seine offenen `respondWith`-Promises nie auf, daher
+die hängenden Requests.
+
+Der Kommentar in `index.html` behauptete das Gegenteil („unser sw.js hat einen
+anderen Namen/Scope und stört sich nicht daran"). Das war der eigentliche
+Fehler: eine falsche Annahme, schriftlich festgehalten und dadurch nie wieder
+hinterfragt.
+
+**Behebung:**
+- Alle drei Builds auf `--pwa-strategy=none`. Unser `sw.js` übernimmt das
+  Caching vollständig; Flutter braucht dafür keinen zweiten Worker.
+- `index.html` löst vor der eigenen Registrierung eine eventuell vorhandene
+  Registrierung von `flutter_service_worker.js` — einmalige Migration für
+  Nutzer, die eine ältere Fassung geöffnet hatten. Bewusst nur diese eine.
+- Kommentar korrigiert.
+
+**Warum es online unsichtbar war:** Beide Worker liefern online aus dem Netz.
+Der Konflikt zeigt sich ausschließlich, wenn der Cache tatsächlich gebraucht
+wird — also im Offline-Fall und damit in der Windows-Distribution.
+
+### App-Shell-Precache erweitert
+
+`anatomy.html`, `cannulas.html` und `privacy.html` samt ihrer sechs Bilder
+werden jetzt bei der Installation vorgeladen. Vorher landeten sie nur im
+Cache, wenn sie jemand einmal geöffnet hatte — wer die App offline nahm, ohne
+vorher die Anatomieseite besucht zu haben, bekam dort eine Fehlerseite.

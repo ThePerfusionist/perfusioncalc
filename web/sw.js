@@ -102,6 +102,24 @@ const APP_SHELL = [
   './icons/Icon-maskable-192.png?v=9',
   './icons/Icon-maskable-512.png?v=9',
   './apple-touch-icon.png?v=9',
+
+  // Eigenstaendige Seiten ausserhalb der Flutter-App. Sie wurden bisher nur
+  // gecacht, WENN sie jemand einmal geoeffnet hatte - wer die App offline
+  // nahm, ohne vorher die Anatomie- oder Kanuelenseite besucht zu haben,
+  // bekam dort eine Fehlerseite. Auf einem OP-Tablet ohne Netz ist das
+  // genau der Moment, in dem man sie braucht.
+  './anatomy.html',
+  './cannulas.html',
+  './privacy.html',
+
+  // Die Bilder dieser Seiten. Ohne sie waere die Seite offline zwar da,
+  // aber leer - und der einzige Inhalt der Anatomieseite sind die Bilder.
+  './assets/assets/heart_anterior.jpg',
+  './assets/assets/heart_posterior.jpg',
+  './assets/assets/heart_cross_section.jpg',
+  './assets/assets/coronary_arteries.svg',
+  './assets/assets/finck_va.jpg',
+  './assets/assets/finck_vv.jpg',
 ];
 
 self.addEventListener('install', (event) => {

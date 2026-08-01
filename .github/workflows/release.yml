@@ -131,10 +131,21 @@ jobs:
       # lädt die App CanvasKit von einem CDN und bleibt ohne Internet leer.
       - name: Build offline web app
         run: |
+          # --pwa-strategy=none ist ZWINGEND und nicht optional:
+          # 'offline-first' laesst Flutter ein eigenes flutter_service_worker.js
+          # erzeugen, das flutter_bootstrap.js beim Start registriert - im
+          # selben Scope '/' wie unser web/sw.js. Zwei Registrierungen fuer
+          # einen Scope koennen nicht koexistieren, die spaetere ersetzt die
+          # fruehere. Online faellt das nicht auf, weil beide aus dem Netz
+          # liefern; OFFLINE bricht die App ab (ERR_INTERNET_DISCONNECTED,
+          # main.dart.js und canvaskit bleiben 'pending', weil unser gerade
+          # verdraengter Worker seine respondWith-Promises nie aufloest).
+          # Unser sw.js uebernimmt das Caching vollstaendig - Flutter braucht
+          # dafuer keinen zweiten Worker.
           flutter build web --release \
             --no-web-resources-cdn \
             --base-href / \
-            --pwa-strategy offline-first
+            --pwa-strategy=none
 
       # Koppelt den Service-Worker-Cache an den Commit (Audit 4.1). Ohne
       # diesen Schritt bleibt BUILD_ID auf 'DEV' und der Cache-Name aendert
