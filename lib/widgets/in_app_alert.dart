@@ -91,6 +91,11 @@ class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderSta
     vsync: this,
   )..forward();
 
+  /// Stable across rebuilds because it lives in the State. Deriving the key
+  /// from the widget instead would hand Dismissible a new key on every
+  /// rebuild and reset its state.
+  final Key _dismissKey = UniqueKey();
+
   late final Animation<Offset> _slide = Tween<Offset>(
     begin: const Offset(0, -1),
     end: Offset.zero,
@@ -121,49 +126,81 @@ class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderSta
             width: width,
             child: Material(
               color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-                decoration: BoxDecoration(
-                  color: kCardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: kGold, width: 1.5),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x55000000), blurRadius: 16, offset: Offset(0, 4)),
-                  ],
-                ),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Icon(Icons.notifications_active, color: kGold, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
+              // Dismissible provides the swipe-away gesture in both
+              // directions with the usual follow-the-finger animation.
+              child: Dismissible(
+                key: _dismissKey,
+                direction: DismissDirection.horizontal,
+                onDismissed: (_) => widget.onDismiss(),
+                child: GestureDetector(
+                  // Tapping anywhere dismisses it as well - hunting for a
+                  // small close icon is the wrong interaction during a case.
+                  // The icon stays as an explicit affordance.
+                  onTap: widget.onDismiss,
+                  // Opaque so taps on the padding register too, not only
+                  // those landing on the text or icons.
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                    decoration: BoxDecoration(
+                      color: kCardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: kGold, width: 1.5),
+                      boxShadow: const [
+                        BoxShadow(
+                            color: Color(0x55000000),
+                            blurRadius: 16,
+                            offset: Offset(0, 4)),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.notifications_active, color: kGold, size: 22),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(widget.title,
-                              style: TextStyle(color: kText, fontSize: 15, fontWeight: FontWeight.bold)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Expanded(
+                                  child: Text(widget.title,
+                                      style: TextStyle(
+                                          color: kText,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                                if (widget.elapsedText != null)
+                                  Text(widget.elapsedText!,
+                                      style: TextStyle(
+                                          color: kGold,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500)),
+                              ]),
+                              const SizedBox(height: 2),
+                              Text(widget.message,
+                                  style: TextStyle(
+                                      color: kTextSecondary, fontSize: 12.5)),
+                            ],
+                          ),
                         ),
-                        if (widget.elapsedText != null)
-                          Text(widget.elapsedText!,
-                              style: TextStyle(color: kGold, fontSize: 15, fontWeight: FontWeight.w500)),
-                      ]),
-                      const SizedBox(height: 2),
-                      Text(widget.message,
-                          style: TextStyle(color: kTextSecondary, fontSize: 12.5)),
-                    ]),
-                  ),
-                  const SizedBox(width: 4),
-                  Semantics(
-                    button: true,
-                    label: t('cardio_alarm_dismiss'),
-                    excludeSemantics: true,
-                    child: GestureDetector(
-                      onTap: widget.onDismiss,
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(Icons.close, color: kTextMuted, size: 18),
-                      ),
+                        const SizedBox(width: 4),
+                        Semantics(
+                          button: true,
+                          label: t('cardio_alarm_dismiss'),
+                          excludeSemantics: true,
+                          child: GestureDetector(
+                            onTap: widget.onDismiss,
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(Icons.close, color: kTextMuted, size: 18),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ]),
+                ),
               ),
             ),
           ),

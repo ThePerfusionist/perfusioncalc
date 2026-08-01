@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.0+21 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.0+22 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -209,7 +209,11 @@ Reihenfolge: **Konstruktor zuerst** (Desktop, kostenlos), Service Worker als
 Fallback mit 2-s-Timeout (sonst hängt `ready` ewig, wenn keiner registriert ist).
 Umgekehrte Reihenfolge kostet auf Desktop unnötig Wartezeit.
 **In-App-Banner** (`widgets/in_app_alert.dart`, OverlayEntry – bewusst kein
-Dialog, der die Rechner blockieren würde) wird **zusätzlich** zur System-
+Dialog, der die Rechner blockieren würde) schließt per **Tippen, Wischen
+(`Dismissible`, horizontal) oder X**; `dismiss()` ist idempotent, damit der
+30-s-Auto-Ausblender und eine parallele Nutzergeste kollisionsfrei sind. Der
+`Dismissible`-Key liegt im State (nicht vom Widget abgeleitet), sonst wäre er
+bei jedem Rebuild neu wird **zusätzlich** zur System-
 Benachrichtigung gezeigt, plattformübergreifend. Grund: System-Meldungen
 können lautlos unterdrückt werden, ohne dass ein Fehler zurückkommt – genau
 das trat im Test auf (Windows-Einstellung). Auto-Ausblendung nach 30 s.
