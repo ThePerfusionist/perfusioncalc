@@ -30735,7 +30735,7 @@ aQf(a){var s=$.aK().a,r=s===A.u,q=B.b4S(a,s),p=r?"Nur zu Ausbildungszwecken. Kei
 return new B.ayC(q,p,o,n,"Version",r?"Perfusionsbericht":"Perfusion report")},
 aQZ(a,b){var s=null,r=t.n_
 return B.a7m(B.aIc(B.b([B.Bv(B.b([B.kq("PerfusionCalc",B.uc(s,A.r2,s,s,s,s,s,s,s,A.cV,s,s,18,s,A.dq,s,!0,s,s,s,s),s),new B.ju(s,2,s),B.kq(b,A.b0U,s)],r),A.eH),B.Bv(B.b([B.kq(a.d+" "+a.a,A.b2C,s)],r),A.v6)],r),A.v6,A.Hl),A.Px,A.Ti,s)},
-aQY(a,b){var s,r,q=null,p=B.kq(b.b,B.uc(q,A.r3,q,q,q,q,q,q,q,A.cV,q,q,7.5,A.ef,q,q,!0,q,q,q,q),q),o=B.kq("PerfusionCalc \xb7 "+b.e+" 0.4.4",A.Nw,q),n=a.d.d
+aQY(a,b){var s,r,q=null,p=B.kq(b.b,B.uc(q,A.r3,q,q,q,q,q,q,q,A.cV,q,q,7.5,A.ef,q,q,!0,q,q,q,q),q),o=B.kq("PerfusionCalc \xb7 "+b.e+" 0.4.5",A.Nw,q),n=a.d.d
 n===$&&B.a()
 s=a.a
 s.toString
@@ -108584,7 +108584,7 @@ return null},
 $S:0}
 B.axr.prototype={
 $1(a){var s=null,r=$.aC().gN()?A.aZ:A.G,q=B.c3(12),p=$.aK(),o=B.a3(B.h("info_title",p.a),s,s,s,s,B.an(s,s,A.a1,s,s,s,s,s,s,s,s,18,s,s,A.av,s,s,!0,s,s,s,s,s,s,s,s),s,s),n=this.a,m=t.p
-n=B.bH(B.b([n.wz(A.V7,B.h("info_version",p.a),"v0.4.4"),A.dc,n.wz(A.Vb,B.h("info_license",p.a),"GNU General Public License v3.0"),A.dc,n.wz(A.Vf,B.h("info_created",p.a),B.h("info_created_value",p.a)),A.dc,n.wz(A.UO,B.h("info_github",p.a),"github.com/ThePerfusionist/perfusioncalc"),A.dc,n.wz(A.UY,B.h("info_contact",p.a),"perfusioncalc@unbox.at")],m),A.ah,A.P,A.cm)
+n=B.bH(B.b([n.wz(A.V7,B.h("info_version",p.a),"v0.4.5"),A.dc,n.wz(A.Vb,B.h("info_license",p.a),"GNU General Public License v3.0"),A.dc,n.wz(A.Vf,B.h("info_created",p.a),B.h("info_created_value",p.a)),A.dc,n.wz(A.UO,B.h("info_github",p.a),"github.com/ThePerfusionist/perfusioncalc"),A.dc,n.wz(A.UY,B.h("info_contact",p.a),"perfusioncalc@unbox.at")],m),A.ah,A.P,A.cm)
 return B.aGq(B.b([B.GP(B.a3(B.h("close",p.a),s,s,s,s,B.an(s,s,A.a1,s,s,s,s,s,s,s,s,s,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),new B.axq(a),s)],m),r,n,new B.d2(q,A.U),o)},
 $S:118}
 B.axq.prototype={
@@ -108624,7 +108624,7 @@ j=t.wB
 j=B.Q(new B.ac(A.BQ,new B.axi(),j),j.i("aF.E"))
 j=B.bp(j,A.X,A.P,A.Q)
 i=B.wb(d.gN()?A.cl:A.cv,1)
-return B.Tz(!0,B.bH(B.b([new B.aD(A.TS,g,h),new B.aD(A.TQ,e,h),s,q,p,r,o,new B.aD(A.vB,n,h),new B.aD(A.vA,l,h),k,new B.aD(A.vB,f,h),new B.aD(A.vA,j,h),i,new B.aD(A.TK,B.a3("v0.4.4",h,h,h,h,B.an(h,h,d.gN()?A.cF:A.d5,h,h,h,h,h,h,h,h,11,h,h,h,h,h,!0,h,h,h,h,h,h,h,h),h,h),h)],m),A.ah,A.P,A.Q),!0)},
+return B.Tz(!0,B.bH(B.b([new B.aD(A.TS,g,h),new B.aD(A.TQ,e,h),s,q,p,r,o,new B.aD(A.vB,n,h),new B.aD(A.vA,l,h),k,new B.aD(A.vB,f,h),new B.aD(A.vA,j,h),i,new B.aD(A.TK,B.a3("v0.4.5",h,h,h,h,B.an(h,h,d.gN()?A.cF:A.d5,h,h,h,h,h,h,h,h,11,h,h,h,h,h,!0,h,h,h,h,h,h,h,h),h,h),h)],m),A.ah,A.P,A.Q),!0)},
 $S:584}
 B.axf.prototype={
 $1(a){var s=null
