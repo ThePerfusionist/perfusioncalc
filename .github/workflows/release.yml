@@ -147,19 +147,86 @@ jobs:
             --base-href / \
             --pwa-strategy=none
 
-      # Koppelt den Service-Worker-Cache an den Commit (Audit 4.1). Ohne
-      # diesen Schritt bleibt BUILD_ID auf 'DEV' und der Cache-Name aendert
-      # sich nie - Nutzer laufen dann unbegrenzt auf einem alten Build.
-      # Die Verifikation danach ist Absicht: ein fehlgeschlagenes sed waere
-      # sonst unsichtbar und wuerde genau den Fehler wieder einfuehren.
-      - name: Stamp service worker build id
+      # Zwei Ersetzungen im ausgelieferten sw.js:
+      #
+      #   BUILD_ID      koppelt den Cache-Namen an den Commit (Audit 4.1).
+      #                 Ohne ihn aendert sich der Cache-Name nie und Nutzer
+      #                 laufen unbegrenzt auf einem alten klinischen Build.
+      #   BUILD_ASSETS  die vollstaendige Precache-Liste aus build/web.
+      #                 Noetig, WEIL der Cache-Name am Commit haengt: jeder
+      #                 Deploy legt einen leeren Cache an, der alte wird in
+      #                 activate() geloescht. Was nicht im Precache steht und
+      #                 vom bereits geladenen Tab nicht erneut angefragt
+      #                 wird, fehlt danach - genau so ist main.dart.js
+      #                 offline verloren gegangen.
+      #
+      # Beide Ersetzungen werden geprueft und brechen den Job ab, wenn sie
+      # nicht greifen. Ein stilles Fehlschlagen waere unsichtbar und wuerde
+      # den Fehler wieder einfuehren, den dieser Schritt behebt.
+      - name: Stamp service worker build id and precache list
         run: |
           set -euo pipefail
           SW=build/web/sw.js
           test -f "$SW" || { echo "::error::$SW fehlt"; exit 1; }
+
           sed -i "s/const BUILD_ID = 'DEV';/const BUILD_ID = '${GITHUB_SHA}';/" "$SW"
           grep -q "const BUILD_ID = '${GITHUB_SHA}';" "$SW" || {
             echo "::error::BUILD_ID nicht ersetzt - Cache-Invalidierung waere wirkungslos."
+            exit 1
+          }
+
+          python3 - "$SW" <<'PY'
+          import json, os, sys
+
+          sw_path = sys.argv[1]
+          root = 'build/web'
+
+          # Bereits in CORE_SHELL, dort mit ?v=9 - so fragt die App sie auch
+          # an. Ohne diesen Ausschluss laegen sie doppelt im Cache.
+          skip_exact = {
+              'sw.js', 'CNAME', 'index.html', 'manifest.json',
+              'favicon.ico', 'favicon.png', 'apple-touch-icon.png',
+          }
+
+          assets = []
+          total = 0
+          for dirpath, _, names in os.walk(root):
+              for name in names:
+                  full = os.path.join(dirpath, name)
+                  rel = os.path.relpath(full, root).replace(os.sep, '/')
+                  if rel in skip_exact or rel.startswith('icons/'):
+                      continue
+                  if rel.endswith('.map'):
+                      continue
+                  assets.append('./' + rel)
+                  total += os.path.getsize(full)
+          assets.sort()
+
+          # Sicherung gegen einen leeren oder halben Build: ohne ein
+          # Haupt-Bundle waere der Precache wertlos und offline erneut kaputt.
+          entry_points = [a for a in assets
+                          if a.startswith('./main.dart.') or a == './flutter_bootstrap.js']
+          if not entry_points:
+              print('::error::Kein main.dart.*/flutter_bootstrap.js in build/web gefunden')
+              sys.exit(1)
+
+          src = open(sw_path, encoding='utf-8').read()
+          placeholder = 'const BUILD_ASSETS = [];'
+          if placeholder not in src:
+              print('::error::Platzhalter BUILD_ASSETS nicht gefunden - sw.js geaendert?')
+              sys.exit(1)
+
+          body = ',\n'.join('  ' + json.dumps(a) for a in assets)
+          src = src.replace(placeholder, 'const BUILD_ASSETS = [\n' + body + ',\n];', 1)
+          open(sw_path, 'w', encoding='utf-8').write(src)
+
+          print('Precache: %d Dateien, %.1f MB' % (len(assets), total / 1024 / 1024))
+          for e in entry_points:
+              print('  Entry point: ' + e)
+          PY
+
+          grep -q "const BUILD_ASSETS = \[$" "$SW" || {
+            echo "::error::BUILD_ASSETS nicht ersetzt - Precache waere leer."
             exit 1
           }
           echo "Service-Worker-Cache: perfusioncalc-pcalc-${GITHUB_SHA}"

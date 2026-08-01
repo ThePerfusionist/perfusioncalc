@@ -85,13 +85,36 @@ const CACHE_NAME = `perfusioncalc-${VERSION}`;
 const ORIGIN = self.location.origin;
 
 // =============================================================================
-// Install: App-Shell vorab cachen, damit der erste Re-Open der installierten
-// PWA sofort flüssig startet (kein Warten auf Runtime-Caching). Nur stabile,
-// vorhersehbare Kern-Dateien werden vorgeladen; die hash-benannten Flutter-
-// Assets kommen weiterhin per Runtime-Caching dazu.
+// Install: App-Shell vorab cachen.
+//
+// WARUM DIE GENERIERTE LISTE UNTEN NOETIG IST
+// -------------------------------------------
+// Frueher standen hier nur "stabile, vorhersehbare Kern-Dateien" und alles
+// andere kam per Runtime-Caching dazu. Das funktioniert nicht, sobald der
+// Cache-Name an die Commit-SHA gekoppelt ist:
+//
+//   Deploy -> neuer CACHE_NAME -> install() legt einen LEEREN Cache an und
+//   fuellt nur APP_SHELL -> activate() loescht den alten Cache mitsamt
+//   main.dart.js und canvaskit.wasm -> der bereits geladene Tab fragt diese
+//   Dateien nicht erneut an -> sie fehlen im neuen Cache -> offline weiss.
+//
+// Genau das ist passiert: canvaskit kam noch aus dem Cache, main.dart.js
+// schlug mit ERR_FAILED fehl. Runtime-Caching fuellt einen frischen Cache
+// eben nur mit dem, was nach der Uebernahme noch einmal angefragt wird.
+//
+// BUILD_ASSETS wird im CI aus dem tatsaechlichen Inhalt von build/web
+// erzeugt (Schritt "Stamp service worker build id"). Damit ist der Precache
+// vollstaendig und bleibt es auch, wenn Flutter Dateinamen aendert -
+// niemand muss daran denken, eine Liste nachzupflegen.
 // skipWaiting sorgt dafuer, dass der neue SW sofort aktiv wird.
 // =============================================================================
-const APP_SHELL = [
+
+// Wird im CI ersetzt. Der Platzhalter-String darf nicht veraendert werden,
+// ohne das Muster im Workflow mit anzupassen; der Workflow prueft nach der
+// Ersetzung, ob sie gegriffen hat, und bricht sonst ab.
+const BUILD_ASSETS = [];
+
+const CORE_SHELL = [
   './',
   './index.html',
   './flutter_bootstrap.js',
@@ -121,6 +144,11 @@ const APP_SHELL = [
   './assets/assets/finck_va.jpg',
   './assets/assets/finck_vv.jpg',
 ];
+
+// CORE_SHELL zuerst: diese Dateien haben Query-Strings (?v=9), unter denen
+// die App sie auch tatsaechlich anfragt. Set() entfernt Doppel, falls die
+// generierte Liste dieselbe Datei ohne Query enthaelt.
+const APP_SHELL = [...new Set([...CORE_SHELL, ...BUILD_ASSETS])];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

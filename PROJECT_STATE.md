@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.5+27 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.6+28 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -658,3 +658,50 @@ wird — also im Offline-Fall und damit in der Windows-Distribution.
 werden jetzt bei der Installation vorgeladen. Vorher landeten sie nur im
 Cache, wenn sie jemand einmal geöffnet hatte — wer die App offline nahm, ohne
 vorher die Anatomieseite besucht zu haben, bekam dort eine Fehlerseite.
+
+### Hotfix v0.4.6 — Precache wird im CI generiert
+
+**Symptom nach v0.4.5:** Der Worker-Konflikt war weg (kein
+`flutter_service_worker.js` mehr in den Requests), `canvaskit.js` und
+`canvaskit.wasm` kamen offline aus dem Cache — aber `main.dart.js` schlug mit
+`ERR_FAILED` fehl (`sw.js:205`, der Entry-Point-Zweig). Ergebnis: Ladekreis,
+dann weißer Bildschirm.
+
+**Ursache — eine Folge der eigenen Cache-Invalidierung aus Block C:**
+
+```
+Deploy → neuer CACHE_NAME → install() legt einen LEEREN Cache an
+       → füllt nur APP_SHELL
+       → activate() löscht den alten Cache samt main.dart.js
+       → der bereits geladene Tab fragt main.dart.js nicht erneut an
+       → die Datei fehlt im neuen Cache → offline weiß
+```
+
+Runtime-Caching füllt einen frischen Cache eben nur mit dem, was **nach** der
+Übernahme noch einmal angefragt wird. Solange der Cache-Name konstant war,
+fiel das nicht auf. Die Kopplung an die Commit-SHA war richtig — sie hat nur
+eine zweite Voraussetzung sichtbar gemacht: **wenn der Cache pro Deploy neu
+ist, muss der Precache vollständig sein.**
+
+**Behebung:** `sw.js` trennt jetzt `CORE_SHELL` (statisch, mit `?v=9`) von
+`BUILD_ASSETS` (Platzhalter `const BUILD_ASSETS = [];`). Der CI-Schritt
+erzeugt die Liste aus dem tatsächlichen Inhalt von `build/web` und ersetzt den
+Platzhalter — analog zum `BUILD_ID`-Stamping und mit denselben zwei Riegeln:
+
+- Abbruch, wenn kein `main.dart.*` oder `flutter_bootstrap.js` im Build liegt
+  (halber Build → wertloser Precache)
+- Abbruch, wenn die Ersetzung nicht greift
+
+Ausgenommen sind `.map`-Dateien und alles, was schon mit `?v=9` in
+`CORE_SHELL` steht. `APP_SHELL` ist die Vereinigung beider Listen über ein
+`Set`, Doppel fallen weg.
+
+**Nebeneffekt:** Der Precache umfasst jetzt den kompletten Build (~12 MB statt
+~1 MB). Für eine App, die im OP ohne Netz funktionieren muss, ist das die
+richtige Seite des Kompromisses — und es ist genau das, was Flutters eigene
+`offline-first`-Strategie getan hätte, die wir in v0.4.5 abschalten mussten.
+
+**Lehre:** Der Umbau in Block C hat zwei Dinge geändert, die zusammengehören —
+Cache-Invalidierung und Precache-Umfang — aber nur eines davon wurde
+angefasst. Offline war der einzige Testfall, der das aufgedeckt hätte, und der
+stand in Stufe 6.
