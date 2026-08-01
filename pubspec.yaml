@@ -9,10 +9,10 @@ description: >-
 
 publish_to: 'none'
 
-version: 0.3.4+19
+version: 0.4.0+21
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: '>=3.10.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -21,9 +21,9 @@ dependencies:
   # Scheduled local notifications for the cardioplegia re-dose reminder.
   # Needed because an in-app timer cannot fire while the app is backgrounded
   # or the screen is off - the OS has to deliver the alert.
-  flutter_local_notifications: ^18.0.1
+  flutter_local_notifications: ^22.0.0
   # Required by flutter_local_notifications for zonedSchedule().
-  timezone: ^0.9.4
+  timezone: ^0.11.0
   # PDF-Export: erzeugt PDF-Dokumente direkt im Browser, native Dart-Lib.
   pdf: ^3.11.1
   # Native DOM-API fuer File-Download im Web (window.HTMLAnchorElement).

@@ -1,6 +1,13 @@
 # ProGuard / R8 rules for PerfusionCalc release builds
 # =====================================================
 #
+# NOTE (since flutter_local_notifications 19.0.0): the plugin bumped its GSON
+# dependency to 2.12, which ships its own consumer rules. The plugin's readme
+# now states these rules are no longer required. They are kept here anyway
+# because they are harmless, and because a silently broken SCHEDULED
+# notification in a release build is expensive to diagnose - see the history
+# below.
+#
 # WHY THIS FILE EXISTS
 # Release builds run R8, which shrinks and obfuscates the bytecode. Without
 # the rules below, scheduled notifications crashed the app the moment they

@@ -123,8 +123,10 @@ class CardioplegiaNotifications {
     Object? lastFailure;
     for (final icon in _iconCandidates) {
       try {
+        // v20+: initialize() takes named parameters; the settings object is
+        // now passed as `settings:`.
         final ok = await _plugin.initialize(
-          InitializationSettings(
+          settings: InitializationSettings(
             android: AndroidInitializationSettings(icon),
             iOS: darwin,
             macOS: darwin,
@@ -305,15 +307,16 @@ class CardioplegiaNotifications {
             ? '$body (${i * intervalMinutes.round()} min)'
             : body;
         try {
+          // v20+: all parameters are named. v19 removed
+          // uiLocalNotificationDateInterpretation (it only applied to iOS 10
+          // and older, which the plugin no longer supports).
           await _plugin.zonedSchedule(
-            _baseId + i, title, body_, when, details,
+            id: _baseId + i,
+            title: title,
+            body: body_,
+            scheduledDate: when,
+            notificationDetails: details,
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            // Required by flutter_local_notifications 18.x. absoluteTime is
-            // correct here: we schedule a concrete wall-clock moment derived
-            // from the delivery timestamp, not a wall-clock time that should
-            // shift with the timezone.
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
           );
         } on PlatformException catch (e) {
           // Exact alarms need a separate, user-revocable permission on
@@ -322,10 +325,12 @@ class CardioplegiaNotifications {
           // the reminder entirely.
           debugPrint('[CardioplegiaNotifications] exact alarm rejected ($e) - falling back to inexact');
           await _plugin.zonedSchedule(
-            _baseId + i, title, body_, when, details,
+            id: _baseId + i,
+            title: title,
+            body: body_,
+            scheduledDate: when,
+            notificationDetails: details,
             androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
           );
         }
       }
@@ -340,7 +345,7 @@ class CardioplegiaNotifications {
     if (!_initialised || kIsWeb) return;
     try {
       for (var i = 1; i <= maxScheduledOccurrences; i++) {
-        await _plugin.cancel(_baseId + i);
+        await _plugin.cancel(id: _baseId + i);
       }
     } catch (e) {
       debugPrint('[CardioplegiaNotifications] cancel failed: $e');
@@ -365,7 +370,12 @@ class CardioplegiaNotifications {
       return;
     }
     try {
-      await _plugin.show(_baseId, title, body, _details(sound: sound, vibration: vibration));
+      await _plugin.show(
+        id: _baseId,
+        title: title,
+        body: body,
+        notificationDetails: _details(sound: sound, vibration: vibration),
+      );
     } catch (e) {
       debugPrint('[CardioplegiaNotifications] test notification failed: $e');
     }

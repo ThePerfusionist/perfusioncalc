@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.4+19 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.0+21 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -262,6 +262,32 @@ und `android/app/build.gradle.kts` (core library desugaring).
 `zonedSchedule()` braucht in **flutter_local_notifications 18.x** zusätzlich den
 Pflichtparameter `uiLocalNotificationDateInterpretation` (in neueren Majors entfernt)
 – beim Anheben der Plugin-Version prüfen.
+
+**flutter_local_notifications 22.x** (Upgrade von 18.0.1 am 01.08.2026).
+Breaking Changes, die den Code betrafen:
+- **v19**: `uiLocalNotificationDateInterpretation` aus `zonedSchedule()` entfernt;
+  `timezone` min. 0.10.0; GSON 2.12 → ProGuard-Regeln laut Plugin nicht mehr nötig
+  (wir behalten sie defensiv).
+- **v20**: **alle positionalen Parameter → benannte Parameter** bei `initialize()`,
+  `show()`, `cancel()`, `zonedSchedule()`. Konkret:
+  `initialize(settings:)`, `show(id:, title:, body:, notificationDetails:)`,
+  `cancel(id:)`, `zonedSchedule(id:, title:, body:, scheduledDate:,
+  notificationDetails:, androidScheduleMode:)`. Java 17 Pflicht.
+- **v21**: Dart ≥3.10.0 / Flutter ≥3.38.1, Android min. API 24, compileSdk 36,
+  AGP 8.11.1. **`timezone` auf ^0.11.0** – der Changelog sagt hier nur „bumped
+  timezone dependency" ohne Zahl; die 0.10.0 aus dem v19-Eintrag ist überholt.
+  ⚠️ Bei Upgrades die transitive Anforderung nicht aus älteren Changelog-Einträgen
+  ableiten, sondern `flutter pub get` entscheiden lassen – der Fehler nennt die
+  exakte Version.
+- **v22**: **natives Web-Support im Plugin.** Unser eigener Wrapper
+  (`web_notifications_*.dart`) läuft weiter, weil alle `kIsWeb`-Guards *vor* den
+  Plugin-Aufrufen greifen. Mittelfristig könnte der Wrapper durch die
+  Plugin-eigene Web-Implementierung ersetzt werden – dann käme auch `cancel()`
+  auf Web zum Tragen.
+⚠️ Signaturen bei künftigen Upgrades **aus dem Quellcode verifizieren**, nicht
+raten: `raw.githubusercontent.com/MaikuB/flutter_local_notifications/master/
+flutter_local_notifications/lib/src/flutter_local_notifications_plugin.dart`
+(pub.dev ist nicht in der Netzwerk-Whitelist, GitHub schon).
 
 ⚠️ **Absturz-Fallen bei Android-Notifications** (beide bereits ausgeräumt):
 1. **Small Icon muss monochrom sein.** `@mipmap/ic_launcher` (adaptives Icon) als
