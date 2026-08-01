@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.3.3+17 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.3.4+18 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -204,6 +204,11 @@ constructor") – dort ist `ServiceWorkerRegistration.showNotification()` Pflich
 Reihenfolge: **Konstruktor zuerst** (Desktop, kostenlos), Service Worker als
 Fallback mit 2-s-Timeout (sonst hängt `ready` ewig, wenn keiner registriert ist).
 Umgekehrte Reihenfolge kostet auf Desktop unnötig Wartezeit.
+**In-App-Banner** (`widgets/in_app_alert.dart`, OverlayEntry – bewusst kein
+Dialog, der die Rechner blockieren würde) wird **zusätzlich** zur System-
+Benachrichtigung gezeigt, plattformübergreifend. Grund: System-Meldungen
+können lautlos unterdrückt werden, ohne dass ein Fehler zurückkommt – genau
+das trat im Test auf (Windows-Einstellung). Auto-Ausblendung nach 30 s.
 ⚠️ **Firefox unter Windows reicht Benachrichtigungen an das Betriebssystem
 durch** – sind sie dort für Firefox deaktiviert oder ist „Fokusassistent" aktiv,
 erscheint nichts, ohne dass die Web-API einen Fehler meldet.

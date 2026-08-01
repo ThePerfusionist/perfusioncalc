@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/common.dart';
+import '../widgets/in_app_alert.dart';
 import '../models/patient_data.dart';
 import '../models/cardioplegia_alarm_settings.dart';
 import '../models/cardioplegia_settings.dart';
@@ -155,6 +156,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   @override
   void dispose() {
     _ticker?.cancel();
+    InAppAlert.dismiss();
     CardioplegiaAlarmSettings.instance.removeListener(_onSettingsChanged);
     CardioplegiaSettings.instance.removeListener(_onSettingsChanged);
     super.dispose();
@@ -516,6 +518,15 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// Uses the pure expectedFireCount() schedule rather than an equality
   /// check on the elapsed time, so the alert cannot be missed just because
   /// a tick was skipped (e.g. the app was briefly backgrounded).
+  /// Shared by the timer card and the in-app banner so both show the same
+  /// elapsed time in the same format.
+  static String _formatElapsed(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+
   void _checkAlarm() {
     final last = patientData.cardioplegiaLastDoseAt;
     if (last == null) return;
@@ -540,6 +551,13 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   void _playAlert() {
     final st = CardioplegiaAlarmSettings.instance;
     if (st.vibration) HapticFeedback.heavyImpact();
+
+    // In-app banner in addition to the system notification. The system one
+    // can be suppressed entirely by OS settings, "do not disturb" or full
+    // screen mode - without any error reaching the app - so the banner is
+    // what actually guarantees the alert is seen while the app is in front.
+    _showBanner();
+
     // On web there is no scheduled OS notification, so the ticker itself has
     // to raise it at the trigger point (see web_notifications_web.dart).
     if (kIsWeb) {
@@ -552,11 +570,24 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     }
   }
 
+  void _showBanner() {
+    if (!mounted) return;
+    final last = patientData.cardioplegiaLastDoseAt;
+    final elapsed = last == null ? null : DateTime.now().difference(last);
+    InAppAlert.show(
+      context,
+      title: t('cardio_alarm_notif_title'),
+      message: t('cardio_alarm_notif_body'),
+      elapsedText: elapsed == null ? null : _formatElapsed(elapsed),
+    );
+  }
+
   /// Posts an immediate notification so the user can verify that sound and
   /// vibration actually come through on their device.
   Future<void> _testAlert() async {
     final st = CardioplegiaAlarmSettings.instance;
     if (st.vibration) HapticFeedback.heavyImpact();
+    _showBanner();
     await CardioplegiaNotifications.instance.showNow(
       sound: st.sound,
       vibration: st.vibration,
@@ -586,12 +617,6 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
       null => (kTextFaint, t('cardio_timer_never')),
     };
 
-    String fmt(Duration d) {
-      final h = d.inHours;
-      final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-      final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-      return h > 0 ? '$h:$m:$s' : '$m:$s';
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -614,7 +639,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
               Text(windowText, style: TextStyle(color: kTextMuted, fontSize: 11)),
             ])),
             const SizedBox(width: 10),
-            Text(elapsed == null ? '—' : fmt(elapsed),
+            Text(elapsed == null ? '—' : _formatElapsed(elapsed),
                 style: TextStyle(color: statusColor, fontSize: 26, fontWeight: FontWeight.w500)),
           ]),
           const SizedBox(height: 4),

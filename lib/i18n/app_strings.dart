@@ -379,6 +379,7 @@ class Strings {
                                AppLocale.de: 'Im Browser muss der Tab geöffnet bleiben \u2013 wird er geschlossen, entfällt die Erinnerung. Die Android-App meldet sich auch im Hintergrund.'},
     'cardio_alarm_scope_hint': {AppLocale.en: 'Also fires in the background. On devices with strict battery management, exclude the app from battery optimisation.',
                                AppLocale.de: 'Wird auch im Hintergrund ausgelöst. Bei striktem Energiesparen die App von der Akku-Optimierung ausnehmen.'},
+    'cardio_alarm_dismiss':    {AppLocale.en: 'Dismiss alert', AppLocale.de: 'Hinweis ausblenden'},
     'cardio_alarm_retry':      {AppLocale.en: 'Retry', AppLocale.de: 'Erneut versuchen'},
     'cardio_alarm_unavailable': {AppLocale.en: 'Notification service could not be started on this device \u2013 reminders are unavailable.',
                                AppLocale.de: 'Der Benachrichtigungsdienst konnte auf diesem Gerät nicht gestartet werden \u2013 Erinnerungen sind nicht verfügbar.'},

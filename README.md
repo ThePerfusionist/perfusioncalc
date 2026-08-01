@@ -4,7 +4,7 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.3.3-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.3.4-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.4-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
@@ -126,6 +126,11 @@ settings are persisted and restored on the next app start.
 The reminder is registered as a **scheduled OS notification**, so it also
 fires when the app is in the background or the screen is off, and can wake
 the device (high-importance channel, exact alarm).
+
+In addition to the system notification, an **in-app banner** is shown while
+the app is open. System notifications can be suppressed by OS settings, "do
+not disturb" or full screen mode without any error reaching the app, so the
+banner is what guarantees the alert is actually seen.
 
 **Web:** the browser Notification API is used instead. Because a browser
 cannot schedule a notification ahead of time without a push server, the
