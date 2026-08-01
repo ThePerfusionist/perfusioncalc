@@ -109,9 +109,44 @@ class CardioplegiaNotifications {
     // immediate notifications, only scheduling would be affected.
     try {
       tzdata.initializeTimeZones();
-      tz.setLocalLocation(tz.getLocation(await _deviceTimeZoneName()));
+      // UTC on purpose, and it is not a limitation here.
+      //
+      // The previous code read tz.local.name and passed it to
+      // setLocalLocation - but before setLocalLocation runs, tz.local IS
+      // UTC by definition, so it asked for the zone it was about to set and
+      // the catch branch was unreachable. It looked like device-timezone
+      // detection and never was one.
+      //
+      // Nothing is lost: every reminder is scheduled as now + Duration and
+      // handed to TZDateTime.from() as an absolute instant. Across a DST
+      // boundary UTC is in fact the more robust choice - a wall-clock zone
+      // would shift the fire time by an hour. If a real device zone is ever
+      // needed (e.g. for daily reminders at a fixed local time), add the
+      // flutter_timezone package; tz.local.name cannot supply it.
+      tz.setLocalLocation(tz.UTC);
     } catch (e) {
       debugPrint('[CardioplegiaNotifications] timezone setup failed: $e');
+    }
+
+    // NEU-2: flutter_local_notifications_windows/_linux are registered via
+    // generated_plugins.cmake since the v22 migration, but no windows:/
+    // linux: settings are passed below - the plugin then throws
+    // ArgumentError for the running platform. The icon-candidate loop
+    // catches it and the UI blames a broken notification icon, which sends
+    // the diagnosis in exactly the wrong direction.
+    //
+    // Desktop is not a shipping target: the Windows offline bundle is the
+    // WEB app behind Caddy, not a Flutter desktop build. So bail out with
+    // an honest message rather than pretending to initialise.
+    // defaultTargetPlatform, not Platform.isWindows: this file is also
+    // compiled for web, where importing dart:io breaks the build.
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux)) {
+      lastError = 'Scheduled notifications are not supported on this '
+          'platform. Use the in-app alert instead.';
+      _initialised = false;
+      return;
     }
 
     const darwin = DarwinInitializationSettings(
@@ -174,17 +209,6 @@ class CardioplegiaNotifications {
     }
   }
 
-  /// Best-effort device timezone. Falls back to UTC, which still schedules
-  /// correctly relative to "now" because we always schedule from a Duration
-  /// rather than an absolute wall-clock time.
-  Future<String> _deviceTimeZoneName() async {
-    try {
-      return tz.local.name;
-    } catch (_) {
-      return 'UTC';
-    }
-  }
-
   /// Asks for notification permission (Android 13+ / iOS). Returns true if
   /// notifications may be posted.
   Future<bool> requestPermission() async {
@@ -229,7 +253,11 @@ class CardioplegiaNotifications {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       if (android != null) return await android.areNotificationsEnabled() ?? false;
-      return true; // iOS: assume granted unless the request said otherwise
+      // iOS/macOS: no query API, assume granted unless the request said
+      // otherwise. Windows/Linux never get here - initialise() returns
+      // early for them, so _initialised is false and this method already
+      // returned above.
+      return true;
     } catch (_) {
       return false;
     }

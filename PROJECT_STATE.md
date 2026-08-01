@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.0+22 · 12 Tabs · **144 Unit-Tests gesamt** (alle 4 Testdateien) · i18n 286/286 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.2+24 · 12 Tabs · **186 Unit-Tests** (7 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -363,10 +363,157 @@ Bei Bretschneider wird stattdessen der protokollspezifische Druck gezeigt.
 ## 6. Offene Punkte / Ideen
 
 - **Play-Store-Release**: Internal-Test-Track (20 Tester / 14 Tage), Paketname
-  `com.perfusioncalc`, `versionCode` muss strikt steigen.
+  `com.perfusioncalc`, `versionCode` muss strikt steigen. Datenschutz-URL für
+  die Console: `https://perfusioncalc.de/privacy.html` (nach dem nächsten
+  Web-Deploy erreichbar). **Anschrift des Verantwortlichen fehlt noch** – in
+  `privacy_policy.md` und `web/privacy.html` als Platzhalter markiert.
 - St.-Thomas- und Eppendorf-Protokoll (in den Studienunterlagen ausgearbeitet).
 - Perfusionsprotokoll mit Zeitstempeln (Bypass-/Klemmzeit, Temperaturverlauf).
 - Heparin/Protamin + ACT-Rechner.
 - Natives Share-Sheet (`share_plus`) – PDF kann aktuell nur gespeichert werden.
 - Versionsnummer wird auf Zuruf angehoben (3 Stellen: `pubspec.yaml`,
   `kAppVersion` in `main.dart`, README-Badge).
+
+---
+
+## 7. Audit-Abarbeitung (v0.3.3 / v0.4.0)
+
+Zwei Audits, zu fünf Blöcken zusammengefasst. Blöcke A–C ändern keinen
+Dart-Code und sind daher ohne Toolchain verantwortbar; D und E brauchen
+`flutter analyze` + Testlauf.
+
+| Block | Inhalt | Status |
+|---|---|---|
+| **A** | Release-Blocker: `USE_EXACT_ALARM`, Datenschutzerklärung, `allowBackup`, `minSdk` | **erledigt (v0.4.1)** |
+| **B** | Supply Chain / CI: Action-SHA-Pins, `flutter-version`, Gradle-SHA, Caddy-Pin, Expression Injection, `flutter test \|\| echo` | **erledigt (v0.4.1)** |
+| **C** | Web / Service Worker: `notificationclick`-Handler, Cache an Build-SHA, CSP | **erledigt (v0.4.1)** |
+| **D** | Klinische Rechenpfade: `expectedHb`, Transfusionsvolumen (Davies 2007), `fTPercent`, Nadler, PDF-Guards | **erledigt (v0.4.2)**, außer Nadler |
+| **E** | Dart-Fehler, tote Pfade, Hygiene, fehlende Tests | **erledigt (v0.4.2)** |
+
+### Entscheidungen aus Block A
+
+- **`USE_EXACT_ALARM` entfernt.** Play-Restricted-Permission, nur für Apps mit
+  Alarm-/Timer-/Kalender-Kernfunktion. `SCHEDULE_EXACT_ALARM` bleibt und deckt
+  dieselbe Funktion ab; `requestExactAlarmsPermission()` und der
+  `PlatformException`-Fallback auf `inexactAllowWhileIdle` existierten bereits.
+  → Kein Dart-Code geändert.
+- **`allowBackup="false"` + `data_extraction_rules.xml`.** Die
+  Geräte-zu-Gerät-Übertragung wird von `allowBackup` *nicht* mitabgeschaltet,
+  deshalb die zusätzliche Regeldatei. Patientendaten waren nie betroffen
+  (nur im RAM), es geht um die SharedPreferences.
+- **`minSdk = maxOf(24, flutter.minSdkVersion)`.** Plugin v21 verlangt API 24;
+  Flutters Default liegt aktuell ebenfalls bei 24, ist aber beweglich.
+- **Datenschutzerklärung** doppelt gepflegt: `privacy_policy.md` (Repo) und
+  `web/privacy.html` (erreichbare URL für Play). **Beide Dateien und die
+  Data-Safety-Angaben in der Play Console müssen zusammen geändert werden.**
+
+### Entscheidungen aus Block B
+
+- **Alle Actions auf vollständige Commit-SHAs gepinnt**, Tag als Kommentar
+  dahinter. Bewusst innerhalb der bisherigen Major-Version geblieben
+  (`checkout` v6.1.0, nicht v7) — Pinnen und Major-Sprung gehören nicht in
+  denselben Commit. `.github/dependabot.yml` hält die SHAs nach.
+- **`FLUTTER_VERSION: '3.44.7'`** als workflow-weite Variable in allen drei
+  Workflows. **Muss mit der lokalen Version übereinstimmen** (`flutter --version`)
+  — sonst testet man gegen eine andere Toolchain, als die CI baut. Beim
+  Anheben: alle drei Workflows plus die Entwicklungsmaschinen gemeinsam.
+- **Caddy 2.11.4 mit SHA-512 gepinnt** statt „neuestes Release aus dem API-Feed".
+  Hash gegen `caddy_2.11.4_checksums.txt` verifiziert; Version, SHA-256 und
+  SHA-512 sind in `OFFLINE_WINDOWS.md` dokumentiert, damit Klinik-IT das
+  ausgelieferte Bundle selbst prüfen kann.
+- **`distributionSha256Sum` im Gradle-Wrapper.** Quelle:
+  gradle.org/release-checksums, „Complete (-all) ZIP" für 8.14. Beim Anheben
+  der Gradle-Version muss der Hash mitwandern, sonst schlägt jeder
+  Android-Build fehl.
+- **Kein stilles Debug-Signing mehr im Release-Workflow.** Fehlt
+  `KEYSTORE_BASE64`, bricht der Job ab, bevor gebaut wird; zusätzlich wirft
+  Gradle, wenn `PERFUSIONCALC_REQUIRE_RELEASE_SIGNING=true` gesetzt ist und
+  `key.properties` fehlt. Lokale Builds ohne diese Variable verhalten sich
+  unverändert.
+- **`commit_message` im gh-pages-Deploy ist jetzt nur noch die SHA.**
+  `github.event.head_commit.message` war nicht vertrauenswürdiger Input in
+  einer Action-Eingabe.
+- **`permissions` in `deploy.yml` auf `contents: write` reduziert** —
+  `pages:`/`id-token: write` gehören zum `actions/deploy-pages`-Weg, der hier
+  nicht benutzt wird.
+- **`web: any` → `^1.1.0`** (aufgelöst ist 1.1.1, Resolution ändert sich nicht).
+
+### Entscheidungen aus Block C
+
+- **`notificationclick`-Handler in `web/sw.js`.** Der Service-Worker-
+  Zustellweg in `web_notifications_web.dart` (Chrome/Android) hatte keinen
+  Klick-Empfaenger — die Erinnerung erschien, ein Tipp darauf tat nichts.
+  Handler fokussiert ein vorhandenes Fenster (`includeUncontrolled: true`,
+  sonst wird ein vor der Aktivierung geoeffneter Tab nicht gefunden) oder
+  oeffnet eines. **Kopplung dokumentiert**: Kommentar in beiden Dateien, damit
+  nicht eine Seite ohne die andere entfernt wird.
+- **Cache-Name an die Commit-SHA gekoppelt.** `const BUILD_ID = 'DEV';` wird
+  im CI per `sed` durch `$GITHUB_SHA` ersetzt — in allen drei Workflows, jeweils
+  mit anschliessender `grep`-Verifikation, die den Job abbricht, wenn die
+  Ersetzung nicht greift. Ein stilles Fehlschlagen wuerde genau den alten
+  Fehler wieder einfuehren. **Der Platzhalter-String darf nicht geaendert
+  werden, ohne das sed-Muster mit anzupassen.**
+- **`flutter_bootstrap.js` und `main.dart.js` auf Network-First.** Beide tragen
+  keinen Hash im Dateinamen und lagen im Cache-First-Zweig. Der SHA-Cache-Name
+  loest das bereits; Network-First ist der zweite Riegel, falls ein Browser
+  die alte `sw.js` noch nicht ersetzt hat. Offline greift weiter der Cache.
+- **`passThrough()` (7 Aufrufe) und `NEVER_CACHE` (leer) entfernt.**
+- **CSP entschlackt**: `gstatic.com` raus (beide Builds nutzen
+  `--no-web-resources-cdn`). `X-Content-Type-Options` und `Permissions-Policy`
+  als `<meta>` entfernt — sie werden von keinem Browser ausgewertet und
+  suggerierten Schutz, den es nicht gab. Eine Tabelle im Kommentar haelt fest,
+  welche Header als `<meta>` ueberhaupt wirken.
+- **Eine Dart-Zeile in diesem Block**: `icon:` in `NotificationOptions`
+  (sonst generisches Browser-Symbol statt App-Icon).
+
+### Entscheidungen aus Block D
+
+- **1.4 Transfusionsvolumen: kein Fehler.** Davies 2007 lautet
+  `Gewicht x ΔHb x 3 / Hkt(EK)`, wobei der Hkt als **Bruch** im Nenner steht
+  und der Faktor 3 ihn *nicht* bereits enthält. Davies' eigenes Beispiel
+  (20 kg x 2 g/dl x 3 / 0,6 = 200 ml = 10 ml/kg) reproduziert die Formel
+  exakt. Der Auditbefund „Doppelkorrektur" war falsch begründet.
+  Der Divisor ist jetzt die dokumentierte Konstante
+  `PatientData.kRbcUnitHematocrit = 0.55`. **Gegen das Etikett des
+  eingesetzten EK prüfen** — deutsche EKs in Additivlösung sind mit
+  Hkt 0,50–0,70 spezifiziert, bei Neugeborenen ist die Differenz relevant.
+- **`expectedHb` → `expectedHbMale`/`expectedHbFemale`**, exakte
+  Verdünnungsformel gegen das eigene Blutvolumenmodell. Der alte Wert war
+  systematisch +0,70 g/dl zu optimistisch. Der BSA-Tab zeigt jetzt zwei
+  Karten statt einer, analog zu Hct.
+- **`cavDO2` beidseitig abgesichert.** Damit fallen VO₂, VO₂i und O₂-ER auf
+  „nicht berechnet" zurück, sobald der venöse Satz unvollständig ist —
+  Bildschirm *und* PDF. Das war der Weg, auf dem „O₂-ER 100 %" ins
+  ausgelieferte Dokument kam.
+- **`PdfRow.numeric` bekommt `zeroIsValid`** statt die 0-Regel global zu
+  streichen: Ein echter Nullwert wird nur dort gedruckt, wo 0 eine Messung
+  ist (BE, ZVD, LAP). Der „nur gefüllte Tabs"-Filter des Gesamtberichts
+  bleibt dadurch funktionsfähig.
+- **1.5 Nadler bleibt offen — bewusst.** Ein Wechsel würde jedes angezeigte
+  Blutvolumen *und* beide Erwartungswerte verschieben und die Körpergröße zur
+  Pflichteingabe für sie machen. Das ist eine klinische Produktentscheidung.
+  Bis dahin sind die beiden Blutvolumen-Karten im UI als Näherung
+  gekennzeichnet (`bsa_bv_approx`), und die Alternativformel steht
+  ausformuliert im Kommentar von `bloodVolumeMale`.
+
+### Entscheidungen aus Block E
+
+- **`Range.note` → `Range.noteKey`**, alle 40 Hinweise über i18n; englische
+  Fassungen ergänzt. Vorher hing an einem übersetzten Tooltip ein deutsches
+  Literal.
+- **`_kTabs` ist jetzt `MainScreen.kTabs`**, Record-Typ, `@visibleForTesting`;
+  `TabController` leitet seine Länge daraus ab. Sechs Casts weniger.
+- **NEU-6 ProGuard: bewusst NICHT geändert.** Die beiden `-keep class`-Zeilen
+  kosten APK-Größe, aber ihr Wegfall zeigt sich erst im Release-Build und der
+  Fehlerfall ist ein Absturz beim Feuern einer geplanten Benachrichtigung.
+  Der Kommentar in `proguard-rules.pro` nennt jetzt den konkreten Test, nach
+  dem sie entfernt werden können.
+- **`analysis_options.yaml` verschärft** (`strict-casts`, `avoid_dynamic_calls`,
+  `unawaited_futures`, `use_build_context_synchronously`,
+  `always_declare_return_types`, `prefer_final_locals`). `strict-raw-types`
+  bewusst nicht — feuert auf Fremdbibliotheks-Signaturen.
+  **Das ist die Änderung, die am ehesten neue Analyzer-Ausgaben erzeugt.**
+- **Schließen-Button nur noch auf Android** (`SystemNavigator.pop()` ist im
+  Web wirkungslos und auf iOS ein Ablehnungsgrund).
+- **`formatElapsed` nach `lib/utils/duration_format.dart` extrahiert**, damit
+  die Zeitanzeige von Timer-Karte und Banner testbar identisch bleibt.

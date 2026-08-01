@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ (API 31) replacement for android:fullBackupContent.
+
+  PerfusionCalc opts out of BOTH extraction paths:
+
+    * cloud-backup   - Google Auto Backup. Also covered by
+                       android:allowBackup="false", declared here for clarity
+                       and because the Play Data safety form asks about it.
+    * device-transfer - device-to-device migration. This is NOT disabled by
+                       allowBackup="false", so the explicit exclusion matters.
+
+  What would otherwise leave the device: SharedPreferences only (language,
+  theme, cardioplegia alarm settings, del Nido ratio). Patient values are
+  never persisted - PatientData lives in memory for the lifetime of the
+  session. Still, for a medical app the correct default is to export nothing.
+
+  See privacy_policy.md / web/privacy.html - both must stay consistent with
+  the Play Console Data safety declaration.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

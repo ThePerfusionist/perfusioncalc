@@ -1,0 +1,37 @@
+version: 2
+
+# Die Workflows sind auf vollstaendige Commit-SHAs gepinnt (siehe Audit 2.1:
+# ein verschiebbarer Tag wie @v2 laeuft im selben Job wie KEYSTORE_BASE64).
+# Gepinnte SHAs veralten aber - Dependabot haelt sie aktuell und schreibt den
+# Versionskommentar hinter dem SHA mit fort. Ohne diese Datei ist der Pin
+# Sicherheitsgewinn plus Wartungsschuld; mit ihr nur der Sicherheitsgewinn.
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+    # Klinische App: Major-Spruenge bei den Kernpaketen werden bewusst und
+    # einzeln gemacht (die 18 -> 22 Migration von flutter_local_notifications
+    # war ein eigener Release), nicht automatisiert.
+    ignore:
+      - dependency-name: "flutter_local_notifications"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pdf"
+        update-types: ["version-update:semver-major"]

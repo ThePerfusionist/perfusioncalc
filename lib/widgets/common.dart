@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/ranges.dart';
@@ -41,6 +42,16 @@ Color get kTableHeaderBg => ThemeNotifier.instance.isDark ? const Color(0xFF2A2A
 Color get kRowStripeA    => ThemeNotifier.instance.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAFA);
 Color get kRowStripeB    => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
 
+/// Formats a number for a text field: at most two decimals, trailing zeros
+/// stripped ("70", not "70.00"). Existed three times in nearly identical
+/// form (here, bsa_screen, o2_delivery_screen) - one behaviour, one place.
+/// null yields an empty string so it can back an empty field directly.
+String formatFieldNumber(double? v) {
+  if (v == null) return '';
+  final s = v.toStringAsFixed(2);
+  return s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+}
+
 /// Tooltip text shown next to an out-of-range value.
 ///
 /// Shared by [InputCard] and by custom inputs that do their own range
@@ -50,7 +61,8 @@ Color get kRowStripeB    => ThemeNotifier.instance.isDark ? const Color(0xFF1A1A
 /// with the app set to English - it now goes through t().
 String warnTooltipFor(Range r) {
   final base = '${t('plausibility_warning')}\n${t('plausibility_plausible')}: ${r.display}';
-  return r.note != null ? '$base\n${r.note}' : base;
+  final key = r.noteKey;
+  return key == null ? base : '$base\n${t(key)}';
 }
 
 class InputCard extends StatefulWidget {
@@ -98,14 +110,14 @@ class _InputCardState extends State<InputCard> {
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.value != null ? _fmt(widget.value!) : '');
+    _ctrl = TextEditingController(text: formatFieldNumber(widget.value));
   }
 
   @override
   void didUpdateWidget(InputCard old) {
     super.didUpdateWidget(old);
     if (!_editing) {
-      final newText = widget.value != null ? _fmt(widget.value!) : '';
+      final newText = formatFieldNumber(widget.value);
       if (_ctrl.text != newText) {
         _ctrl.text = newText;
         _ctrl.selection = TextSelection.collapsed(offset: newText.length);
@@ -115,14 +127,6 @@ class _InputCardState extends State<InputCard> {
 
   @override
   void dispose() { _ctrl.dispose(); super.dispose(); }
-
-  String _fmt(double v) {
-    String s = v.toStringAsFixed(2);
-    if (s.contains('.')) {
-      s = s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
-    }
-    return s;
-  }
 
   /// Safely parse a numeric string input. Returns null for invalid/extreme values.
   /// Rejects NaN, Infinity, and values outside a sensible clinical range (±1e6).
@@ -137,14 +141,24 @@ class _InputCardState extends State<InputCard> {
     return v;
   }
 
+  /// Keeps stepping inside the plausible range where one is defined.
+  /// Decrementing an empty weight field used to produce -0.1 kg.
+  double _clampToRange(double v) {
+    final r = widget.range;
+    if (r == null) return v;
+    if (v < r.min) return r.min;
+    if (v > r.max) return r.max;
+    return v;
+  }
+
   void _increment() {
     final v = double.parse(((widget.value ?? 0) + widget.step).toStringAsFixed(4));
-    widget.onChanged(v);
+    widget.onChanged(_clampToRange(v));
   }
 
   void _decrement() {
     final v = double.parse(((widget.value ?? 0) - widget.step).toStringAsFixed(4));
-    widget.onChanged(v);
+    widget.onChanged(_clampToRange(v));
   }
 
   @override
@@ -186,11 +200,11 @@ class _InputCardState extends State<InputCard> {
                 if (outOfRange) ...[
                   const SizedBox(width: 6),
                   Tooltip(
-                    message: _warnTooltipFor(widget.range!),
+                    message: warnTooltipFor(widget.range!),
                     triggerMode: TooltipTriggerMode.tap,
                     showDuration: const Duration(seconds: 4),
                     child: Semantics(
-                      label: '${t('a11y_warning')}: ${_warnTooltipFor(widget.range!)}',
+                      label: '${t('a11y_warning')}: ${warnTooltipFor(widget.range!)}',
                       excludeSemantics: true,
                       child: const Icon(Icons.warning_amber_rounded,
                           color: warnColor, size: 16),
@@ -220,8 +234,15 @@ class _InputCardState extends State<InputCard> {
                 // Input validation: max 10 chars, only digits/decimals/minus
                 maxLength: 10,
                 inputFormatters: [
-                  // Allow only digits, single decimal separator (. or ,), optional leading minus
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
+                  // Validates the WHOLE field, not single characters. The
+                  // previous per-character filter accepted "1.2.3" and
+                  // "--5"; _safeParse then returned null, the value
+                  // vanished silently, and the typed text stayed on screen -
+                  // the field looked filled while the calculation had
+                  // nothing. Partial input ("", "-", "1.") must stay
+                  // allowed or the field could not be typed into.
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'^-?[0-9]*[.,]?[0-9]*$')),
                 ],
                 decoration: InputDecoration(
                   counterText: '', // hide the "x/10" counter
@@ -241,10 +262,6 @@ class _InputCardState extends State<InputCard> {
       ),
     );
   }
-
-  /// Builds the tooltip text for the warning icon.
-  /// Format: "Unusual value - plausible: 5–20 g/dl\nSevere anemia to polycythemia"
-  String _warnTooltipFor(Range r) => warnTooltipFor(r);
 
   /// Small inline chip row that replaces the static unit label when
   /// [InputCard.unitOptions] is supplied - lets the user switch the entry
@@ -528,6 +545,15 @@ class BrowserSafeImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Everything below this line only makes sense on web. On Android/iOS
+    // 'assets/<path>' is a relative URL with no scheme, and the release
+    // build has no INTERNET permission at all - so Image.network was
+    // guaranteed to fail and fall through errorBuilder to Image.asset.
+    // Every anatomy image was loaded twice, with an exception logged in
+    // between.
+    if (!kIsWeb) {
+      return Image.asset(assetPath, fit: fit, width: width, height: height);
+    }
     // Flutter packages assets in the web build under assets/assets/<file>.
     // A relative path respects the page's <base href>.
     final url = 'assets/$assetPath';

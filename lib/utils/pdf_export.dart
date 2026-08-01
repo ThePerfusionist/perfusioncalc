@@ -58,17 +58,29 @@ class PdfRow {
   });
 
   /// Convenience: directly from a numeric calculation.
-  /// If value is 0 or NaN, "—" is shown (= "not yet calculated").
+  ///
+  /// null and NaN always print "—". A value of exactly 0 does too, because
+  /// every result getter in PatientData returns 0 to mean "inputs
+  /// incomplete" - that is what makes the combined report's "only filled
+  /// tabs" filter work.
+  ///
+  /// [zeroIsValid] switches that off for the handful of fields where 0 is a
+  /// real, entered measurement rather than a missing one: base excess, CVP,
+  /// LAP. Printing "—" for a CVP of 0 mmHg claims the value was never
+  /// entered, which is a different statement from "it was 0".
   factory PdfRow.numeric({
     required String label,
     required double? value,
     String unit = '',
     int decimals = 2,
     String? note,
+    bool zeroIsValid = false,
   }) {
-    final str = (value == null || value.isNaN || value == 0)
-        ? '—'
-        : value.toStringAsFixed(decimals);
+    final missing = value == null ||
+        value.isNaN ||
+        value.isInfinite ||
+        (value == 0 && !zeroIsValid);
+    final str = missing ? '—' : value.toStringAsFixed(decimals);
     return PdfRow(label: label, value: str, unit: unit, note: note);
   }
 }
@@ -106,62 +118,20 @@ Future<void> exportTabAsPdf({
   required String filename,
   required List<PdfSection> sections,
 }) async {
-  final locale = LocaleNotifier.instance.current;
   final theme = await _loadTheme();
   final pdf = pw.Document(theme: theme);
 
-  // Current date/time for the header
   final now = DateTime.now();
-  final dateStr = _formatDateTime(now, locale);
-
-  // Static texts (localized)
-  final headerTitle = 'PerfusionCalc';
-  final disclaimerText = locale == AppLocale.de
-      ? 'Nur zu Ausbildungszwecken. Keine klinische Verwendung. Keine Garantie auf Richtigkeit der Ergebnisse.'
-      : 'For educational use only. Not for clinical use. No guarantee of result accuracy.';
-  final pageLabel = locale == AppLocale.de ? 'Seite' : 'Page';
-  final exportedLabel = locale == AppLocale.de ? 'Exportiert am' : 'Exported on';
-  final versionLabel = locale == AppLocale.de ? 'Version' : 'Version';
+  final labels = _PdfLabels.forCurrentLocale(now);
 
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 60),
 
-      // ── Header (on every page) ──────────────────────────────────────────
-      header: (ctx) => pw.Container(
-        padding: const pw.EdgeInsets.only(bottom: 8),
-        decoration: const pw.BoxDecoration(
-          border: pw.Border(
-            bottom: pw.BorderSide(color: PdfColors.amber700, width: 1.5),
-          ),
-        ),
-        child: pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          children: [
-            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Text(headerTitle, style: pw.TextStyle(
-                color: PdfColors.amber800,
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-              )),
-              pw.SizedBox(height: 2),
-              pw.Text(tabTitle, style: const pw.TextStyle(
-                color: PdfColors.grey800,
-                fontSize: 13,
-              )),
-            ]),
-            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-              pw.Text('$exportedLabel $dateStr',
-                  style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
-            ]),
-          ],
-        ),
-      ),
-
-      // ── Footer (on every page) ──────────────────────────────────────────
-      footer: (ctx) => _buildFooter(ctx, disclaimerText, pageLabel, versionLabel),
+      // ── Header/Footer (on every page), shared with the combined report ──
+      header: (ctx) => _buildHeader(subtitle: tabTitle, labels: labels),
+      footer: (ctx) => _buildFooter(ctx, labels),
 
       // ── Body: sections ───────────────────────────────────────────────────
       build: (ctx) => [
@@ -209,61 +179,20 @@ class PdfTabReport {
 Future<void> exportCombinedReportAsPdf({
   required List<PdfTabReport> tabs,
 }) async {
-  final locale = LocaleNotifier.instance.current;
   final theme = await _loadTheme();
   final pdf = pw.Document(theme: theme);
 
   final now = DateTime.now();
-  final dateStr = _formatDateTime(now, locale);
-
-  final headerTitle = 'PerfusionCalc';
-  final reportTitle = locale == AppLocale.de ? 'Perfusionsbericht' : 'Perfusion report';
-  final disclaimerText = locale == AppLocale.de
-      ? 'Nur zu Ausbildungszwecken. Keine klinische Verwendung. Keine Garantie auf Richtigkeit der Ergebnisse.'
-      : 'For educational use only. Not for clinical use. No guarantee of result accuracy.';
-  final pageLabel = locale == AppLocale.de ? 'Seite' : 'Page';
-  final exportedLabel = locale == AppLocale.de ? 'Exportiert am' : 'Exported on';
-  final versionLabel = locale == AppLocale.de ? 'Version' : 'Version';
+  final labels = _PdfLabels.forCurrentLocale(now);
 
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 60),
 
-      // ── Header (on every page) ──────────────────────────────────────────
-      header: (ctx) => pw.Container(
-        padding: const pw.EdgeInsets.only(bottom: 8),
-        decoration: const pw.BoxDecoration(
-          border: pw.Border(
-            bottom: pw.BorderSide(color: PdfColors.amber700, width: 1.5),
-          ),
-        ),
-        child: pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          children: [
-            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Text(headerTitle, style: pw.TextStyle(
-                color: PdfColors.amber800,
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-              )),
-              pw.SizedBox(height: 2),
-              pw.Text(reportTitle, style: const pw.TextStyle(
-                color: PdfColors.grey800,
-                fontSize: 13,
-              )),
-            ]),
-            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-              pw.Text('$exportedLabel $dateStr',
-                  style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
-            ]),
-          ],
-        ),
-      ),
-
-      // ── Footer (on every page) - identical to the single-tab export ─────
-      footer: (ctx) => _buildFooter(ctx, disclaimerText, pageLabel, versionLabel),
+      // ── Header/Footer (on every page), shared with the single-tab export ─
+      header: (ctx) => _buildHeader(subtitle: labels.reportTitle, labels: labels),
+      footer: (ctx) => _buildFooter(ctx, labels),
 
       // ── Body: one "chapter" per tab, each with its own sections ─────────
       build: (ctx) => [
@@ -309,9 +238,81 @@ pw.Widget _buildTabChapter(PdfTabReport tab) {
 // Helpers
 // ════════════════════════════════════════════════════════════════════════════
 
+/// The handful of chrome strings both exports need, resolved once per
+/// document. These are not in app_strings.dart because they only ever
+/// appear inside a generated PDF, never in the UI.
+class _PdfLabels {
+  final String dateStr;
+  final String disclaimer;
+  final String page;
+  final String exported;
+  final String version;
+  final String reportTitle;
+
+  const _PdfLabels({
+    required this.dateStr,
+    required this.disclaimer,
+    required this.page,
+    required this.exported,
+    required this.version,
+    required this.reportTitle,
+  });
+
+  factory _PdfLabels.forCurrentLocale(DateTime now) {
+    final locale = LocaleNotifier.instance.current;
+    final de = locale == AppLocale.de;
+    return _PdfLabels(
+      dateStr: _formatDateTime(now, locale),
+      disclaimer: de
+          ? 'Nur zu Ausbildungszwecken. Keine klinische Verwendung. Keine Garantie auf Richtigkeit der Ergebnisse.'
+          : 'For educational use only. Not for clinical use. No guarantee of result accuracy.',
+      page: de ? 'Seite' : 'Page',
+      exported: de ? 'Exportiert am' : 'Exported on',
+      version: 'Version',
+      reportTitle: de ? 'Perfusionsbericht' : 'Perfusion report',
+    );
+  }
+}
+
+/// Header band: app name, a subtitle (tab title or report title) and the
+/// export timestamp. Used identically by both export types - this block and
+/// the label construction above it were ~60 duplicated lines.
+pw.Widget _buildHeader({required String subtitle, required _PdfLabels labels}) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.only(bottom: 8),
+    decoration: const pw.BoxDecoration(
+      border: pw.Border(
+        bottom: pw.BorderSide(color: PdfColors.amber700, width: 1.5),
+      ),
+    ),
+    child: pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: pw.CrossAxisAlignment.end,
+      children: [
+        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+          pw.Text('PerfusionCalc', style: pw.TextStyle(
+            color: PdfColors.amber800,
+            fontSize: 18,
+            fontWeight: pw.FontWeight.bold,
+          )),
+          pw.SizedBox(height: 2),
+          pw.Text(subtitle, style: const pw.TextStyle(
+            color: PdfColors.grey800,
+            fontSize: 13,
+          )),
+        ]),
+        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+          pw.Text('${labels.exported} ${labels.dateStr}',
+              style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
+        ]),
+      ],
+    ),
+  );
+}
+
 /// Footer line: disclaimer + version/page number. Used identically by both
 /// export types (single-tab and combined report).
-pw.Widget _buildFooter(pw.Context ctx, String disclaimerText, String pageLabel, String versionLabel) {
+pw.Widget _buildFooter(pw.Context ctx, _PdfLabels labels) {
   return pw.Container(
     padding: const pw.EdgeInsets.only(top: 8),
     decoration: const pw.BoxDecoration(
@@ -320,16 +321,16 @@ pw.Widget _buildFooter(pw.Context ctx, String disclaimerText, String pageLabel, 
       ),
     ),
     child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-      pw.Text(disclaimerText, style: pw.TextStyle(
+      pw.Text(labels.disclaimer, style: pw.TextStyle(
         color: PdfColors.grey600,
         fontSize: 7.5,
         fontStyle: pw.FontStyle.italic,
       )),
       pw.SizedBox(height: 2),
       pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-        pw.Text('PerfusionCalc · $versionLabel $kAppVersion',
+        pw.Text('PerfusionCalc · ${labels.version} $kAppVersion',
             style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 8)),
-        pw.Text('$pageLabel ${ctx.pageNumber} / ${ctx.pagesCount}',
+        pw.Text('${labels.page} ${ctx.pageNumber} / ${ctx.pagesCount}',
             style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 8)),
       ]),
     ]),
@@ -364,23 +365,36 @@ pw.Widget _buildSection(PdfSection section) {
 pw.Widget _buildRow(PdfRow row) {
   return pw.Padding(
     padding: const pw.EdgeInsets.symmetric(vertical: 3),
-    child: pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-      // Label - 50% width
-      pw.Expanded(flex: 5, child: pw.Text(row.label,
-          style: const pw.TextStyle(color: PdfColors.grey800, fontSize: 10))),
-      // Value - 25% width, bold
-      pw.Expanded(flex: 3, child: pw.Text(row.value,
-          textAlign: pw.TextAlign.right,
-          style: pw.TextStyle(
-            color: PdfColors.black,
-            fontSize: 11,
-            fontWeight: pw.FontWeight.bold,
-          ))),
-      // Unit - 15% width
-      pw.SizedBox(width: 6),
-      pw.Expanded(flex: 2, child: pw.Text(row.unit,
-          style: const pw.TextStyle(color: PdfColors.grey700, fontSize: 10))),
-      // Note - if any, on a second line below the row (wider context)
+    child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        // Label - 50% width
+        pw.Expanded(flex: 5, child: pw.Text(row.label,
+            style: const pw.TextStyle(color: PdfColors.grey800, fontSize: 10))),
+        // Value - 25% width, bold
+        pw.Expanded(flex: 3, child: pw.Text(row.value,
+            textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(
+              color: PdfColors.black,
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+            ))),
+        // Unit - 15% width
+        pw.SizedBox(width: 6),
+        pw.Expanded(flex: 2, child: pw.Text(row.unit,
+            style: const pw.TextStyle(color: PdfColors.grey700, fontSize: 10))),
+      ]),
+      // Note on a second line. PdfRow.note was filled in several places and
+      // then silently dropped - the comment here described code that did
+      // not exist.
+      if (row.note != null && row.note!.isNotEmpty)
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 1),
+          child: pw.Text(row.note!, style: pw.TextStyle(
+            color: PdfColors.grey600,
+            fontSize: 8,
+            fontStyle: pw.FontStyle.italic,
+          )),
+        ),
     ]),
   );
 }

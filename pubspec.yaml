@@ -9,7 +9,7 @@ description: >-
 
 publish_to: 'none'
 
-version: 0.4.0+22
+version: 0.4.2+24
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
@@ -27,7 +27,7 @@ dependencies:
   # PDF-Export: erzeugt PDF-Dokumente direkt im Browser, native Dart-Lib.
   pdf: ^3.11.1
   # Native DOM-API fuer File-Download im Web (window.HTMLAnchorElement).
-  web: any
+  web: ^1.1.0   # war "any": ein frisches pub upgrade duerfte sonst ueber einen Breaking Change springen
   # Cross-Platform Save-Dialog: oeffnet auf Android das Storage Access
   # Framework, auf iOS die Files-App, und schreibt das PDF an den vom
   # Nutzer gewaehlten Speicherort. Selbe API, plattform-uebergreifend.

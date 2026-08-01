@@ -10,8 +10,11 @@
 #   Release-Notes:  automatisch aus Commits seit dem letzten Tag.
 #
 # SIGNIERUNG:
-#   Ohne Secrets → APK/AAB wird debug-signed (nicht Play-Store-tauglich).
-#   Mit Secrets  → APK/AAB wird release-signed (Play Store tauglich).
+#   Dieser Workflow verlangt ZWINGEND release-signing. Fehlt KEYSTORE_BASE64,
+#   bricht der Job sofort ab, statt still debug-signierte Artefakte unter dem
+#   Release-Namen zu veroeffentlichen (Play lehnt die ab, ein sideloadbares
+#   APK sieht dagegen echt aus). Der Gradle-Fallback auf den Debug-Key greift
+#   dadurch nur noch bei lokalen Builds ohne key.properties.
 #   Secrets im Repo unter Settings → Secrets and variables → Actions anlegen:
 #     KEYSTORE_BASE64   – base64-kodierter JKS-Keystore
 #                         (openssl base64 -in release.keystore | tr -d '\n')
@@ -31,6 +34,13 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Siehe deploy.yml - Toolchain gepinnt, damit derselbe Tag zweimal gebaut
+  # dasselbe Ergebnis liefert. Bei einer klinischen App muss die Frage
+  # "welche Toolchain hat dieses APK gebaut" beantwortbar sein.
+  FLUTTER_VERSION: '3.44.7'
+  # Von android/app/build.gradle.kts ausgewertet: kein stiller Rueckfall auf
+  # den Debug-Key im Release-Build.
+  PERFUSIONCALC_REQUIRE_RELEASE_SIGNING: 'true'
 
 jobs:
   build-and-release:
@@ -42,22 +52,23 @@ jobs:
 
       # ── 1. Code auschecken ────────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0   # Vollständige History für Changelog-Generierung
 
       # ── 2. Java (für Android-Build nötig) ────────────────────────────
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@d7793b545071e98d581d3bf084a51c3213318a07 # v4.9.0
         with:
           distribution: 'temurin'
           java-version: '17'
 
       # ── 3. Flutter ────────────────────────────────────────────────────
-      - name: Setup Flutter (stable)
-        uses: subosito/flutter-action@v2
+      - name: Setup Flutter (pinned)
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
       - name: Show Flutter & Dart versions
@@ -74,34 +85,34 @@ jobs:
         run: flutter test
 
       # ── 5. Signing-Keystore vorbereiten (optional) ────────────────────
-      # Wenn KEYSTORE_BASE64 als Secret hinterlegt ist, wird der Keystore
-      # dekodiert und key.properties angelegt. Fehlt das Secret, bleibt es
-      # beim debug-Signing (Gradle-Fallback in android/app/build.gradle.kts).
-      - name: Decode keystore & write key.properties (wenn Secret vorhanden)
+      # KEYSTORE_BASE64 ist Pflicht: ein Release-Tag darf keine debug-
+      # signierten Artefakte erzeugen. Fehlt das Secret, bricht der Job hier
+      # ab, bevor irgendetwas gebaut wird.
+      - name: Decode keystore & write key.properties
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Keystore-Secret gefunden – release-signing wird konfiguriert."
-            echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > android/app/release.keystore
-            if [ ! -s android/app/release.keystore ]; then
-              echo "FEHLER: Keystore-Datei ist leer – KEYSTORE_BASE64 prüfen."
-              exit 1
-            fi
-            echo "Keystore dekodiert ($(wc -c < android/app/release.keystore) Bytes)."
-            cat > android/key.properties << EOF
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 fehlt. Ein Release-Tag ohne Signaturschlüssel würde debug-signierte Artefakte erzeugen – Abbruch."
+            exit 1
+          fi
+          echo "Keystore-Secret gefunden – release-signing wird konfiguriert."
+          echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > android/app/release.keystore
+          if [ ! -s android/app/release.keystore ]; then
+            echo "FEHLER: Keystore-Datei ist leer – KEYSTORE_BASE64 prüfen."
+            exit 1
+          fi
+          echo "Keystore dekodiert ($(wc -c < android/app/release.keystore) Bytes)."
+          cat > android/key.properties << EOF
           storePassword=${STORE_PASSWORD}
           keyPassword=${KEY_PASSWORD}
           keyAlias=${KEY_ALIAS}
           storeFile=release.keystore
           EOF
-            echo "key.properties geschrieben."
-          else
-            echo "Kein KEYSTORE_BASE64-Secret gefunden – APK/AAB wird debug-signed."
-          fi
+          echo "key.properties geschrieben."
 
       # ── 6. APK bauen (für Direktinstall / Sideloading) ────────────────
       - name: Build release APK
@@ -125,22 +136,45 @@ jobs:
             --base-href / \
             --pwa-strategy offline-first
 
+      # Koppelt den Service-Worker-Cache an den Commit (Audit 4.1). Ohne
+      # diesen Schritt bleibt BUILD_ID auf 'DEV' und der Cache-Name aendert
+      # sich nie - Nutzer laufen dann unbegrenzt auf einem alten Build.
+      # Die Verifikation danach ist Absicht: ein fehlgeschlagenes sed waere
+      # sonst unsichtbar und wuerde genau den Fehler wieder einfuehren.
+      - name: Stamp service worker build id
+        run: |
+          set -euo pipefail
+          SW=build/web/sw.js
+          test -f "$SW" || { echo "::error::$SW fehlt"; exit 1; }
+          sed -i "s/const BUILD_ID = 'DEV';/const BUILD_ID = '${GITHUB_SHA}';/" "$SW"
+          grep -q "const BUILD_ID = '${GITHUB_SHA}';" "$SW" || {
+            echo "::error::BUILD_ID nicht ersetzt - Cache-Invalidierung waere wirkungslos."
+            exit 1
+          }
+          echo "Service-Worker-Cache: perfusioncalc-pcalc-${GITHUB_SHA}"
+
       - name: Assemble offline Windows bundle
         run: |
           set -euo pipefail
           mkdir -p bundle/web
           cp -r build/web/. bundle/web/
 
-          # Portablen Webserver beilegen (Apache-2.0). Die Download-URL wird
-          # aus dem Release-Feed gelesen statt fest verdrahtet.
-          CADDY_URL=$(curl -sSL https://api.github.com/repos/caddyserver/caddy/releases/latest \
-            | grep -o 'https://[^"]*windows_amd64\.zip' | head -1)
-          if [ -z "$CADDY_URL" ]; then
-            echo "::error::Keine Caddy-Windows-Download-URL gefunden"
-            exit 1
-          fi
+          # Portablen Webserver beilegen (Apache-2.0). Version UND Hash sind
+          # gepinnt: dieses caddy.exe wird unter unserem Release-Namen an
+          # Klinik-Arbeitsplaetze verteilt. Ohne Pin ist der Build nicht
+          # reproduzierbar (zwei Builds desselben Tags koennen verschiedene
+          # Binaries enthalten) und ein ausgeliefertes Bundle nachtraeglich
+          # nicht verifizierbar.
+          # Der SHA-512 stammt aus caddy_${CADDY_VERSION}_checksums.txt des
+          # offiziellen Releases und ist dort gegenpruefbar.
+          # Beim Anheben: Version + Hash gemeinsam aendern, Hash aus
+          # https://github.com/caddyserver/caddy/releases/download/v<V>/caddy_<V>_checksums.txt
+          CADDY_VERSION="2.11.4"
+          CADDY_SHA512="cd5ccfd86a4b40732cf715890d0dca5bf3f63adefec5a7914de85adf240c60ce7e5d2791631b88ef9758e46b23bb1730e020b9c5d696889740b284ffd4788e35"
+          CADDY_URL="https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_windows_amd64.zip"
           echo "Caddy: $CADDY_URL"
-          curl -sSL "$CADDY_URL" -o caddy.zip
+          curl -sSLf "$CADDY_URL" -o caddy.zip
+          echo "${CADDY_SHA512}  caddy.zip" | sha512sum -c -
           unzip -o -j caddy.zip caddy.exe -d bundle/
           unzip -o -j caddy.zip LICENSE -d bundle/ || true
           if [ -f bundle/LICENSE ]; then mv bundle/LICENSE bundle/LICENSE-caddy.txt; fi
@@ -169,7 +203,7 @@ jobs:
 
       # ── 10. GitHub-Release erstellen + alle Artefakte hochladen ───────
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: "PerfusionCalc ${{ env.VERSION }}"
           generate_release_notes: true
@@ -187,10 +221,22 @@ jobs:
             | `PerfusionCalc-Offline-Windows-${{ env.VERSION }}.zip` | Webapp für Windows-PCs **ohne Internetzugang** |
 
             ### Installation
-            1. APK download
-            2. At the Android-Device: **Settings → Security → Unkown Sources** activate
-            3. Open APK and install
+            1. Download the APK
+            2. On the Android device, enable **Settings → Security → Unknown sources**
+            3. Open the APK and install it
 
             > **⚠️ Disclaimer** This application is intended only for educational and personal use.
             > It is not validated for clinical use and must not be used for medical diagnosis, treatment decisions, or patient management.
             > No guarantee of accuracy. Always verify results with primary sources and qualified professionals.
+
+      # ── 11. Signaturmaterial aus dem Runner-Workspace entfernen ───────
+      # Aktuell wird nichts davon als Artefakt hochgeladen, das Risiko ist
+      # also latent. Der Schritt ist billige Absicherung gegen eine spätere
+      # Workflow-Änderung, die versehentlich das Workspace-Verzeichnis
+      # einsammelt. 'if: always()' - gerade der Fehlerfall ist der, in dem
+      # aufgeräumt werden muss.
+      - name: Clean up signing material
+        if: always()
+        run: |
+          rm -f android/key.properties android/app/release.keystore
+          echo "Signing material removed from workspace."

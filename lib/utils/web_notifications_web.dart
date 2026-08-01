@@ -7,6 +7,10 @@
 //    Android, where the constructor throws "Illegal constructor. Use
 //    ServiceWorkerRegistration.showNotification() instead". Flutter ships a
 //    service worker for the PWA, so this is normally available there.
+//    NOTE: a click on a notification raised this way is delivered to the
+//    worker, not to this page, so `onclick` below cannot work for it. The
+//    'notificationclick' handler in web/sw.js focuses (or opens) the window
+//    instead - do not remove one without the other.
 //
 // Ordering matters: trying the service worker first would add its timeout on
 // desktop setups that do not need it at all.
@@ -24,6 +28,18 @@
 // Note that a system notification can still be suppressed by OS settings or
 // "do not disturb" without any error surfacing here - which is why the app
 // also shows its own in-app banner (widgets/in_app_alert.dart).
+
+// WHY THIS FILE STILL EXISTS AFTER PLUGIN v22 (audit NEU-5)
+// flutter_local_notifications gained web support in 22.0.0, so there are now
+// two ways to raise a web notification. This one is kept deliberately:
+// the plugin cannot schedule ahead on web either (no push server, same
+// browser limitation as described above), so it would buy no capability -
+// while the ticker-driven path here is what the cardioplegia screen is built
+// around, and it carries the lastError diagnostics the UI shows. Every call
+// site branches on kIsWeb, so nothing collides.
+// If this is ever revisited, note that a web bugfix has to be considered
+// twice - the missing notificationclick handler in web/sw.js was exactly
+// such a case.
 
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
@@ -74,7 +90,14 @@ class WebNotifications {
     }
     // A fixed tag makes a new reminder replace the previous one instead of
     // stacking up identical notifications.
-    final options = web.NotificationOptions(body: body, tag: 'cardioplegia_redose');
+    // Without `icon` Chrome falls back to a generic browser symbol; the
+    // 192px app icon is already in the service worker's app-shell precache
+    // (same ?v=9 query), so this costs no extra request.
+    final options = web.NotificationOptions(
+      body: body,
+      tag: 'cardioplegia_redose',
+      icon: 'icons/Icon-192.png?v=9',
+    );
 
     // Path 1: the plain constructor. Works on every desktop browser and
     // needs no service worker, so it is tried first - going through the

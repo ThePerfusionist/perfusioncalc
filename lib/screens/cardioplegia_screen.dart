@@ -8,6 +8,7 @@ import '../widgets/in_app_alert.dart';
 import '../models/patient_data.dart';
 import '../models/cardioplegia_alarm_settings.dart';
 import '../models/cardioplegia_settings.dart';
+import '../utils/duration_format.dart';
 import '../utils/notification_service.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
@@ -518,15 +519,6 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// Uses the pure expectedFireCount() schedule rather than an equality
   /// check on the elapsed time, so the alert cannot be missed just because
   /// a tick was skipped (e.g. the app was briefly backgrounded).
-  /// Shared by the timer card and the in-app banner so both show the same
-  /// elapsed time in the same format.
-  static String _formatElapsed(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
-
   void _checkAlarm() {
     final last = patientData.cardioplegiaLastDoseAt;
     if (last == null) return;
@@ -576,9 +568,9 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     final elapsed = last == null ? null : DateTime.now().difference(last);
     InAppAlert.show(
       context,
-      title: t('cardio_alarm_notif_title'),
-      message: t('cardio_alarm_notif_body'),
-      elapsedText: elapsed == null ? null : _formatElapsed(elapsed),
+      titleKey: 'cardio_alarm_notif_title',
+      messageKey: 'cardio_alarm_notif_body',
+      elapsedText: elapsed == null ? null : formatElapsed(elapsed),
     );
   }
 
@@ -586,7 +578,10 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   /// vibration actually come through on their device.
   Future<void> _testAlert() async {
     final st = CardioplegiaAlarmSettings.instance;
-    if (st.vibration) HapticFeedback.heavyImpact();
+    // Fire and forget on purpose: awaiting the haptic would delay the
+    // banner behind the vibration, and a failed buzz must not hold up the
+    // alert. unawaited() states that rather than leaving a bare Future.
+    if (st.vibration) unawaited(HapticFeedback.heavyImpact());
     _showBanner();
     await CardioplegiaNotifications.instance.showNow(
       sound: st.sound,
@@ -639,7 +634,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
               Text(windowText, style: TextStyle(color: kTextMuted, fontSize: 11)),
             ])),
             const SizedBox(width: 10),
-            Text(elapsed == null ? '—' : _formatElapsed(elapsed),
+            Text(elapsed == null ? '—' : formatElapsed(elapsed),
                 style: TextStyle(color: statusColor, fontSize: 26, fontWeight: FontWeight.w500)),
           ]),
           const SizedBox(height: 4),

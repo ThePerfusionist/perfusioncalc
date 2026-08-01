@@ -110,7 +110,8 @@ List<PdfSection> buildElectrolytesPdfSections(PatientData pd) => [
     PdfRow.numeric(label: t('elec_calcium_current'),  value: pd.calziumIst,     unit: 'mmol'),
     PdfRow.numeric(label: t('elec_calcium_target'),
         value: pd.calziumSollTouched ? pd.calziumSoll : null, unit: 'mmol'),
-    PdfRow.numeric(label: t('elec_base_excess'),      value: pd.baseExcess,     unit: 'mmol/L'),
+    // BE 0 is a normal, entered finding - not a missing input.
+    PdfRow.numeric(label: t('elec_base_excess'),      value: pd.baseExcess,     unit: 'mmol/L', zeroIsValid: true),
   ]),
   PdfSection(title: t('pdf_results'), rows: [
     PdfRow.numeric(label: t('elec_sodium_need'),    value: pd.natriumBedarf, unit: 'ml NaCl 10%',     decimals: 1),

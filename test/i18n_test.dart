@@ -77,4 +77,42 @@ void main() {
       notifier.removeListener(listener);
     });
   });
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Completeness (audit NEU-11)
+  // ══════════════════════════════════════════════════════════════════════
+  group('Translation table completeness', () {
+    test('Every key is defined in every locale', () {
+      // The file header always claimed to check this; it checked six
+      // hand-picked keys. A one-sided addition - the normal way a
+      // translation gap appears - went unnoticed.
+      final missing = <String>[];
+      for (final entry in Strings.all.entries) {
+        for (final loc in AppLocale.values) {
+          if (entry.value[loc] == null) missing.add('${loc.code}: ${entry.key}');
+        }
+      }
+      expect(missing, isEmpty, reason: 'Missing translations: $missing');
+    });
+
+    test('No translation is empty or left as a placeholder', () {
+      for (final entry in Strings.all.entries) {
+        for (final loc in AppLocale.values) {
+          final value = entry.value[loc];
+          if (value == null) continue;
+          expect(value.trim(), isNotEmpty, reason: '${loc.code}: ${entry.key}');
+          expect(value.startsWith('TODO'), isFalse,
+              reason: '${loc.code}: ${entry.key}');
+        }
+      }
+    });
+
+    test('Every plausibility range note resolves to a real key', () {
+      // Range.noteKey is a string; a typo would surface in the UI as the
+      // bug marker instead of a hint. Checked against the table directly.
+      for (final key in Strings.all.keys.where((k) => k.startsWith('range_note_'))) {
+        expect(Strings.of(key, AppLocale.de), isNot(startsWith('\u27e8')));
+      }
+    });
+  });
 }

@@ -4,13 +4,13 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.4.0-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.4.2-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
-[![Flutter](https://img.shields.io/badge/Flutter-≥%203.4-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
+[![Flutter](https://img.shields.io/badge/Flutter-≥%203.38-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
 [![WebApp](https://img.shields.io/badge/WebApp-live-success?style=flat-square)](https://perfusioncalc.de/)
 [![Languages](https://img.shields.io/badge/i18n-EN%20%2F%20DE-blueviolet?style=flat-square)](#-internationalization)
-[![Tests](https://img.shields.io/badge/tests-83%20passing-brightgreen?style=flat-square)](test/)
+[![Tests](https://img.shields.io/badge/tests-186%20passing-brightgreen?style=flat-square)](test/)
 [![PWA](https://img.shields.io/badge/PWA-offline%20capable-5A0FC8?style=flat-square)](#-progressive-web-app)
 
 </div>
@@ -635,6 +635,18 @@ Questions, bug reports or clinical feedback: **perfusioncalc@unbox.at**
 
 For reproducible bug reports, please include the app version (burger menu →
 info button), the platform (Web/Android/iOS) and the tab concerned.
+
+---
+
+## 🔒 Privacy
+
+PerfusionCalc collects no personal data: no accounts, no analytics, no tracking,
+no advertising identifiers, no third-party sharing. Values you enter are held in
+memory only and are never persisted or transmitted; the Android release build
+declares no `INTERNET` permission at all.
+
+Full policy: [privacy_policy.md](privacy_policy.md) ·
+online at [perfusioncalc.de/privacy.html](https://perfusioncalc.de/privacy.html)
 
 ---
 

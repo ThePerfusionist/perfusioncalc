@@ -108,23 +108,34 @@ class _BSAScreenState extends State<BSAScreen> {
               value: pd.cardiacOutput,
               missingInputs: missing([hHeight, hWeight]),
             ),
+            // rangeHint marks these as a weight-only approximation rather
+            // than a primary-literature formula - see the comment on
+            // PatientData.bloodVolumeMale.
             ResultCard(
               label: t('bsa_result_bv_male'),
               unit: 'l',
               value: pd.bloodVolumeMale,
+              rangeHint: t('bsa_bv_approx'),
               missingInputs: missing([hWeight]),
             ),
             ResultCard(
               label: t('bsa_result_bv_female'),
               unit: 'l',
               value: pd.bloodVolumeFemale,
+              rangeHint: t('bsa_bv_approx'),
               missingInputs: missing([hWeight]),
             ),
             SectionHeader(t('bsa_section_expected')),
             ResultCard(
-              label: t('bsa_expected_hb'),
+              label: t('bsa_expected_hb_m'),
               unit: 'g/dl',
-              value: pd.expectedHb,
+              value: pd.expectedHbMale,
+              missingInputs: missing([hWeight, hHb, hPrim]),
+            ),
+            ResultCard(
+              label: t('bsa_expected_hb_f'),
+              unit: 'g/dl',
+              value: pd.expectedHbFemale,
               missingInputs: missing([hWeight, hHb, hPrim]),
             ),
             ResultCard(
@@ -171,24 +182,19 @@ class _CIInputCardState extends State<_CIInputCard> {
   bool _editing = false;
 
   @override
-  void initState() { super.initState(); _ctrl = TextEditingController(text: _fmt(widget.value)); }
+  void initState() { super.initState(); _ctrl = TextEditingController(text: formatFieldNumber(widget.value)); }
 
   @override
   void didUpdateWidget(_CIInputCard old) {
     super.didUpdateWidget(old);
     if (!_editing) {
-      final t = _fmt(widget.value);
+      final t = formatFieldNumber(widget.value);
       if (_ctrl.text != t) { _ctrl.text = t; _ctrl.selection = TextSelection.collapsed(offset: t.length); }
     }
   }
 
   @override
   void dispose() { _ctrl.dispose(); super.dispose(); }
-
-  String _fmt(double v) {
-    String s = v.toStringAsFixed(2);
-    return s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
-  }
 
   void _inc() => widget.onChanged(double.parse((widget.value + 0.1).toStringAsFixed(4)));
   void _dec() => widget.onChanged(double.parse((widget.value - 0.1).toStringAsFixed(4)));
@@ -278,7 +284,8 @@ List<PdfSection> buildBsaPdfSections(PatientData pd) => [
     PdfRow.numeric(label: t('bsa_result_co'),         value: pd.cardiacOutput,   unit: 'l/min'),
     PdfRow.numeric(label: t('bsa_result_bv_male'),    value: pd.bloodVolumeMale,   unit: 'l'),
     PdfRow.numeric(label: t('bsa_result_bv_female'),  value: pd.bloodVolumeFemale, unit: 'l'),
-    PdfRow.numeric(label: t('bsa_expected_hb'),       value: pd.expectedHb,        unit: 'g/dl'),
+    PdfRow.numeric(label: t('bsa_expected_hb_m'),     value: pd.expectedHbMale,    unit: 'g/dl'),
+    PdfRow.numeric(label: t('bsa_expected_hb_f'),     value: pd.expectedHbFemale,  unit: 'g/dl'),
     PdfRow.numeric(label: t('bsa_expected_hct_m'),    value: pd.expectedHctMale,   unit: '%'),
     PdfRow.numeric(label: t('bsa_expected_hct_f'),    value: pd.expectedHctFemale, unit: '%'),
   ]),

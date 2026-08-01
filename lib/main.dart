@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, visibleForTesting, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/bsa_screen.dart';
@@ -23,7 +25,7 @@ import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.4.0';
+const kAppVersion = '0.4.2';
 
 void main() async {
   // Load language + theme from SharedPreferences before the UI is rendered,
@@ -62,6 +64,36 @@ class PerfusionCalcApp extends StatelessWidget {
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
+  /// Tab definition: icon is static, label is freshly translated via t() on
+  /// every build. When the language switches, the AnimatedBuilder above
+  /// triggers a rebuild and _tabsList() is re-evaluated.
+  ///
+  /// Order chosen deliberately: BSA and O2 as the central calculations
+  /// first, then hypothermia (Severinghaus, didactically especially
+  /// important), followed by electrolytes and resistances (downstream
+  /// hemodynamic quantities). Then pediatric and tube-related
+  /// calculations, and finally the pure reference/anatomy tabs.
+  ///
+  /// A record type instead of `List<Map<String, dynamic>>`: the map version
+  /// needed an `as String` / `as IconData` cast at every single access, and
+  /// a typo in a field name would only have shown up at runtime.
+  @visibleForTesting
+  static const List<({String key, IconData icon})> kTabs = [
+    (key: 'tab_bsa',            icon: Icons.monitor_heart_outlined),
+    (key: 'tab_o2',             icon: Icons.air),
+    (key: 'tab_hypothermia',    icon: Icons.ac_unit),
+    (key: 'tab_cardioplegia',   icon: Icons.bloodtype_outlined),
+    (key: 'tab_electrolytes',   icon: Icons.science_outlined),
+    (key: 'tab_ultrafiltration', icon: Icons.opacity),
+    (key: 'tab_resistances',    icon: Icons.compress),
+    (key: 'tab_pediatric',      icon: Icons.child_care_outlined),
+    (key: 'tab_tube_volume',    icon: Icons.linear_scale),
+    (key: 'tab_zoll',           icon: Icons.straighten),
+    (key: 'tab_reference',      icon: Icons.table_chart_outlined),
+    (key: 'tab_anatomy',        icon: Icons.favorite_border),
+  ];
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
@@ -73,35 +105,14 @@ class _MainScreenState extends State<MainScreen>
   final BgaModel _bgaModel = BgaModel();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  /// Tab definition: icon is static, label is freshly translated via t() on
-  /// every build. When the language switches, the AnimatedBuilder above
-  /// triggers a rebuild and _tabsList() is re-evaluated.
-  ///
-  /// Order chosen deliberately: BSA and O2 as the central calculations
-  /// first, then hypothermia (Severinghaus, didactically especially
-  /// important), followed by electrolytes and resistances (downstream
-  /// hemodynamic quantities). Then pediatric and tube-related
-  /// calculations, and finally the pure reference/anatomy tabs.
-  static const List<Map<String, dynamic>> _kTabs = [
-    {'key': 'tab_bsa',          'icon': Icons.monitor_heart_outlined},
-    {'key': 'tab_o2',           'icon': Icons.air},
-    {'key': 'tab_hypothermia',  'icon': Icons.ac_unit},
-    {'key': 'tab_cardioplegia', 'icon': Icons.bloodtype_outlined},
-    {'key': 'tab_electrolytes', 'icon': Icons.science_outlined},
-    {'key': 'tab_ultrafiltration', 'icon': Icons.opacity},
-    {'key': 'tab_resistances',  'icon': Icons.compress},
-    {'key': 'tab_pediatric',    'icon': Icons.child_care_outlined},
-    {'key': 'tab_tube_volume',  'icon': Icons.linear_scale},
-    {'key': 'tab_zoll',         'icon': Icons.straighten},
-    {'key': 'tab_reference',    'icon': Icons.table_chart_outlined},
-    {'key': 'tab_anatomy',      'icon': Icons.favorite_border},
-  ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 12, vsync: this);
+    // Derived, not a literal 12 next to a 12-entry list - the classic way
+    // for a new tab to be added and the controller to be forgotten.
+    _tabController = TabController(length: MainScreen.kTabs.length, vsync: this);
     // IMPORTANT for performance: the listener must NOT trigger setState on
     // every animation frame, or the entire widget tree (AppBar, TabBar, all
     // 12 TabBarView children) would rebuild 60x/second. We only rebuild
@@ -321,7 +332,7 @@ class _MainScreenState extends State<MainScreen>
             child: Builder(
               builder: (context) {
                 // fetch tabs once per build, so it's not re-evaluated 11x.
-                final tabs = _kTabs;
+                final tabs = MainScreen.kTabs;
                 return ListView.builder(
                   padding: EdgeInsets.zero,
                   itemCount: tabs.length,
@@ -330,7 +341,7 @@ class _MainScreenState extends State<MainScreen>
                     return Semantics(
                       button: true,
                       selected: isActive,
-                      label: t(tabs[i]['key'] as String),
+                      label: t(tabs[i].key),
                       excludeSemantics: true,
                       child: InkWell(
                       onTap: () => _goToTab(i),
@@ -343,10 +354,10 @@ class _MainScreenState extends State<MainScreen>
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                         child: Row(children: [
-                          Icon(tabs[i]['icon'] as IconData,
+                          Icon(tabs[i].icon,
                               color: isActive ? kGold : kTextMuted, size: 20),
                           const SizedBox(width: 14),
-                          Expanded(child: Text(t(tabs[i]['key'] as String),
+                          Expanded(child: Text(t(tabs[i].key),
                               style: TextStyle(
                                 color: isActive ? kGold : kTextSecondary,
                                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
@@ -538,12 +549,15 @@ class _MainScreenState extends State<MainScreen>
             onPressed: _showInfoDialog,
             tooltip: t('a11y_app_info'),
           ),
-          // Close button — rightmost
-          IconButton(
-            icon: Icon(Icons.close, color: kText),
-            onPressed: () => SystemNavigator.pop(),
-            tooltip: t('a11y_close_app'),
-          ),
+          // Close button — rightmost. Android only: SystemNavigator.pop()
+          // is a no-op on web, and an app that terminates itself is a
+          // documented App Store rejection reason under the iOS HIG.
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+            IconButton(
+              icon: Icon(Icons.close, color: kText),
+              onPressed: () => SystemNavigator.pop(),
+              tooltip: t('a11y_close_app'),
+            ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -558,9 +572,7 @@ class _MainScreenState extends State<MainScreen>
               unselectedLabelColor: kTextMuted,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               unselectedLabelStyle: const TextStyle(fontSize: 13),
-              tabs: _kTabs
-                  .map((tab) => Tab(text: t(tab['key'] as String)))
-                  .toList(),
+              tabs: MainScreen.kTabs.map((tab) => Tab(text: t(tab.key))).toList(),
             ),
           ),
         ),

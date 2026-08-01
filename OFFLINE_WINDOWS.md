@@ -59,6 +59,35 @@ Eine einzelne portable EXE genügt, z. B. **Caddy**
 Alternativ ist **Python** oft schon auf dem Zielrechner vorhanden — dann wird
 keine zusätzliche Datei gebraucht (siehe Schritt 4, Variante B).
 
+### Prüfsummen des mitgelieferten Caddy
+
+Die von GitHub Actions gebauten Bundles (`PerfusionCalc-Offline-Windows-*.zip`)
+enthalten eine fest gepinnte Caddy-Version. Version und Hash stehen in
+`.github/workflows/release.yml` und `offline-bundle.yml`; ohne Pin wären zwei
+Builds desselben Tags nicht bitgleich und ein ausgeliefertes Bundle
+nachträglich nicht überprüfbar.
+
+| | |
+|---|---|
+| Version | **2.11.4** |
+| Datei | `caddy_2.11.4_windows_amd64.zip` |
+| SHA-256 | `1708333f79e274c7697285afe6d592ab39314e0b131e9ec6bea08ad27df62ebf` |
+| SHA-512 | `cd5ccfd86a4b40732cf715890d0dca5bf3f63adefec5a7914de85adf240c60ce7e5d2791631b88ef9758e46b23bb1730e020b9c5d696889740b284ffd4788e35` |
+
+Der SHA-512 ist gegen die offizielle Liste des Herstellers prüfbar:
+`https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_checksums.txt`
+
+Prüfung unter Windows (PowerShell):
+
+```powershell
+(Get-FileHash caddy_2.11.4_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
+```
+
+In Klinikumgebungen ist genau diese Nachweiskette oft Voraussetzung dafür,
+dass die IT-Abteilung eine unbekannte `.exe` freigibt. Wer die EXE gar nicht
+ausführen darf, nimmt Variante B (PowerShell-/Python-Server) — dann wird
+`caddy.exe` nicht gebraucht.
+
 ## Schritt 3 — USB-Stick packen
 
 ```

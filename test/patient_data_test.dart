@@ -113,15 +113,43 @@ void main() {
   });
 
   group('Expected Hb/Hct after priming', () {
-    // Expected Hb: Hb × (1 - priming_ml / (weight_kg × 100))
-    // Expected Hct (Nadler 1962): Hct × BV / (BV + priming)
+    // One dilution law for both metrics, because it is the same red cell
+    // mass in a larger volume:  X_after = X_before × BV / (BV + priming)
+    // BV_male   = 0.041 × kg + 1.53 [l]
+    // BV_female = 0.047 × kg + 0.86 [l]
 
-    test('Hb 14 g/dl, 1500 ml priming, 70 kg → Hb 11.0', () {
+    test('Hb 14 g/dl, 1500 ml priming, 70 kg male → 10.39 g/dl', () {
       final pd = PatientData()
         ..currentHb = 14
         ..primingVolume = 1500
         ..weight = 70;
-      expect(pd.expectedHb, closeTo(11.0, 0.01));
+      // BV_male = 4.40 l = 4400 ml; 14 × 4400 / (4400 + 1500) = 10.4407
+      expect(pd.expectedHbMale, closeTo(10.4407, 0.001));
+    });
+
+    test('Hb 14 g/dl, 1500 ml priming, 70 kg female → uses female BV', () {
+      final pd = PatientData()
+        ..currentHb = 14
+        ..primingVolume = 1500
+        ..weight = 70;
+      // BV_female = 4.15 l = 4150 ml; 14 × 4150 / (4150 + 1500) = 10.2832
+      expect(pd.expectedHbFemale, closeTo(10.2832, 0.001));
+      // Lower blood volume dilutes more.
+      expect(pd.expectedHbFemale, lessThan(pd.expectedHbMale));
+    });
+
+    test('Regression: expectedHb no longer uses weight × 100 ml', () {
+      // The old implementation returned 11.38 g/dl for this case (implied
+      // BV 8000 ml, linearised). Exact dilution against the model's own
+      // blood volume: BV_male = 0.041 x 80 + 1.53 = 4.81 l = 4810 ml,
+      // 14 x 4810 / (4810 + 1500) = 10.6719. The +0.71 g/dl was systematic
+      // and always on the optimistic side. Audit finding 1.3.
+      final pd = PatientData()
+        ..currentHb = 14
+        ..primingVolume = 1500
+        ..weight = 80;
+      expect(pd.expectedHbMale, closeTo(10.6719, 0.001));
+      expect(pd.expectedHbMale, lessThan(11.0));
     });
 
     test('Hct 42%, 1500 ml priming, 70 kg man → ~31.32%', () {
@@ -133,12 +161,22 @@ void main() {
       expect(pd.expectedHctMale, closeTo(31.32, 0.02));
     });
 
+    test('Hb and Hct dilute by the same factor', () {
+      final pd = PatientData()
+        ..currentHb = 14
+        ..currentHct = 42
+        ..primingVolume = 1500
+        ..weight = 70;
+      expect(pd.expectedHbMale / 14, closeTo(pd.expectedHctMale / 42, 1e-9));
+    });
+
     test('Without priming (= 0 ml), Hb stays unchanged', () {
       final pd = PatientData()
         ..currentHb = 14
         ..primingVolume = 0
         ..weight = 70;
-      expect(pd.expectedHb, closeTo(14.0, 0.001));
+      expect(pd.expectedHbMale, closeTo(14.0, 0.001));
+      expect(pd.expectedHbFemale, closeTo(14.0, 0.001));
     });
   });
 
@@ -910,8 +948,9 @@ void main() {
   // ════════════════════════════════════════════════════════════════════════
   // Pediatric transfusion
   // ════════════════════════════════════════════════════════════════════════
-  group('Pediatric transfusion', () {
-    // Volume = kg × ΔHb × 3 / (55 × 0.01)
+  group('Pediatric transfusion (Davies 2007)', () {
+    // volume (ml) = kg × ΔHb (g/dl) × 3 / Hct(RBC unit, as a FRACTION)
+    // Davies P et al. Transfusion. 2007;47(2):212-216.
 
     test('15 kg, ΔHb +3 → approx. 245 ml packed red cells', () {
       final pd = PatientData()
@@ -920,9 +959,76 @@ void main() {
       expect(pd.transfusionVolume, closeTo(245.45, 0.02));
     });
 
+    test("Reproduces Davies' own worked example at a UK unit (Hct 0.60)", () {
+      // The paper states: 10 ml/kg raises Hb by 2 g/dl at Hct 0.6.
+      // 20 kg × 2 g/dl × 3 / 0.6 = 200 ml = 10 ml/kg.
+      // Guards the SHAPE of the formula independently of the institutional
+      // hematocrit constant - the audit suspected a double correction here,
+      // and this is what rules it out.
+      const weight = 20.0;
+      const deltaHb = 2.0;
+      final volumeAtUkUnit = weight * deltaHb * 3 / 0.60;
+      expect(volumeAtUkUnit, closeTo(200, 0.001));
+      expect(volumeAtUkUnit / weight, closeTo(10, 0.001));
+    });
+
+    test('The assumed RBC unit hematocrit is the only tunable', () {
+      // Documents the institutional assumption so a change to it is a
+      // conscious, reviewed act rather than a silent edit.
+      expect(PatientData.kRbcUnitHematocrit, 0.55);
+      final pd = PatientData()
+        ..pediatricWeight = 10
+        ..desiredHbIncrease = 1;
+      // 10 × 1 × 3 / 0.55 = 54.5 ml = 5.45 ml/kg per g/dl
+      expect(pd.transfusionVolume / 10, closeTo(5.4545, 0.001));
+    });
+
     test('No weight → 0', () {
       final pd = PatientData()..desiredHbIncrease = 3;
       expect(pd.transfusionVolume, 0);
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Incomplete venous set must not fake a full oxygen balance (audit 1.1)
+  // ════════════════════════════════════════════════════════════════════════
+  group('Ca-vDO2 guard with arterial values only', () {
+    PatientData arterialOnly() => PatientData()
+      ..artHb = 12
+      ..saO2 = 99
+      ..paO2 = 200
+      ..hzv = 5
+      ..kof = 1.9;
+
+    test('cavDO2 is 0 while the venous side is missing', () {
+      // Unguarded this returned caO2 - 0 == caO2, and every consumer below
+      // inherited it. On screen ResultCard.missingInputs hid that; the PDF
+      // export has no such notion and printed the numbers.
+      expect(arterialOnly().cavDO2, 0);
+    });
+
+    test('VO2 and VO2i do not equal DO2/DO2i', () {
+      final pd = arterialOnly();
+      expect(pd.do2, greaterThan(0));
+      expect(pd.vo2, 0);
+      expect(pd.vo2i, 0);
+    });
+
+    test('O2-ER does not report 100 %', () {
+      final pd = arterialOnly();
+      expect(pd.o2er, 0);
+      expect(pd.o2er, isNot(closeTo(100, 0.01)));
+    });
+
+    test('With a complete venous set the values come back', () {
+      final pd = arterialOnly()
+        ..venHb = 12
+        ..svO2 = 75
+        ..pvO2 = 40;
+      expect(pd.cavDO2, greaterThan(0));
+      expect(pd.vo2, greaterThan(0));
+      expect(pd.o2er, greaterThan(0));
+      expect(pd.o2er, lessThan(100));
     });
   });
 
@@ -936,7 +1042,8 @@ void main() {
       expect(pd.bsa, 0);
       expect(pd.cardiacOutput, 0);
       expect(pd.bloodVolumeMale, 0);
-      expect(pd.expectedHb, 0);
+      expect(pd.expectedHbMale, 0);
+      expect(pd.expectedHbFemale, 0);
       expect(pd.caO2, 0);
       expect(pd.do2, 0);
       expect(pd.svr, 0);

@@ -28,17 +28,22 @@ on:
 permissions:
   contents: read
 
+env:
+  # Wie in release.yml/deploy.yml gepinnt - siehe dort.
+  FLUTTER_VERSION: '3.44.7'
+
 jobs:
   offline-bundle:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - name: Setup Flutter (stable)
-        uses: subosito/flutter-action@v2
+      - name: Setup Flutter (pinned)
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
 
       - name: Install dependencies
         run: flutter pub get
@@ -55,22 +60,40 @@ jobs:
             --base-href / \
             --pwa-strategy offline-first
 
+      # Koppelt den Service-Worker-Cache an den Commit (Audit 4.1). Ohne
+      # diesen Schritt bleibt BUILD_ID auf 'DEV' und der Cache-Name aendert
+      # sich nie - Nutzer laufen dann unbegrenzt auf einem alten Build.
+      # Die Verifikation danach ist Absicht: ein fehlgeschlagenes sed waere
+      # sonst unsichtbar und wuerde genau den Fehler wieder einfuehren.
+      - name: Stamp service worker build id
+        run: |
+          set -euo pipefail
+          SW=build/web/sw.js
+          test -f "$SW" || { echo "::error::$SW fehlt"; exit 1; }
+          sed -i "s/const BUILD_ID = 'DEV';/const BUILD_ID = '${GITHUB_SHA}';/" "$SW"
+          grep -q "const BUILD_ID = '${GITHUB_SHA}';" "$SW" || {
+            echo "::error::BUILD_ID nicht ersetzt - Cache-Invalidierung waere wirkungslos."
+            exit 1
+          }
+          echo "Service-Worker-Cache: perfusioncalc-pcalc-${GITHUB_SHA}"
+
       - name: Assemble bundle
         run: |
           set -euo pipefail
           mkdir -p bundle/web
           cp -r build/web/. bundle/web/
 
-          # Portable web server: resolve the current Caddy Windows build from
-          # the official release feed rather than pinning a URL that rots.
-          CADDY_URL=$(curl -sSL https://api.github.com/repos/caddyserver/caddy/releases/latest \
-            | grep -o 'https://[^"]*windows_amd64\.zip' | head -1)
-          if [ -z "$CADDY_URL" ]; then
-            echo "::error::Could not resolve a Caddy Windows download URL"
-            exit 1
-          fi
+          # Portable web server, version AND hash pinned - this binary is
+          # handed to clinical workstations under our release name, so the
+          # build has to be reproducible and the shipped bundle verifiable.
+          # SHA-512 taken from the official caddy_<version>_checksums.txt.
+          # Keep in sync with release.yml and OFFLINE_WINDOWS.md.
+          CADDY_VERSION="2.11.4"
+          CADDY_SHA512="cd5ccfd86a4b40732cf715890d0dca5bf3f63adefec5a7914de85adf240c60ce7e5d2791631b88ef9758e46b23bb1730e020b9c5d696889740b284ffd4788e35"
+          CADDY_URL="https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_windows_amd64.zip"
           echo "Using $CADDY_URL"
-          curl -sSL "$CADDY_URL" -o caddy.zip
+          curl -sSLf "$CADDY_URL" -o caddy.zip
+          echo "${CADDY_SHA512}  caddy.zip" | sha512sum -c -
           unzip -o -j caddy.zip caddy.exe -d bundle/
           unzip -o -j caddy.zip LICENSE -d bundle/ || true
           if [ -f bundle/LICENSE ]; then mv bundle/LICENSE bundle/LICENSE-caddy.txt; fi
@@ -91,7 +114,7 @@ jobs:
       # The bundle is published as a workflow artifact only - releases are
       # handled by release.yml.
       - name: Upload as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ env.BUNDLE_NAME }}
           path: ${{ env.BUNDLE_NAME }}.zip

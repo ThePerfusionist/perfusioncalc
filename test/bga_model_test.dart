@@ -18,6 +18,8 @@
 // except for tests that check EXACTLY a published reference value
 // (tighter tolerance there, see comments).
 
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:perfusion_calc/models/bga_model.dart';
 
@@ -173,6 +175,41 @@ void main() {
       expect(m.corrPH, isNull);
       expect(m.satFromPaO2, isNull);
       expect(m.hco3, isNull);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Displayed correction factor (audit 1.6)
+  // ══════════════════════════════════════════════════════════════════════
+  group('fTPercent', () {
+    test('Is derived from the measured PaO2, not from the corrected one', () {
+      // corrPaO2 uses _fT(paO2). If fTPercent used _fT(corrPaO2) the
+      // displayed percentage would not belong to the correction actually
+      // carried out - two numbers on one screen from different inputs.
+      final m = BgaModel()
+        ..paO2 = 100
+        ..temp = 28;
+      // Same measured PaO2 at a different temperature must yield the same
+      // factor, because the factor is a property of PO2 alone.
+      final other = BgaModel()
+        ..paO2 = 100
+        ..temp = 37;
+      expect(m.fTPercent, isNotNull);
+      expect(m.fTPercent, closeTo(other.fTPercent!, 1e-9));
+    });
+
+    test('Matches the coefficient used inside corrPaO2', () {
+      final m = BgaModel()
+        ..paO2 = 100
+        ..temp = 30;
+      // corrPaO2 = paO2 × exp(f_T × (T - 37)) → solve back for f_T.
+      final implied =
+          (log(m.corrPaO2! / m.paO2!) / (m.temp! - 37.0)) * 100.0;
+      expect(m.fTPercent, closeTo(implied, 1e-9));
+    });
+
+    test('Returns null without PaO2', () {
+      expect((BgaModel()..temp = 30).fTPercent, isNull);
     });
   });
 }

@@ -19,10 +19,11 @@ on:
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
+# Least privilege: peaceiris/actions-gh-pages pushes a commit to the
+# gh-pages branch, that is all it needs. 'pages: write' and 'id-token: write'
+# belong to the actions/deploy-pages route, which this workflow does not use.
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 # Zwingt alle JavaScript-Actions in diesem Workflow auf Node.js 24, auch wenn
 # die Action selbst noch 'using: node20' in ihrer action.yml deklariert
@@ -34,6 +35,12 @@ permissions:
 # aber real auf Node 24.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Single source of truth for the toolchain. pubspec.lock requires
+  # flutter >= 3.38.1 / dart >= 3.10.0 (raised by flutter_local_notifications
+  # v21). Without an explicit pin the action installs whatever 'stable' is on
+  # the day, so two builds of the same commit can see two toolchains.
+  # Keep in sync with the other workflows AND with the local dev machines.
+  FLUTTER_VERSION: '3.44.7'
 
 # Verhindert, dass sich zwei Deployments gleichzeitig überlagern, wenn
 # mehrere Pushes hintereinander passieren. Neuer Push → alter Run abgebrochen.
@@ -48,12 +55,13 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - name: Setup Flutter (stable)
-        uses: subosito/flutter-action@v2
+      - name: Setup Flutter (pinned)
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
       - name: Show Flutter & Dart versions
@@ -68,9 +76,11 @@ jobs:
         run: flutter analyze --no-fatal-warnings
 
       - name: Run tests
-        # Läuft durch, wenn noch keine Tests da sind (exit code 0 bei keinem Test).
-        # Später: wenn wir Formel-Tests hinzufügen, werden die hier automatisch geprüft.
-        run: flutter test || echo "No tests yet – skipping."
+        # KEIN '|| echo' mehr: perfusioncalc.de darf nicht deployed werden,
+        # wenn die Rechen-Tests rot sind. Ein stiller Fehlschlag hier hiesse,
+        # dass eine Regression, die die Testsuite bereits erkannt hat,
+        # trotzdem an klinische Nutzer ausgeliefert wird.
+        run: flutter test
 
       - name: Build Flutter Web (WASM build, CanvasKit fallback)
         # --wasm aktiviert den WebAssembly-Build: Flutter wählt zur Laufzeit
@@ -84,12 +94,34 @@ jobs:
         # --pwa-strategy offline-first: SW bedient Assets sofort aus dem Cache.
         run: flutter build web --wasm --release --no-web-resources-cdn --base-href / --pwa-strategy offline-first
 
+      # Koppelt den Service-Worker-Cache an den Commit (Audit 4.1). Ohne
+      # diesen Schritt bleibt BUILD_ID auf 'DEV' und der Cache-Name aendert
+      # sich nie - Nutzer laufen dann unbegrenzt auf einem alten Build.
+      # Die Verifikation danach ist Absicht: ein fehlgeschlagenes sed waere
+      # sonst unsichtbar und wuerde genau den Fehler wieder einfuehren.
+      - name: Stamp service worker build id
+        run: |
+          set -euo pipefail
+          SW=build/web/sw.js
+          test -f "$SW" || { echo "::error::$SW fehlt"; exit 1; }
+          sed -i "s/const BUILD_ID = 'DEV';/const BUILD_ID = '${GITHUB_SHA}';/" "$SW"
+          grep -q "const BUILD_ID = '${GITHUB_SHA}';" "$SW" || {
+            echo "::error::BUILD_ID nicht ersetzt - Cache-Invalidierung waere wirkungslos."
+            exit 1
+          }
+          echo "Service-Worker-Cache: perfusioncalc-pcalc-${GITHUB_SHA}"
+
       - name: Deploy to GitHub Pages (gh-pages branch)
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
           publish_branch: gh-pages
           # Commit-Message im gh-pages-Branch identifiziert den auslösenden Push.
-          commit_message: "Deploy: ${{ github.event.head_commit.message }}"
+          # Bewusst NUR die SHA: github.event.head_commit.message ist nicht
+          # vertrauenswuerdiger Input und wurde hier direkt in eine Action-
+          # Eingabe interpoliert (Expression Injection, Standardbefund jedes
+          # Actions-Scanners). Die SHA identifiziert den Push eindeutig und
+          # ist nicht beeinflussbar.
+          commit_message: "Deploy ${{ github.sha }}"
           cname: perfusioncalc.de

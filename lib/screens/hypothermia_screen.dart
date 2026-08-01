@@ -147,7 +147,7 @@ class _HypothermiaScreenState extends State<HypothermiaScreen> {
       InputCard(
         label: t('hypo_paco2'), unit: 'mmHg',
         value: _model.paCO2, step: 1.0,
-        range: const Range(10, 100, 'mmHg', note: 'Normal 35–45'),
+        range: const Range(10, 100, 'mmHg', noteKey: 'range_note_pv_o2'),
         onChanged: (v) { _model.paCO2 = v; _rebuild(); },
       ),
       InputCard(

@@ -40,9 +40,42 @@ void main() {
   });
 
   group('Range.display', () {
-    test('Format is "min–max unit"', () {
+    test('Whole numbers print without a decimal tail', () {
+      // This string ends up in every plausibility tooltip; "70.0–100.0"
+      // was cosmetic noise on values that are integers by nature.
       const r = Range(70, 100, 'mmHg');
-      expect(r.display, '70.0–100.0 mmHg');
+      expect(r.display, '70–100 mmHg');
+    });
+
+    test('Real decimals are preserved', () {
+      const r = Range(0.5, 6.0, 'l/min/m²');
+      expect(r.display, '0.5–6 l/min/m²');
+    });
+
+    test('Negative bounds work', () {
+      const r = Range(-5, 30, 'mmHg');
+      expect(r.display, '-5–30 mmHg');
+    });
+
+    test('Unitless range leaves no double space', () {
+      const r = Range(6.8, 7.8, '');
+      expect(r.display.trim(), '6.8–7.8');
+    });
+  });
+
+  group('Range.noteKey', () {
+    test('Every note is an i18n key, never a finished string', () {
+      // German literals used to be appended to an otherwise translated
+      // tooltip, so an English user got a mixed-language message.
+      const ranges = [
+        Ranges.hb, Ranges.hct, Ranges.height, Ranges.weight,
+        Ranges.paO2, Ranges.svO2, Ranges.baseExcess, Ranges.temperature,
+      ];
+      for (final r in ranges) {
+        expect(r.noteKey, isNotNull);
+        expect(r.noteKey, startsWith('range_note_'));
+        expect(r.noteKey, matches(RegExp(r'^[a-z0-9_]+$')));
+      }
     });
   });
 

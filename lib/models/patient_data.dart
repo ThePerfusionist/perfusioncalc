@@ -94,6 +94,22 @@ class PatientData {
   /// Cardiac output uses user-defined CI (default 2.4) instead of fixed value
   double get cardiacOutput => _safe(bsa * bsaCardiacIndex);
 
+  // Weight-only linear approximation of the circulating blood volume, as
+  // used in clinical perfusion practice (Silbernagl & Despopoulos,
+  // Taschenatlas Physiologie - AppSources.silbernagl).
+  //
+  // OPEN POINT, deliberately not changed unilaterally: this is a textbook
+  // approximation, while the project otherwise insists on primary
+  // literature. Nadler WM, Hidalgo JU, Bloch T. Prediction of blood volume
+  // in normal human adults. Surgery. 1962;51(2):224-232 is already cited as
+  // AppSources.nadler but drives no calculation. Nadler additionally needs
+  // body height (available as PatientData.height):
+  //   male   BV(l) = 0.3669 x H(m)^3 + 0.03219 x W(kg) + 0.6041
+  //   female BV(l) = 0.3561 x H(m)^3 + 0.03308 x W(kg) + 0.1833
+  // Switching would move every displayed blood volume AND both expected
+  // Hct/Hb values, and would make height a required input for them - a
+  // clinical product decision, not a bug fix. Until it is taken, the UI
+  // labels these two results as an approximation.
   double get bloodVolumeMale {
     if (weight == null || weight! <= 0) return 0;
     return 0.041 * weight! + 1.53;
@@ -104,12 +120,26 @@ class PatientData {
     return 0.047 * weight! + 0.86;
   }
 
-  double get expectedHb {
-    if (weight == null || weight! <= 0 || currentHb == null || primingVolume == null) return 0;
-    final bvMl = weight! * 1000;
-    if (bvMl <= 0) return 0;
-    return currentHb! - (currentHb! * primingVolume!) / (bvMl / 10);
+  // Hemodilution after priming, for Hb exactly as for Hct below: the red
+  // cell mass is unchanged, only the volume it is distributed in grows.
+  //
+  //   Hb_after = Hb_before x BV / (BV + priming)
+  //
+  // The previous implementation used a linearised form AND an implied blood
+  // volume of weight x 100 ml (8000 ml at 80 kg), while the Hct getters
+  // right below already used bloodVolumeMale/Female. At 80 kg / Hb 14 /
+  // 1500 ml priming that produced 11.38 instead of 10.67 g/dl - a
+  // systematic +0.70 g/dl, always on the optimistic side, in exactly the
+  // range where transfusion is discussed. Hb is now split by sex like Hct,
+  // because the underlying blood volume is.
+  double _expectedHb(double bvLitres) {
+    if (currentHb == null || primingVolume == null || bvLitres <= 0) return 0;
+    final bvMl = bvLitres * 1000;
+    return _safe(currentHb! * bvMl / (bvMl + primingVolume!));
   }
+
+  double get expectedHbMale => _expectedHb(bloodVolumeMale);
+  double get expectedHbFemale => _expectedHb(bloodVolumeFemale);
 
   double get expectedHctMale {
     if (weight == null || currentHct == null || primingVolume == null) return 0;
@@ -150,7 +180,19 @@ class PatientData {
     return (venHb! * 1.34 * (svO2! / 100)) + (pvO2! * 0.0031);
   }
 
-  double get cavDO2 => caO2 - cvO2;
+  /// Arteriovenous oxygen content difference.
+  ///
+  /// Guarded on BOTH sides on purpose. cvO2 returns 0 when any venous input
+  /// is missing, so an unguarded subtraction silently degenerates to
+  /// cavDO2 == caO2 - and with it VO2 == DO2 and O2-ER == 100 %. On screen
+  /// that was masked by ResultCard.missingInputs, but the PDF export has no
+  /// such notion and printed a plausible-looking "O2-ER 100.00 %" into the
+  /// one artefact that leaves the app. Returning 0 here makes every
+  /// downstream getter fall back to "not calculated" in both places.
+  double get cavDO2 {
+    if (caO2 <= 0 || cvO2 <= 0) return 0;
+    return caO2 - cvO2;
+  }
 
   double get do2 {
     final co = _coEffective;
@@ -246,9 +288,33 @@ class PatientData {
   double get mmToCh => (mmInput ?? 0) * 3;
 
   // ── Pediatric transfusion ─────────────────────────────────────────────────
+  // Davies P, Robertson S, Hegde S, Greenwood R, Massey E, Davis P.
+  // Calculating the required transfusion volume in children.
+  // Transfusion. 2007;47(2):212-216. doi:10.1111/j.1537-2995.2007.01091.x
+  //
+  //   volume (ml) = weight (kg) x Hb increment (g/dl) x 3 / Hct(RBC unit)
+  //
+  // The Hct is a FRACTION, not a percentage. Davies' own worked example:
+  // 20 kg x 2 g/dl x 3 / 0.6 = 200 ml = 10 ml/kg, which is the paper's
+  // headline statement ("10 mL/kg gives an increment of 2 g/dL" at the UK
+  // standard Hct of 0.6).
+  //
+  // The factor 3 does NOT already contain the unit's hematocrit - dividing
+  // by it is the paper's formula, not a double correction. With the 0.55
+  // assumed here the result is 5.45 ml/kg per g/dl versus 5.0 at a UK unit;
+  // Davies measured an empirical transfusion factor of 5.02 ml/kg.
+  //
+  // 0.55 is an institutional assumption, and it is the one number in this
+  // formula that varies between blood services: German RBC concentrates in
+  // additive solution are specified at Hct 0.50-0.70. Erring low yields a
+  // slightly larger volume, so check it against the unit label before use -
+  // in neonates the difference is clinically relevant.
+  static const double kRbcUnitHematocrit = 0.55;
+
   double get transfusionVolume {
     if (pediatricWeight == null || desiredHbIncrease == null) return 0;
-    return pediatricWeight! * desiredHbIncrease! * 3 / (55 * 0.01);
+    return _safe(
+        pediatricWeight! * desiredHbIncrease! * 3 / kRbcUnitHematocrit);
   }
 
   // ── Ultrafiltration / hemoconcentration ─────────────────────────────────

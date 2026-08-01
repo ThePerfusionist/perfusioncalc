@@ -69,6 +69,12 @@ class BgaModel {
 
   /// Oxygen saturation in % from (corrected) PaO2.
   /// Severinghaus dissociation curve.
+  ///
+  /// Model simplification, stated openly: the 37 °C dissociation curve is
+  /// applied to a temperature-corrected PO2. Physiologically the curve
+  /// itself shifts with temperature as well, so this is an approximation -
+  /// deliberate, because the alternative needs a full temperature-dependent
+  /// curve that the correction this screen teaches does not use either.
   double? get satFromPaO2 {
     final p = corrPaO2 ?? paO2;
     if (p == null || p <= 0) return null;
@@ -78,8 +84,14 @@ class BgaModel {
   }
 
   /// Correction factor in % (how strongly PaO2 changes per °C).
+  ///
+  /// Must use the MEASURED 37 °C PaO2, exactly like [corrPaO2] does. Feeding
+  /// the already-corrected value back in produced a displayed percentage
+  /// that did not belong to the correction actually carried out - the number
+  /// on screen and the number in the result were derived from different
+  /// inputs.
   double? get fTPercent {
-    final p = corrPaO2 ?? paO2;
+    final p = paO2;
     if (p == null || p <= 0) return null;
     return _safe(_fT(p) * 100.0);
   }

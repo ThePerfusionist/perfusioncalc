@@ -30,12 +30,18 @@ class InAppAlert {
 
   /// Shows the banner over the current screen.
   ///
-  /// [elapsedText] carries the already formatted elapsed time so this widget
-  /// stays free of any timing logic.
+  /// [titleKey] and [messageKey] are i18n KEYS, not finished strings: the
+  /// banner stands for 30 seconds, and a language switch while it is up
+  /// used to leave the title and body frozen in the old language while the
+  /// close button's semantics label - resolved inside build() - followed
+  /// along. Resolving both in build() keeps the whole banner consistent.
+  ///
+  /// [elapsedText] stays a finished string; it is a formatted duration and
+  /// carries no language.
   static void show(
     BuildContext context, {
-    required String title,
-    required String message,
+    required String titleKey,
+    required String messageKey,
     String? elapsedText,
   }) {
     final overlay = Overlay.maybeOf(context);
@@ -46,8 +52,8 @@ class InAppAlert {
 
     final entry = OverlayEntry(
       builder: (ctx) => _AlertBanner(
-        title: title,
-        message: message,
+        titleKey: titleKey,
+        messageKey: messageKey,
         elapsedText: elapsedText,
         onDismiss: dismiss,
       ),
@@ -69,14 +75,14 @@ class InAppAlert {
 }
 
 class _AlertBanner extends StatefulWidget {
-  final String title;
-  final String message;
+  final String titleKey;
+  final String messageKey;
   final String? elapsedText;
   final VoidCallback onDismiss;
 
   const _AlertBanner({
-    required this.title,
-    required this.message,
+    required this.titleKey,
+    required this.messageKey,
     required this.elapsedText,
     required this.onDismiss,
   });
@@ -107,9 +113,27 @@ class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderSta
     super.dispose();
   }
 
+  /// One flat sentence for the screen reader: prefix, title, body and, when
+  /// present, the elapsed time. Built as a helper rather than inline so the
+  /// widget tree stays readable.
+  String _semanticsLabel(String title, String message) {
+    final buffer = StringBuffer()
+      ..write(t('a11y_alert_banner'))
+      ..write(': ')
+      ..write(title)
+      ..write('. ')
+      ..write(message);
+    final elapsed = widget.elapsedText;
+    if (elapsed != null) buffer.write('. $elapsed');
+    return buffer.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
+    // Resolved here, not at the call site - see InAppAlert.show().
+    final title = t(widget.titleKey);
+    final message = t(widget.messageKey);
     // Cap the width so the banner does not stretch across a wide desktop
     // window; on phones it simply fills the available space.
     final width = media.size.width < 520 ? media.size.width - 16 : 480.0;
@@ -140,7 +164,15 @@ class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderSta
                   // Opaque so taps on the padding register too, not only
                   // those landing on the text or icons.
                   behavior: HitTestBehavior.opaque,
-                  child: Container(
+                  // liveRegion: this banner appears WITHOUT any user action,
+                  // which is exactly the case screen readers need announced.
+                  // Without it a TalkBack/VoiceOver user simply never learns
+                  // the re-dose reminder fired - the only semantics label on
+                  // the banner sat on the close icon.
+                  child: Semantics(
+                    liveRegion: true,
+                    label: _semanticsLabel(title, message),
+                    child: Container(
                     padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
                     decoration: BoxDecoration(
                       color: kCardColor,
@@ -164,7 +196,7 @@ class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderSta
                             children: [
                               Row(children: [
                                 Expanded(
-                                  child: Text(widget.title,
+                                  child: Text(title,
                                       style: TextStyle(
                                           color: kText,
                                           fontSize: 15,
@@ -178,7 +210,7 @@ class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderSta
                                           fontWeight: FontWeight.w500)),
                               ]),
                               const SizedBox(height: 2),
-                              Text(widget.message,
+                              Text(message,
                                   style: TextStyle(
                                       color: kTextSecondary, fontSize: 12.5)),
                             ],
@@ -199,6 +231,7 @@ class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderSta
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ),
               ),

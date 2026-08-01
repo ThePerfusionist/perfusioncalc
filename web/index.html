@@ -16,32 +16,42 @@
       - worker-src 'self' blob: erlaubt den skwasm-Render-Worker.
       - child-src spiegelt worker-src für Browser, die worker-src (noch) nicht
         unterstützen (z. B. ältere Safari) und auf child-src zurückfallen.
-      - Assets werden lokal ausgeliefert (--no-web-resources-cdn); gstatic.com
-        bleibt nur als Fallback-Quelle für CanvasKit gelistet.
+      - gstatic.com wurde ENTFERNT (Audit 2.6): beide Builds laufen mit
+        --no-web-resources-cdn, CanvasKit kommt vom eigenen Origin. Die
+        Einträge weiteten die erlaubten Script-Quellen auf, ohne je benutzt
+        zu werden. Falls --no-web-resources-cdn je entfällt, müssen sie
+        zusammen mit dem Build-Flag zurückkommen.
   -->
   <!--
-    Hinweis: 'frame-ancestors' und 'X-Frame-Options' wurden entfernt - beide
-    wirken NUR als echte HTTP-Header, nicht im <meta>-Tag (der Browser ignoriert
-    sie dort und gibt eine Konsolenwarnung aus). GitHub Pages kann keine HTTP-
-    Header setzen, daher sind sie hier wirkungslos. Clickjacking-Schutz müsste,
-    falls nötig, über einen Reverse-Proxy/CDN als echte Header erfolgen.
+    Welche Security-Header als <meta> überhaupt wirken:
+
+      Content-Security-Policy   ja, per http-equiv
+      X-Content-Type-Options    NEIN - nur als echter HTTP-Header
+      Permissions-Policy        NEIN - nur als echter HTTP-Header
+      X-Frame-Options           NEIN - nur als echter HTTP-Header
+      frame-ancestors           NEIN - in <meta> per Spezifikation ignoriert
+      referrer                  ja, als <meta name="referrer">
+
+    Die drei wirkungslosen Tags standen hier und suggerierten Schutz, den es
+    nicht gab (Audit 2.6) - entfernt. GitHub Pages kann keine HTTP-Header
+    setzen; wer sie wirklich braucht, muss einen Reverse-Proxy oder ein CDN
+    davorsetzen. Für den Offline-Windows-Bundle liesse sich das in der
+    Caddyfile nachrüsten.
   -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com;
+    script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval';
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob:;
     font-src 'self' data:;
-    connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com;
+    connect-src 'self';
     worker-src 'self' blob:;
     child-src 'self' blob:;
     object-src 'none';
     base-uri 'self';
     form-action 'none';
   ">
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()">
 
   <!-- ═══ Favicon (v9) ═══ -->
   <link rel="icon" type="image/x-icon" href="favicon.ico?v=9">

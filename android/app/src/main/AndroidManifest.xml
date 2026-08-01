@@ -1,15 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Cardioplegia re-dose reminder (scheduled local notifications).
          POST_NOTIFICATIONS: required from Android 13 to post at all.
-         SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM: without these Android 12+
-         downgrades the alarm to inexact delivery, which is unacceptable for
-         a 15-minute clinical reminder.
+         SCHEDULE_EXACT_ALARM: on Android 12+ exact alarms need a separate,
+         user-revocable permission; without it the OS downgrades delivery to
+         inexact, which is not good enough for a timed clinical reminder.
+         NotificationService.requestPermission() asks for it explicitly and
+         zonedSchedule() falls back to inexactAllowWhileIdle if it is denied.
+
+         USE_EXACT_ALARM is deliberately NOT declared. It is a Play Store
+         restricted permission, granted only to apps whose CORE function is
+         alarms, timers or calendars (Play Console policy "Exact alarm
+         permissions"). PerfusionCalc is a calculator with an optional
+         re-dose reminder, so declaring it risks rejection of the release.
+         SCHEDULE_EXACT_ALARM covers the same functionality; the only
+         difference for the user is a one-time system prompt.
+
          WAKE_LOCK: lets the reminder wake the screen.
          RECEIVE_BOOT_COMPLETED: re-registers pending alarms after a
          restart so a scheduled reminder is not lost. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
@@ -18,7 +28,10 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="false"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"

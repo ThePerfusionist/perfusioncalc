@@ -80,10 +80,11 @@ class _ResistancesScreenState extends State<ResistancesScreen> {
 List<PdfSection> buildResistancesPdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
     PdfRow.numeric(label: 'MAP',                value: pd.map,    unit: 'mmHg'),
-    PdfRow.numeric(label: 'CVP',                value: pd.cvp,    unit: 'mmHg'),
+    // CVP/LAP of 0 mmHg is a real measurement, not an empty field.
+    PdfRow.numeric(label: 'CVP',                value: pd.cvp,    unit: 'mmHg', zeroIsValid: true),
     PdfRow.numeric(label: t('res_co_for_svr'),  value: pd.hzvRes, unit: 'l/min'),
     PdfRow.numeric(label: 'PAP',                value: pd.pap,    unit: 'mmHg'),
-    PdfRow.numeric(label: 'LAP',                value: pd.lap,    unit: 'mmHg'),
+    PdfRow.numeric(label: 'LAP',                value: pd.lap,    unit: 'mmHg', zeroIsValid: true),
     PdfRow.numeric(label: t('res_co_for_pvr'),  value: pd.hzvPvr, unit: 'l/min'),
   ]),
   PdfSection(title: t('pdf_results'), rows: [

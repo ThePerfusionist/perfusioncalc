@@ -33,9 +33,12 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.perfusioncalc"
-        minSdk = flutter.minSdkVersion
+        // flutter_local_notifications v21 raised its floor to Android 7.0
+        // (API 24). Flutter's own default currently sits at 24 as well, but
+        // it is a moving target - taking the maximum keeps the build correct
+        // if Flutter ever lowers it, and follows Flutter upwards if it rises.
+        minSdk = maxOf(24, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -54,9 +57,22 @@ android {
 
     buildTypes {
         release {
+            // Ohne key.properties fiel der Release-Build bisher still auf den
+            // Debug-Key zurueck. Ein debug-signiertes APK unter dem Release-
+            // Namen sieht echt aus, laesst sich sideloaden und ist nie wieder
+            // durch ein korrekt signiertes Update ersetzbar. release.yml setzt
+            // deshalb PERFUSIONCALC_REQUIRE_RELEASE_SIGNING=true; dann bricht
+            // der Build ab statt zu degradieren. Lokale Builds ohne die
+            // Variable verhalten sich unveraendert.
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
+                if (System.getenv("PERFUSIONCALC_REQUIRE_RELEASE_SIGNING") == "true") {
+                    throw GradleException(
+                        "Release signing required but android/key.properties is missing. " +
+                        "Refusing to fall back to the debug key."
+                    )
+                }
                 signingConfigs.getByName("debug")
             }
             // R8 strips the generic signatures that Gson's TypeToken needs,

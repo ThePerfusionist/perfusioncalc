@@ -22,8 +22,15 @@ class Range {
   final double min;
   final double max;
   final String unit;
-  final String? note; // optional hint text shown in the tooltip
-  const Range(this.min, this.max, this.unit, {this.note});
+
+  /// i18n key of an optional hint shown in the plausibility tooltip.
+  ///
+  /// A key, not a finished string: these notes used to be German literals
+  /// that warnTooltipFor() appended to an otherwise translated tooltip, so
+  /// an English user got a mixed-language message.
+  final String? noteKey;
+
+  const Range(this.min, this.max, this.unit, {this.noteKey});
 
   /// true if the value is within the plausible range.
   /// null values count as "not entered" and therefore not implausible.
@@ -32,8 +39,15 @@ class Range {
     return v >= min && v <= max;
   }
 
-  /// For tooltip display: "5–20 g/dl"
-  String get display => '$min–$max $unit';
+  /// For tooltip display: "5–20 g/dl".
+  ///
+  /// Whole numbers print without a decimal tail - Range(30, 230, 'cm')
+  /// rendered as "30.0–230.0 cm" before, and that string appears in every
+  /// plausibility tooltip.
+  static String _n(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+  String get display => '${_n(min)}–${_n(max)} $unit';
 }
 
 /// Central collection of all normal ranges, grouped by clinical context.
@@ -41,65 +55,65 @@ class Range {
 class Ranges {
   // ── Anthropometry ────────────────────────────────────────────────────────
   static const height = Range(30, 230, 'cm',
-      note: 'Körpergröße Säuglinge bis Riesenwuchs');
+      noteKey: 'range_note_height');
   static const weight = Range(0.5, 300, 'kg',
-      note: 'Neugeborene bis adipositas permagna');
+      noteKey: 'range_note_weight');
   static const pediatricWeight = Range(0.5, 50, 'kg',
-      note: 'Pädiatrischer Bereich');
+      noteKey: 'range_note_pediatric_weight');
   static const bsa = Range(0.1, 3.5, 'm²',
-      note: 'Säugling bis sehr großer Erwachsener');
+      noteKey: 'range_note_bsa');
 
   // ── Hematology ───────────────────────────────────────────────────────────
   static const hb = Range(4, 22, 'g/dl',
-      note: 'Schwere Anämie bis Polyglobulie');
+      noteKey: 'range_note_hb');
   static const hct = Range(10, 65, '%',
-      note: 'Schwere Anämie bis Polyglobulie');
+      noteKey: 'range_note_hct');
   static const primingVolume = Range(0, 3000, 'ml',
-      note: 'Typisch 1200–1800 ml Adult, 300–600 ml Pädiatrie');
+      noteKey: 'range_note_priming_volume');
   static const circulatingVolume = Range(300, 8000, 'ml',
-      note: 'Patientenblutvolumen + Priming, pädiatrisch bis adult');
+      noteKey: 'range_note_circulating_volume');
 
   // ── Oxygen transport ─────────────────────────────────────────────────────
   static const paO2 = Range(20, 600, 'mmHg',
-      note: 'Hypoxämie bis 100% O2-Beatmung');
+      noteKey: 'range_note_pa_o2');
   static const pvO2 = Range(10, 80, 'mmHg',
-      note: 'Gemischt-venös typisch 35–45');
+      noteKey: 'range_note_pv_o2');
   static const saO2 = Range(50, 100, '%',
-      note: 'Schwere Hypoxämie bis Normalbefund');
+      noteKey: 'range_note_sa_o2');
   static const svO2 = Range(30, 90, '%',
-      note: 'Normal 65–75%, kritisch <50%');
+      noteKey: 'range_note_sv_o2');
 
   // ── Hemodynamics ─────────────────────────────────────────────────────────
   static const co = Range(0.5, 12, 'l/min',
-      note: 'Schock bis Hyperdynamie');
+      noteKey: 'range_note_co');
   static const ci = Range(0.5, 6.0, 'l/min/m²',
-      note: 'Normal 2.5–4.0');
+      noteKey: 'range_note_ci');
   static const map = Range(30, 180, 'mmHg',
-      note: 'Normal 70–100');
+      noteKey: 'range_note_map');
   static const cvp = Range(-5, 30, 'mmHg',
-      note: 'Normal 2–8');
+      noteKey: 'range_note_cvp');
   static const pap = Range(5, 80, 'mmHg',
-      note: 'Normal systolisch 15–30');
+      noteKey: 'range_note_pap');
   static const lap = Range(0, 30, 'mmHg',
-      note: 'Normal 6–12');
+      noteKey: 'range_note_lap');
 
   // ── Electrolytes / blood gas ─────────────────────────────────────────────
   static const natrium = Range(110, 160, 'mmol/l',
-      note: 'Normal 135–145');
+      noteKey: 'range_note_natrium');
   static const kalium = Range(1.5, 8.0, 'mmol/l',
-      note: 'Normal 3.5–5.0');
+      noteKey: 'range_note_kalium');
   static const calzium = Range(0.3, 2.0, 'mmol/l',
-      note: 'Ionisiertes Ca, Normal 1.1–1.3');
+      noteKey: 'range_note_calzium');
   static const baseExcess = Range(-30, 30, 'mmol/l',
-      note: 'Normal ±2');
+      noteKey: 'range_note_base_excess');
   static const pH = Range(6.8, 7.8, '',
-      note: 'Normal 7.35–7.45');
+      noteKey: 'range_note_ph');
   static const temperature = Range(15, 42, '°C',
-      note: 'Tiefe Hypothermie bis Hyperthermie');
+      noteKey: 'range_note_temperature');
 
   // ── Tube length ──────────────────────────────────────────────────────────
   static const tubeLength = Range(10, 500, 'cm',
-      note: 'Übliche Längen HLM-Schlauchsysteme');
+      noteKey: 'range_note_tube_length');
 
   // ── Charrière ────────────────────────────────────────────────────────────
   static const ch = Range(1, 40, 'Ch');
@@ -107,37 +121,37 @@ class Ranges {
 
   // ── Pediatrics ───────────────────────────────────────────────────────────
   static const desiredHbIncrease = Range(0.5, 8, 'g/dl',
-      note: 'Üblicher Ziel-Hb-Anstieg');
+      noteKey: 'range_note_desired_hb_increase');
 
   // ── Cardioplegia ─────────────────────────────────────────────────────────
   static const cardioplegiaDoseBuckberg = Range(1, 2, 'ml/kg',
-      note: 'Induktions-/Erhaltungsdosis nach Buckberg 1987');
+      noteKey: 'range_note_cardioplegia_dose_buckberg');
   static const cardioplegiaDoseDelNido = Range(15, 20, 'ml/kg',
-      note: 'Einzeldosis nach Matte & del Nido 2012, max. 1000 ml');
+      noteKey: 'range_note_cardioplegia_dose_del_nido');
   static const cardioplegiaDelNidoCrystalloid = Range(100, 1600, 'ml',
-      note: 'Kristalloidanteil (4 Teile); Blut folgt mit 1 Teil');
+      noteKey: 'range_note_cardioplegia_del_nido_crystalloid');
   static const cardioplegiaDelNidoPumpFlow = Range(50, 600, 'ml/min',
-      note: 'Kristalloidpumpe 100 %; Blutpumpe folgt anteilig');
+      noteKey: 'range_note_cardioplegia_del_nido_pump_flow');
   static const cardioplegiaDelNidoCrystPercent = Range(50, 95, '%',
-      note: 'Kristalloidanteil der fertigen Lösung; 80 % entspricht 4:1');
+      noteKey: 'range_note_cardioplegia_del_nido_cryst_percent');
   static const cardioplegiaCalafioreFlow = Range(50, 500, 'ml/min',
-      note: 'Druckgesteuert (z.B. 90–100 mmHg); flusskontrolliertes Referenzprotokoll 200–300 ml/min');
+      noteKey: 'range_note_cardioplegia_calafiore_flow');
   static const cardioplegiaCalafioreKclVolume = Range(5, 100, 'ml',
-      note: 'Institutionelles Beispiel: 40 ml KCl 14,9 % (4 Ampullen à 10 ml)');
+      noteKey: 'range_note_cardioplegia_calafiore_kcl_volume');
   static const cardioplegiaCalafioreMgVolume = Range(0, 50, 'ml',
-      note: 'Optional. Institutionelles Beispiel: 10 ml MgSO4 (1 Ampulle à 10 ml)');
+      noteKey: 'range_note_cardioplegia_calafiore_mg_volume');
   static const cardioplegiaCalafioreKclConc = Range(0.5, 3, 'mmol/ml',
-      note: 'KCl 14,9 % entspricht 2 mmol/ml');
+      noteKey: 'range_note_cardioplegia_calafiore_kcl_conc');
   static const cardioplegiaCalafioreKclConcPercent = Range(3.5, 22.5, '%',
-      note: 'KCl 14,9 % (Standard) entspricht 2 mmol/ml');
+      noteKey: 'range_note_cardioplegia_calafiore_kcl_conc_percent');
   static const cardioplegiaCalafioreMgConc = Range(0.5, 3, 'mmol/ml',
-      note: '500 mg/ml MgSO4-Heptahydrat entspricht 20 mmol pro 10-ml-Ampulle (≈2,0 mmol/ml)');
+      noteKey: 'range_note_cardioplegia_calafiore_mg_conc');
   static const cardioplegiaCalafioreMgConcPercent = Range(10, 60, '%',
-      note: '500 mg/ml MgSO4-Heptahydrat entspricht ca. 50 % (w/v)');
+      noteKey: 'range_note_cardioplegia_calafiore_mg_conc_percent');
 
   // ── Bretschneider (HTK/Custodiol) ────────────────────────────────────────
   static const cardioplegiaBretschneiderFlow = Range(50, 600, 'ml/min',
-      note: 'Druckgesteuert: initial 100–110 mmHg, nach Herzstillstand 40–50 mmHg');
+      noteKey: 'range_note_cardioplegia_bretschneider_flow');
   static const cardioplegiaBretschneiderTime = Range(2, 8, 'min',
-      note: 'Erstperfusion 6–8 min, Nachperfusion ca. 2–3 min');
+      noteKey: 'range_note_cardioplegia_bretschneider_time');
 }

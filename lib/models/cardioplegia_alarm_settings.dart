@@ -5,17 +5,26 @@
 // values are persisted in SharedPreferences and loaded once in main() before
 // the first frame, so the user's choices survive app restarts.
 //
-// Scope note (important, and surfaced to the user in the UI): this drives an
-// IN-APP alert only. It fires while PerfusionCalc is open and in the
-// foreground - it is not an OS-level scheduled notification and will not
-// wake the device or fire from the background. Doing that would require a
-// local-notification plugin plus platform channel/permission setup; see
-// PROJECT_STATE.md for the open item.
+// Scope (this description was two releases out of date and claimed the
+// opposite of what the code does):
 //
-// Volume is intentionally NOT offered as a setting: neither SystemSound nor
-// HapticFeedback (the SDK built-ins used here) expose a programmatic volume,
-// so a volume slider would change a number without any audible effect. The
-// alert follows the device's notification volume instead.
+//   Android/iOS  scheduled OS notification via flutter_local_notifications
+//                (utils/notification_service.dart), fires with the app in
+//                the background and wakes the screen.
+//   Web          the app's own one-second ticker raises a browser
+//                notification while the tab is alive; there is no push
+//                server, so closing the browser ends the reminder.
+//   Windows/Linux not supported - notification_service bails out early.
+//
+// On top of that, and on every platform, an in-app banner
+// (widgets/in_app_alert.dart) is shown. It exists because a system
+// notification can be swallowed silently by "do not disturb" or full-screen
+// mode without any error surfacing.
+//
+// Volume is intentionally NOT offered as a setting: the alert follows the
+// device's notification volume, and neither the OS notification channel nor
+// HapticFeedback exposes a programmatic volume - a slider would move a
+// number with no audible effect.
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -63,10 +72,15 @@ class CardioplegiaAlarmSettings extends ChangeNotifier {
     }
   }
 
-  Future<void> _save(void Function(SharedPreferences p) write) async {
+  /// Takes an ASYNC writer and awaits it. With a synchronous
+  /// `void Function(SharedPreferences)` the returned Future was dropped on
+  /// the floor, so the surrounding try/catch caught nothing: a failing
+  /// setBool/setDouble threw into the void instead of being swallowed
+  /// deliberately.
+  Future<void> _save(Future<void> Function(SharedPreferences p) write) async {
     try {
       final p = await SharedPreferences.getInstance();
-      write(p);
+      await write(p);
     } catch (_) {
       // Persisting failed -> the choice still applies for this session.
     }

@@ -222,25 +222,19 @@ class _CoCiCardState extends State<_CoCiCard> {
   ValueChanged<double?> get _cb => widget.mode == _CoMode.co ? widget.onCoChanged : widget.onCiChanged;
 
   @override
-  void initState() { super.initState(); _ctrl = TextEditingController(text: _fmt(_val)); }
+  void initState() { super.initState(); _ctrl = TextEditingController(text: formatFieldNumber(_val)); }
 
   @override
   void didUpdateWidget(_CoCiCard old) {
     super.didUpdateWidget(old);
     if (!_editing) {
-      final t = _fmt(_val);
+      final t = formatFieldNumber(_val);
       if (_ctrl.text != t) { _ctrl.text = t; _ctrl.selection = TextSelection.collapsed(offset: t.length); }
     }
   }
 
   @override
   void dispose() { _ctrl.dispose(); super.dispose(); }
-
-  String _fmt(double? v) {
-    if (v == null) return '';
-    String s = v.toStringAsFixed(2);
-    return s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
-  }
 
   void _inc() => _cb(double.parse(((_val ?? 0) + 0.1).toStringAsFixed(4)));
   void _dec() => _cb(double.parse(((_val ?? 0) - 0.1).toStringAsFixed(4)));
