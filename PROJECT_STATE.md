@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.6+28 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.7+29 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -608,7 +608,7 @@ einem lokalen `flutter test` gemergt werden.
 | 4 | EK-Hämatokrit | aus der Entscheidung wurde ein persistiertes Eingabefeld (v0.4.4) |
 | 5 | Benachrichtigungen im Release-Build, Android | **verifiziert** — geplante Benachrichtigung feuert und stürzt nicht ab |
 | 6 | Web / Service Worker | Cache-Name ✔, Fontfix ✔ (0 gstatic-Requests), **Offline-Laden war defekt → v0.4.5** |
-| 7 | CI | offen, hängt am nächsten Push/Tag |
+| 7 | CI | **verifiziert** am Release-Lauf v0.4.6 (analyze sauber, 199 Tests, Keystore-Pflicht, Caddy-SHA-512, Precache-Generator, Cleanup) |
 
 **Was Stufe 5 nebenbei beantwortet hat:** Die ProGuard-`-keep`-Regeln greifen
 weiterhin, und der Wegfall von `USE_EXACT_ALARM` hat die Funktion nicht
@@ -705,3 +705,33 @@ richtige Seite des Kompromisses — und es ist genau das, was Flutters eigene
 Cache-Invalidierung und Precache-Umfang — aber nur eines davon wurde
 angefasst. Offline war der einzige Testfall, der das aufgedeckt hätte, und der
 stand in Stufe 6.
+
+### v0.4.7 — Precache entschlackt
+
+Der Release-Lauf v0.4.6 meldete `Precache: 49 Dateien, 45.5 MB`, während der
+Offline-Betrieb tatsächlich nur 10,7 MB anforderte. Die Differenz waren
+Dateien, die der Browser nie lädt:
+
+- **`.symbols`** — Symboltabellen zum Entschlüsseln von Stacktraces. Flutter
+  legt neben jede CanvasKit-Variante eine; zusammen der größte Posten. Beim
+  Bau des Generators war `.map` ausgeschlossen, `.symbols` nicht.
+- **`canvaskit/experimental_webparagraph/`** — experimentelle Renderer-
+  Variante, wird nur mit gesetztem Flag geladen.
+
+**Bewusst drin geblieben** sind die übrigen Renderer-Varianten (`canvaskit/`,
+`canvaskit/chromium/`, `skwasm`, `skwasm_heavy`, `wimp`). Welche greift,
+entscheidet erst der Browser zur Laufzeit — Offline-Robustheit über
+verschiedene Browser hinweg wiegt hier schwerer als ein paar MB.
+
+Zusätzlich gibt der Schritt jetzt die **fünf größten Einträge** aus. Damit ist
+beim nächsten Lauf ohne Nachmessen sichtbar, wohin das Gewicht geht, falls
+Flutter neue Varianten mitliefert.
+
+Gegen einen nachgebauten Build-Baum (64 Dateien, 43,1 MB) geprüft: 44 Dateien
+/ 21,2 MB im Precache, alle vier Entry Points erkannt, erzeugtes `sw.js` mit
+`node --check` validiert.
+
+**Warum das zählt:** Für die Windows-Distribution ist die Größe folgenlos,
+dort liegt ohnehin alles lokal. Für die Web-PWA lädt jeder Besucher den
+Precache bei **jedem** Deploy neu — der Cache-Name hängt an der Commit-SHA.
+Auf einem Klinik-Tablet über Mobilfunk ist das der Unterschied.

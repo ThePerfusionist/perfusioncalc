@@ -112,18 +112,42 @@ jobs:
               'favicon.ico', 'favicon.png', 'apple-touch-icon.png',
           }
 
+          # Dateien, die der Browser NIE anfragt. Ohne diese Ausschluesse lag
+          # der Precache bei 45,5 MB, waehrend der Offline-Betrieb tatsaechlich
+          # 10,7 MB brauchte - jeder Besucher haette bei jedem Deploy das
+          # Vierfache geladen. Auf einem Klinik-Tablet ueber Mobilfunk zaehlt
+          # das.
+          #
+          #   .map / .symbols  Debug-Artefakte zum Entschluesseln von
+          #                    Stacktraces. Flutter legt neben jede
+          #                    CanvasKit-Variante eine .symbols-Datei; zur
+          #                    Laufzeit wird keine davon geladen.
+          #   experimental_webparagraph/
+          #                    experimentelle Renderer-Variante, wird nur mit
+          #                    gesetztem Flag geladen.
+          #
+          # Die uebrigen Renderer-Varianten (canvaskit/, canvaskit/chromium/,
+          # skwasm, skwasm_heavy, wimp) bleiben BEWUSST drin: welche greift,
+          # entscheidet erst der Browser zur Laufzeit. Offline-Robustheit ueber
+          # verschiedene Browser hinweg ist hier mehr wert als ein paar MB.
+          skip_suffix = ('.map', '.symbols')
+          skip_prefix = ('icons/', 'canvaskit/experimental_webparagraph/')
+
           assets = []
+          sizes = {}
           total = 0
           for dirpath, _, names in os.walk(root):
               for name in names:
                   full = os.path.join(dirpath, name)
                   rel = os.path.relpath(full, root).replace(os.sep, '/')
-                  if rel in skip_exact or rel.startswith('icons/'):
+                  if rel in skip_exact:
                       continue
-                  if rel.endswith('.map'):
+                  if rel.startswith(skip_prefix) or rel.endswith(skip_suffix):
                       continue
+                  size = os.path.getsize(full)
                   assets.append('./' + rel)
-                  total += os.path.getsize(full)
+                  sizes['./' + rel] = size
+                  total += size
           assets.sort()
 
           # Sicherung gegen einen leeren oder halben Build: ohne ein
@@ -147,6 +171,12 @@ jobs:
           print('Precache: %d Dateien, %.1f MB' % (len(assets), total / 1024 / 1024))
           for e in entry_points:
               print('  Entry point: ' + e)
+          # Die groessten Brocken mit ausgeben: so ist beim naechsten Lauf ohne
+          # Nachmessen sichtbar, wohin das Gewicht geht, falls Flutter neue
+          # Varianten mitliefert.
+          print('  Groesste Eintraege:')
+          for a in sorted(assets, key=lambda x: sizes[x], reverse=True)[:5]:
+              print('    %7.1f MB  %s' % (sizes[a] / 1024 / 1024, a))
           PY
 
           grep -q "const BUILD_ASSETS = \[$" "$SW" || {
