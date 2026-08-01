@@ -30,7 +30,7 @@ permissions:
 
 env:
   # Wie in release.yml/deploy.yml gepinnt - siehe dort.
-  FLUTTER_VERSION: '3.44.7'
+  FLUTTER_VERSION: '3.44.8'
 
 jobs:
   offline-bundle:

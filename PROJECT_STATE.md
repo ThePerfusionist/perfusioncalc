@@ -413,7 +413,7 @@ Dart-Code und sind daher ohne Toolchain verantwortbar; D und E brauchen
   dahinter. Bewusst innerhalb der bisherigen Major-Version geblieben
   (`checkout` v6.1.0, nicht v7) — Pinnen und Major-Sprung gehören nicht in
   denselben Commit. `.github/dependabot.yml` hält die SHAs nach.
-- **`FLUTTER_VERSION: '3.44.7'`** als workflow-weite Variable in allen drei
+- **`FLUTTER_VERSION: '3.44.8'`** als workflow-weite Variable in allen drei
   Workflows. **Muss mit der lokalen Version übereinstimmen** (`flutter --version`)
   — sonst testet man gegen eine andere Toolchain, als die CI baut. Beim
   Anheben: alle drei Workflows plus die Entwicklungsmaschinen gemeinsam.
@@ -597,3 +597,25 @@ upload-artifact 4→**7**).
 Dependabot öffnet sie mit dieser Konfiguration nicht erneut. #6
 (`pdf` 3.12.0 → 3.13.0) ist ein Minor innerhalb von `^3.11.1` und kann nach
 einem lokalen `flutter test` gemergt werden.
+
+### Prüfstatus v0.4.4 (Stand 01.08.2026)
+
+| Stufe | Inhalt | Status |
+|---|---|---|
+| 1 | `pub get`, `analyze`, `test` | **grün** (199 Tests; drei Erstbefunde behoben: Testerwartung, `unnecessary_non_null_assertion`, `unawaited_futures`) |
+| 2 | Verschärfter Analyzer | **grün** — `strict-casts` und `use_build_context_synchronously` ohne Treffer |
+| 3 | Klinische Rechenwege am laufenden System | **verifiziert** |
+| 4 | EK-Hämatokrit | aus der Entscheidung wurde ein persistiertes Eingabefeld (v0.4.4) |
+| 5 | Benachrichtigungen im Release-Build, Android | **verifiziert** — geplante Benachrichtigung feuert und stürzt nicht ab |
+| 6 | Web / Service Worker | offen, hängt am nächsten Deploy |
+| 7 | CI | offen, hängt am nächsten Push/Tag |
+
+**Was Stufe 5 nebenbei beantwortet hat:** Die ProGuard-`-keep`-Regeln greifen
+weiterhin, und der Wegfall von `USE_EXACT_ALARM` hat die Funktion nicht
+beschädigt — `SCHEDULE_EXACT_ALARM` allein trägt sie. Der Play-Store-Blocker
+ist damit ohne Funktionsverlust weg.
+
+**Toolchain angeglichen:** lokal läuft Flutter **3.44.8** / Dart 3.12.2
+(Framework-Revision 058e0af2c2, 23.07.2026). `FLUTTER_VERSION` in allen drei
+Workflows steht jetzt auf demselben Wert — vorher 3.44.7, was bedeutet hätte,
+dass lokal gegen eine andere Toolchain getestet wird als die CI baut.

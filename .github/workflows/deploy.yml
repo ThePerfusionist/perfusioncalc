@@ -40,7 +40,7 @@ env:
   # v21). Without an explicit pin the action installs whatever 'stable' is on
   # the day, so two builds of the same commit can see two toolchains.
   # Keep in sync with the other workflows AND with the local dev machines.
-  FLUTTER_VERSION: '3.44.7'
+  FLUTTER_VERSION: '3.44.8'
 
 # Verhindert, dass sich zwei Deployments gleichzeitig überlagern, wenn
 # mehrere Pushes hintereinander passieren. Neuer Push → alter Run abgebrochen.

@@ -37,7 +37,7 @@ env:
   # Siehe deploy.yml - Toolchain gepinnt, damit derselbe Tag zweimal gebaut
   # dasselbe Ergebnis liefert. Bei einer klinischen App muss die Frage
   # "welche Toolchain hat dieses APK gebaut" beantwortbar sein.
-  FLUTTER_VERSION: '3.44.7'
+  FLUTTER_VERSION: '3.44.8'
   # Von android/app/build.gradle.kts ausgewertet: kein stiller Rueckfall auf
   # den Debug-Key im Release-Build.
   PERFUSIONCALC_REQUIRE_RELEASE_SIGNING: 'true'
