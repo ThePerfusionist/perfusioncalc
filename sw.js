@@ -58,7 +58,7 @@
 //     dadurch auf CPU-Rendering zurückfiel -> langsamer als ohne. GPU-Rendering
 //     ist der größere Hebel. Diese Version verwirft die mit COI-Headern
 //     gecachten Responses aus v5.
-const BUILD_ID = 'fbe388c6cd176567f1402b3047c3619502d73d2d';
+const BUILD_ID = '78cb32d0493e4eb95ca82c0a55e395efe9409af1';
 const VERSION = `pcalc-${BUILD_ID}`;
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
@@ -85,13 +85,88 @@ const CACHE_NAME = `perfusioncalc-${VERSION}`;
 const ORIGIN = self.location.origin;
 
 // =============================================================================
-// Install: App-Shell vorab cachen, damit der erste Re-Open der installierten
-// PWA sofort flüssig startet (kein Warten auf Runtime-Caching). Nur stabile,
-// vorhersehbare Kern-Dateien werden vorgeladen; die hash-benannten Flutter-
-// Assets kommen weiterhin per Runtime-Caching dazu.
+// Install: App-Shell vorab cachen.
+//
+// WARUM DIE GENERIERTE LISTE UNTEN NOETIG IST
+// -------------------------------------------
+// Frueher standen hier nur "stabile, vorhersehbare Kern-Dateien" und alles
+// andere kam per Runtime-Caching dazu. Das funktioniert nicht, sobald der
+// Cache-Name an die Commit-SHA gekoppelt ist:
+//
+//   Deploy -> neuer CACHE_NAME -> install() legt einen LEEREN Cache an und
+//   fuellt nur APP_SHELL -> activate() loescht den alten Cache mitsamt
+//   main.dart.js und canvaskit.wasm -> der bereits geladene Tab fragt diese
+//   Dateien nicht erneut an -> sie fehlen im neuen Cache -> offline weiss.
+//
+// Genau das ist passiert: canvaskit kam noch aus dem Cache, main.dart.js
+// schlug mit ERR_FAILED fehl. Runtime-Caching fuellt einen frischen Cache
+// eben nur mit dem, was nach der Uebernahme noch einmal angefragt wird.
+//
+// BUILD_ASSETS wird im CI aus dem tatsaechlichen Inhalt von build/web
+// erzeugt (Schritt "Stamp service worker build id"). Damit ist der Precache
+// vollstaendig und bleibt es auch, wenn Flutter Dateinamen aendert -
+// niemand muss daran denken, eine Liste nachzupflegen.
 // skipWaiting sorgt dafuer, dass der neue SW sofort aktiv wird.
 // =============================================================================
-const APP_SHELL = [
+
+// Wird im CI ersetzt. Der Platzhalter-String darf nicht veraendert werden,
+// ohne das Muster im Workflow mit anzupassen; der Workflow prueft nach der
+// Ersetzung, ob sie gegriffen hat, und bricht sonst ab.
+const BUILD_ASSETS = [
+  "./.last_build_id",
+  "./anatomy.html",
+  "./assets/AssetManifest.bin",
+  "./assets/AssetManifest.bin.json",
+  "./assets/FontManifest.json",
+  "./assets/NOTICES",
+  "./assets/assets/coronary_arteries.jpg",
+  "./assets/assets/coronary_arteries.svg",
+  "./assets/assets/finck_va.jpg",
+  "./assets/assets/finck_vv.jpg",
+  "./assets/assets/fonts/Roboto-Bold.ttf",
+  "./assets/assets/fonts/Roboto-Italic.ttf",
+  "./assets/assets/fonts/Roboto-Regular.ttf",
+  "./assets/assets/heart_anterior.jpg",
+  "./assets/assets/heart_cross_section.jpg",
+  "./assets/assets/heart_posterior.jpg",
+  "./assets/assets/o2_chart.png",
+  "./assets/fonts/MaterialIcons-Regular.otf",
+  "./assets/packages/flutter_local_notifications_web/web/notifications_service_worker.js",
+  "./assets/shaders/ink_sparkle.frag",
+  "./assets/shaders/stretch_effect.frag",
+  "./cannulas.html",
+  "./canvaskit/canvaskit.js",
+  "./canvaskit/canvaskit.js.symbols",
+  "./canvaskit/canvaskit.wasm",
+  "./canvaskit/chromium/canvaskit.js",
+  "./canvaskit/chromium/canvaskit.js.symbols",
+  "./canvaskit/chromium/canvaskit.wasm",
+  "./canvaskit/experimental_webparagraph/canvaskit.js",
+  "./canvaskit/experimental_webparagraph/canvaskit.js.symbols",
+  "./canvaskit/experimental_webparagraph/canvaskit.wasm",
+  "./canvaskit/skwasm.js",
+  "./canvaskit/skwasm.js.symbols",
+  "./canvaskit/skwasm.wasm",
+  "./canvaskit/skwasm_heavy.js",
+  "./canvaskit/skwasm_heavy.js.symbols",
+  "./canvaskit/skwasm_heavy.wasm",
+  "./canvaskit/wimp.js",
+  "./canvaskit/wimp.js.symbols",
+  "./canvaskit/wimp.wasm",
+  "./flutter.js",
+  "./flutter_bootstrap.js",
+  "./flutter_service_worker.js",
+  "./main.dart.js",
+  "./main.dart.mjs",
+  "./main.dart.wasm",
+  "./pcalc-icon-v8-192.png",
+  "./pcalc-icon-v8.ico",
+  "./pcalc-icon-v8.png",
+  "./privacy.html",
+  "./version.json",
+];
+
+const CORE_SHELL = [
   './',
   './index.html',
   './flutter_bootstrap.js',
@@ -121,6 +196,11 @@ const APP_SHELL = [
   './assets/assets/finck_va.jpg',
   './assets/assets/finck_vv.jpg',
 ];
+
+// CORE_SHELL zuerst: diese Dateien haben Query-Strings (?v=9), unter denen
+// die App sie auch tatsaechlich anfragt. Set() entfernt Doppel, falls die
+// generierte Liste dieselbe Datei ohne Query enthaelt.
+const APP_SHELL = [...new Set([...CORE_SHELL, ...BUILD_ASSETS])];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
