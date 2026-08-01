@@ -15,13 +15,31 @@
 // inhaltlich). Eine feste Liste waere nach jedem Deploy veraltet. Runtime-
 // Caching passt sich automatisch an.
 //
-// Cache-Invalidierung: Wenn sich dieser Service Worker aendert (Version
-// hochzaehlen!), werden alle alten Caches geloescht und neu befuellt.
+// Cache-Invalidierung: Der Cache-Name enthaelt die Commit-SHA des Builds
+// (BUILD_ID, im CI eingestempelt). Jeder Deploy erzeugt damit automatisch
+// einen neuen Cache; 'activate' loescht alle aelteren. Kein manuelles
+// Hochzaehlen mehr.
 
 'use strict';
 
-// Bei jedem groesseren Release hochzaehlen, damit Client-Caches
-// vollstaendig invalidiert werden.
+// CACHE-INVALIDIERUNG (Audit 4.1)
+// ================================
+// Frueher wurde VERSION von Hand hochgezaehlt - gekoppelt an Renderer-
+// Umstellungen, nicht an App-Versionen. Folge: Wer perfusioncalc.de vor einem
+// Deploy geoeffnet hatte, bekam den alten Build unbegrenzt weiter geliefert,
+// ohne es zu merken. Bei einem klinischen Rechner ist das der unangenehmste
+// Fehlerfall ueberhaupt - schlimmer als ein sichtbarer Absturz.
+//
+// BUILD_ID wird jetzt im CI durch die Commit-SHA ersetzt (deploy.yml und
+// release.yml, Schritt "Stamp service worker build id"). Jeder Deploy erzeugt
+// damit einen neuen Cache-Namen; 'activate' loescht alle alten. Lokal bleibt
+// der Platzhalter stehen, dann ist der Cache im Dev-Build stabil.
+//
+// WICHTIG: Der Platzhalter-String unten darf nicht veraendert werden, ohne
+// das sed-Muster in beiden Workflows mit anzupassen. Die Workflows pruefen
+// nach der Ersetzung, ob sie gegriffen hat, und brechen sonst ab.
+//
+// Historie der frueheren manuellen Versionen:
 // v2: Umstellung auf WASM-Build (skwasm-Renderer) - alte CanvasKit-Caches
 //     muessen vollstaendig verworfen werden, damit kein Mix aus altem und
 //     neuem Renderer-Assets entsteht.
@@ -40,7 +58,8 @@
 //     dadurch auf CPU-Rendering zurückfiel -> langsamer als ohne. GPU-Rendering
 //     ist der größere Hebel. Diese Version verwirft die mit COI-Headern
 //     gecachten Responses aus v5.
-const VERSION = 'pcalc-v6';
+const BUILD_ID = '3036ac6d69bd73dd40c50e6e0e4189bb212abeba';
+const VERSION = `pcalc-${BUILD_ID}`;
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
 // =============================================================================
@@ -55,20 +74,15 @@ const CACHE_NAME = `perfusioncalc-${VERSION}`;
 // GPU-Rendering (CanvasKit über WebGL) ist auf Smartphones der mit Abstand
 // größere Performance-Hebel als Multi-Threading. Daher reichen wir Responses
 // jetzt UNVERÄNDERT durch (kein COOP/COEP mehr).
-function passThrough(response) {
-  return response;
-}
+//
+// Die frueher hier stehende Funktion passThrough() war seit diesem Rueckbau
+// eine reine Identitaetsfunktion und wurde an sieben Stellen aufgerufen -
+// entfernt (Audit 4.8). Sollten COOP/COEP je zurueckkehren, gehoert die
+// Header-Manipulation an genau diese Stelle.
 
 // Nur Same-Origin-Requests cachen. Alles von externen Hosts
 // (z.B. gstatic.com fuer CanvasKit) direkt aus dem Netzwerk laden.
 const ORIGIN = self.location.origin;
-
-// URLs, die niemals gecacht werden sollen (falls wir mal dynamische
-// Endpoints hinzufuegen, hier ausschliessen).
-const NEVER_CACHE = [
-  // Beispiele fuer spaeter:
-  // '/api/',
-];
 
 // =============================================================================
 // Install: App-Shell vorab cachen, damit der erste Re-Open der installierten
@@ -137,9 +151,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== ORIGIN) return;
 
-  // Blacklist pruefen.
-  if (NEVER_CACHE.some((path) => url.pathname.includes(path))) return;
-
   // Navigations-Requests (ein neuer Tab oeffnet "/") bekommen Network-First:
   // Wenn online, hole frisches HTML. Bei Fehler (offline): Fallback auf Cache.
   // So sehen Nutzer zwar die zuletzt gecachte Version offline, bekommen aber
@@ -150,13 +161,38 @@ self.addEventListener('fetch', (event) => {
         const fresh = await fetch(request);
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, fresh.clone());
-        return passThrough(fresh);
+        return fresh;
       } catch (e) {
         const cached = await caches.match(request);
-        if (cached) return passThrough(cached);
+        if (cached) return cached;
         // Letzter Fallback: index.html aus dem Cache.
         const indexFallback = await caches.match('./');
-        if (indexFallback) return passThrough(indexFallback);
+        if (indexFallback) return indexFallback;
+        throw e;
+      }
+    })());
+    return;
+  }
+
+  // Der Bootstrap und das Haupt-Bundle tragen KEINEN Hash im Dateinamen und
+  // fielen deshalb in den Cache-First-Zweig unten - sie wurden nach dem ersten
+  // Besuch nie wieder revalidiert (Audit 4.1). Der an die Commit-SHA
+  // gekoppelte Cache-Name loest das bereits; Network-First ist der zweite
+  // Riegel fuer den Fall, dass ein Browser die alte sw.js noch nicht ersetzt
+  // hat. Offline greift weiterhin der Cache.
+  const isEntryPoint = /\/(flutter_bootstrap\.js|main\.dart\.js)$/.test(url.pathname);
+  if (isEntryPoint) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(request, { cache: 'no-cache' });
+        if (fresh && fresh.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, fresh.clone());
+        }
+        return fresh;
+      } catch (e) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
         throw e;
       }
     })());
@@ -178,7 +214,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => null);
       // Sofort aus Cache liefern wenn vorhanden, sonst auf Netzwerk warten.
       const resp = cached || (await networkFetch);
-      return resp ? passThrough(resp) : Response.error();
+      return resp || Response.error();
     })());
     return;
   }
@@ -189,7 +225,7 @@ self.addEventListener('fetch', (event) => {
   // kommen über die SW-VERSION (oben) sauber als Ganzes.
   event.respondWith((async () => {
     const cached = await caches.match(request);
-    if (cached) return passThrough(cached);
+    if (cached) return cached;
 
     try {
       const fresh = await fetch(request);
@@ -199,7 +235,7 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, fresh.clone());
       }
-      return passThrough(fresh);
+      return fresh;
     } catch (e) {
       // Offline und nicht im Cache -> Netzwerk-Fehler zum Browser durchreichen.
       throw e;
@@ -216,4 +252,32 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+// =============================================================================
+// Notification-Klick (Audit NEU-1)
+// =============================================================================
+// web_notifications_web.dart hat zwei Zustellwege. Beim Konstruktor-Weg setzt
+// der Dart-Code n.onclick und holt das Fenster nach vorn. Beim Service-Worker-
+// Weg ist das strukturell unmoeglich: der Klick wird an den Worker zugestellt,
+// nicht an die Seite. Ohne diesen Handler passierte auf Chrome fuer Android -
+// also genau der Plattform, fuer die dieser Zustellweg gebaut wurde -
+// schlicht nichts. Der Nutzer sieht die Kardioplegie-Erinnerung, tippt darauf,
+// landet nirgends und muss die App mitten im Fall von Hand suchen.
+//
+// Verhalten: vorhandenes Fenster fokussieren, sonst eines oeffnen.
+// includeUncontrolled: true ist noetig, weil ein Tab, der vor der Aktivierung
+// dieses Workers geoeffnet wurde, noch nicht von ihm kontrolliert wird.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    });
+    for (const client of all) {
+      if ('focus' in client) return client.focus();
+    }
+    if (self.clients.openWindow) return self.clients.openWindow('./');
+  })());
 });

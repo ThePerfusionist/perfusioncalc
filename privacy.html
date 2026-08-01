@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="index, follow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Datenschutzerklärung – PerfusionCalc</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=8">
+<style>
+  /*
+    Eigenständige Datenschutzseite. Muss ohne Flutter, ohne Service Worker
+    und ohne JavaScript lesbar sein - der Play-Store-Reviewer ruft diese URL
+    unter Umständen mit einem sehr schlanken Client ab. Der Sprachumschalter
+    ist deshalb progressive enhancement: ohne JS sind BEIDE Fassungen sichtbar.
+
+    Inhaltsgleich mit privacy_policy.md im Repository-Wurzelverzeichnis.
+    Bei Änderungen IMMER beide Dateien und die Play-Console-Angaben unter
+    "Datensicherheit" zusammen anpassen - Abweichungen sind ein häufiger
+    Ablehnungsgrund.
+   */
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #2C2C2C;
+    color: #e8e8e8;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    line-height: 1.6;
+  }
+  body { padding: 16px 16px 48px; max-width: 820px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  header h1 { color: #FFA500; font-size: 22px; margin: 0; }
+  .stand { color: #999; font-size: 13px; margin: 0 0 28px; }
+
+  .lang-toggle { display: inline-flex; gap: 4px; margin-left: auto; }
+  .lang-toggle button {
+    background: #1a1a1a; color: #ccc; border: 1px solid transparent;
+    padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  }
+  .lang-toggle button.active { color: #FFA500; border-color: #FFA500; background: #FFA50022; }
+
+  h2 { color: #FFA500; font-size: 16px; margin: 28px 0 8px; }
+  p  { margin: 8px 0; }
+  a  { color: #FFA500; }
+  strong { color: #fff; }
+  code {
+    background: #1C1C1C; border: 1px solid #ffffff14; border-radius: 4px;
+    padding: 1px 5px; font-size: 13px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14px; }
+  th, td { border: 1px solid #ffffff1a; padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: #1C1C1C; color: #FFA500; font-weight: 600; }
+  .todo { color: #FF8A65; font-style: italic; }
+  .note {
+    background: #1C1C1C; border-left: 3px solid #FFA500;
+    border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 16px 0;
+  }
+  footer {
+    margin-top: 40px; padding-top: 16px; border-top: 1px solid #ffffff1a;
+    color: #999; font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="page-title">Datenschutzerklärung</h1>
+  <div class="lang-toggle">
+    <button data-lang="de" class="active">DE</button>
+    <button data-lang="en">EN</button>
+  </div>
+</header>
+<p class="stand" id="stand">Stand: 01.08.2026 · PerfusionCalc (Android, iOS, Web, Offline-Windows)</p>
+
+<!-- ===================== DEUTSCH ===================== -->
+<div id="content-de">
+
+  <h2>1. Verantwortlicher</h2>
+  <p>
+    Nils Röder<br>
+    <span class="todo">[Anschrift eintragen – nach Art. 13 Abs. 1 lit. a DSGVO verpflichtend]</span><br>
+    E-Mail: <a href="mailto:perfusioncalc@unbox.at">perfusioncalc@unbox.at</a>
+  </p>
+
+  <h2>2. Kurzfassung</h2>
+  <div class="note">
+    <strong>PerfusionCalc erhebt keine personenbezogenen Daten.</strong> Keine Registrierung,
+    kein Nutzerkonto, keine Analytics, kein Tracking, keine Werbung, keine Werbe-IDs,
+    kein Crash-Reporting, keine Weitergabe an Dritte. Alle Berechnungen laufen
+    ausschließlich auf dem Gerät.
+  </div>
+
+  <h2>3. Eingegebene Patienten- und Messwerte</h2>
+  <p>
+    Alle in der App eingegebenen Werte (Größe, Gewicht, Hb/Hkt, Blutgase, Elektrolyte,
+    Flussraten, Kardioplegie-Parameter usw.) werden <strong>ausschließlich im Arbeitsspeicher</strong>
+    verarbeitet. Sie werden nicht auf ein Speichermedium geschrieben, nicht in ein Backup
+    übernommen und nicht übertragen. Beim Schließen der App bzw. beim Neuladen der Seite
+    gehen sie verloren.
+  </p>
+  <p>
+    Ausnahme: Erzeugen Sie über die Export-Funktion ein PDF, enthält diese Datei die von
+    Ihnen eingegebenen Werte. Sie entsteht lokal an dem von Ihnen gewählten Speicherort und
+    liegt ab diesem Zeitpunkt in Ihrer Verantwortung – insbesondere, wenn sie Patientenbezug aufweist.
+  </p>
+
+  <h2>4. Lokal gespeicherte Einstellungen</h2>
+  <p>
+    In der geräteeigenen Ablage (Android/iOS: <code>SharedPreferences</code>; Web:
+    <code>localStorage</code>) werden ausschließlich Programmeinstellungen abgelegt:
+  </p>
+  <table>
+    <tr><th>Gespeichert</th><th>Zweck</th></tr>
+    <tr><td>Sprachauswahl (DE/EN)</td><td>Oberflächensprache über Neustarts hinweg</td></tr>
+    <tr><td>Design (Hell/Dunkel/System)</td><td>Darstellung</td></tr>
+    <tr><td>Kardioplegie-Alarmeinstellungen</td><td>Erinnerungsfunktion (Intervall, Ton, Vibration, Wiederholung)</td></tr>
+    <tr><td>del-Nido-Mischungsverhältnis</td><td>zuletzt genutztes Protokoll</td></tr>
+  </table>
+  <p>
+    Diese Einträge enthalten keine personenbezogenen Daten und lassen sich durch
+    Deinstallation der App bzw. Löschen der Websitedaten vollständig entfernen. Die
+    Android-App ist zusätzlich ausdrücklich von der Google-Cloud-Sicherung und von der
+    Geräte-zu-Gerät-Übertragung ausgenommen (<code>allowBackup="false"</code>,
+    <code>data_extraction_rules.xml</code>).
+  </p>
+
+  <h2>5. Berechtigungen der Android-App</h2>
+  <table>
+    <tr><th>Berechtigung</th><th>Zweck</th></tr>
+    <tr><td><code>POST_NOTIFICATIONS</code></td><td>Anzeige der Kardioplegie-Re-Dosis-Erinnerung</td></tr>
+    <tr><td><code>SCHEDULE_EXACT_ALARM</code></td><td>zeitgenaue Auslösung dieser Erinnerung</td></tr>
+    <tr><td><code>RECEIVE_BOOT_COMPLETED</code></td><td>Wiederherstellung geplanter Erinnerungen nach Neustart</td></tr>
+    <tr><td><code>WAKE_LOCK</code></td><td>Aufwecken des Displays bei Auslösung</td></tr>
+    <tr><td><code>VIBRATE</code></td><td>optionale Vibration</td></tr>
+  </table>
+  <p>
+    Die Erinnerungsfunktion ist optional und wird ausschließlich lokal geplant. Es gibt
+    keinen Push-Dienst und keinen Server. <strong>Der Release-Build deklariert keine
+    <code>INTERNET</code>-Berechtigung</strong> – die App ist damit technisch außerstande,
+    Daten zu übertragen.
+  </p>
+
+  <h2>6. Web-App (perfusioncalc.de)</h2>
+  <p>
+    Die Web-App wird als statische Seite über GitHub Pages ausgeliefert (GitHub, Inc.,
+    88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA). Beim Abruf verarbeitet
+    GitHub als Hosting-Dienstleister technisch notwendige Verbindungsdaten – insbesondere
+    IP-Adresse, Zeitpunkt, angeforderte Ressource und User-Agent – in Server-Logfiles.
+    Auf diese Verarbeitung besteht kein Einfluss; sie ist für die Auslieferung jeder
+    Webseite unvermeidbar. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO.
+    Einzelheiten im
+    <a href="https://docs.github.com/site-policy/privacy-policies/github-privacy-statement">GitHub Privacy Statement</a>.
+  </p>
+  <p>
+    Die Anwendung selbst lädt <strong>keine</strong> externen Ressourcen: keine CDNs, keine
+    Schriftarten von Drittanbietern, keine Analyse-Skripte, keine Cookies. Ein Service Worker
+    legt die Programmdateien im Browser-Cache ab, damit die Anwendung offline funktioniert;
+    Eingabedaten werden dabei nicht gespeichert.
+  </p>
+
+  <h2>7. Offline-Windows-Distribution</h2>
+  <p>
+    Das Windows-Bundle enthält die Web-App und einen lokalen Webserver (Caddy), der
+    ausschließlich an <code>localhost</code> gebunden ist. Es besteht keine Verbindung nach außen.
+  </p>
+
+  <h2>8. Empfänger, Drittland, automatisierte Entscheidungen</h2>
+  <p>
+    Keine Weitergabe an Dritte – ausgenommen die unter Ziffer 6 beschriebene, technisch
+    unvermeidbare Verarbeitung durch den Hosting-Dienstleister. Keine automatisierte
+    Entscheidungsfindung, kein Profiling.
+  </p>
+
+  <h2>9. Speicherdauer</h2>
+  <p>
+    Da keine Daten erhoben werden, entfällt eine Speicherdauer. Lokale Einstellungen
+    verbleiben bis zur Deinstallation bzw. bis zum Löschen der Websitedaten auf Ihrem Gerät.
+  </p>
+
+  <h2>10. Ihre Rechte</h2>
+  <p>
+    Ihnen stehen die Rechte nach Art. 15–21 DSGVO zu (Auskunft, Berichtigung, Löschung,
+    Einschränkung, Datenübertragbarkeit, Widerspruch) sowie das Beschwerderecht bei einer
+    Aufsichtsbehörde nach Art. 77 DSGVO. Da keine personenbezogenen Daten erhoben werden,
+    können Auskunfts- und Löschersuchen mangels vorhandener Daten regelmäßig nur negativ
+    beschieden werden.
+  </p>
+
+  <h2>11. Kinder</h2>
+  <p>
+    Die Anwendung richtet sich an medizinisches Fachpersonal und Auszubildende in der
+    Kardiotechnik. Sie ist nicht für Kinder bestimmt und erhebt keine Daten von Kindern.
+  </p>
+
+  <h2>12. Kein Medizinprodukt</h2>
+  <p>
+    PerfusionCalc ist ein Werkzeug für Ausbildung und persönliche Nutzung. Es ist
+    <strong>kein Medizinprodukt</strong> im Sinne der Verordnung (EU) 2017/745 (MDR), ist
+    nicht für die klinische Anwendung validiert und darf nicht als Grundlage für Diagnose,
+    Therapieentscheidung oder Patientenbehandlung dienen. Ergebnisse sind stets gegen die
+    Primärliteratur und die Vorgaben der eigenen Einrichtung zu prüfen.
+  </p>
+
+  <h2>13. Änderungen</h2>
+  <p>
+    Änderungen werden unter dieser URL veröffentlicht. Maßgeblich ist die hier abrufbare
+    Fassung mit dem jeweils aktuellen Datum.
+  </p>
+</div>
+
+<!-- ===================== ENGLISH ===================== -->
+<div id="content-en">
+
+  <h2>1. Controller</h2>
+  <p>
+    Nils Röder<br>
+    <span class="todo">[postal address to be inserted – mandatory under Art. 13(1)(a) GDPR]</span><br>
+    E-mail: <a href="mailto:perfusioncalc@unbox.at">perfusioncalc@unbox.at</a>
+  </p>
+
+  <h2>2. Summary</h2>
+  <div class="note">
+    <strong>PerfusionCalc collects no personal data.</strong> No sign-up, no user account,
+    no analytics, no tracking, no advertising, no advertising identifiers, no crash
+    reporting, no sharing with third parties. All calculations run entirely on the device.
+  </div>
+
+  <h2>3. Patient and measurement values you enter</h2>
+  <p>
+    Every value entered into the app (height, weight, Hb/Hct, blood gases, electrolytes,
+    flow rates, cardioplegia parameters and so on) is held <strong>in memory only</strong>.
+    It is never written to storage, never included in a backup and never transmitted.
+    Closing the app or reloading the page discards it.
+  </p>
+  <p>
+    One exception: if you use the export function to produce a PDF, that file contains the
+    values you entered. It is created locally, at a location you choose, and from that point
+    it is your responsibility – particularly if it relates to an identifiable patient.
+  </p>
+
+  <h2>4. Settings stored locally</h2>
+  <p>
+    Only application settings are written to device storage (Android/iOS:
+    <code>SharedPreferences</code>; web: <code>localStorage</code>):
+  </p>
+  <table>
+    <tr><th>Stored</th><th>Purpose</th></tr>
+    <tr><td>Language (DE/EN)</td><td>interface language across restarts</td></tr>
+    <tr><td>Theme (light/dark/system)</td><td>appearance</td></tr>
+    <tr><td>Cardioplegia alarm settings</td><td>reminder feature (interval, sound, vibration, repeat)</td></tr>
+    <tr><td>del Nido mixing ratio</td><td>last protocol used</td></tr>
+  </table>
+  <p>
+    None of these contain personal data; they are removed completely by uninstalling the app
+    or clearing site data. The Android app is additionally excluded from Google cloud backup
+    and from device-to-device transfer (<code>allowBackup="false"</code>,
+    <code>data_extraction_rules.xml</code>).
+  </p>
+
+  <h2>5. Android permissions</h2>
+  <table>
+    <tr><th>Permission</th><th>Purpose</th></tr>
+    <tr><td><code>POST_NOTIFICATIONS</code></td><td>display the cardioplegia re-dose reminder</td></tr>
+    <tr><td><code>SCHEDULE_EXACT_ALARM</code></td><td>fire that reminder on time</td></tr>
+    <tr><td><code>RECEIVE_BOOT_COMPLETED</code></td><td>restore pending reminders after a restart</td></tr>
+    <tr><td><code>WAKE_LOCK</code></td><td>wake the screen when a reminder fires</td></tr>
+    <tr><td><code>VIBRATE</code></td><td>optional vibration</td></tr>
+  </table>
+  <p>
+    The reminder is optional and scheduled locally. There is no push service and no server.
+    <strong>The release build declares no <code>INTERNET</code> permission</strong>, which
+    makes data transmission technically impossible.
+  </p>
+
+  <h2>6. Web app (perfusioncalc.de)</h2>
+  <p>
+    The web app is served as a static site via GitHub Pages (GitHub, Inc., 88 Colin P. Kelly
+    Jr. Street, San Francisco, CA 94107, USA). As hosting provider, GitHub processes
+    technically necessary connection data in server log files – IP address, timestamp,
+    requested resource and user agent. This processing is outside our control and is
+    unavoidable for the delivery of any web page. The legal basis is Art. 6(1)(f) GDPR.
+    Details in the
+    <a href="https://docs.github.com/site-policy/privacy-policies/github-privacy-statement">GitHub Privacy Statement</a>.
+  </p>
+  <p>
+    The application itself loads <strong>no</strong> external resources: no CDNs, no
+    third-party fonts, no analytics scripts, no cookies. A service worker caches the program
+    files so the app works offline; no entered data is cached.
+  </p>
+
+  <h2>7. Offline Windows distribution</h2>
+  <p>
+    The Windows bundle contains the web app and a local web server (Caddy) bound to
+    <code>localhost</code> only. No outbound connection is made.
+  </p>
+
+  <h2>8. Recipients, third countries, automated decisions</h2>
+  <p>
+    No data is shared with third parties, except for the technically unavoidable processing
+    by the hosting provider described in section 6. There is no automated decision-making
+    and no profiling.
+  </p>
+
+  <h2>9. Retention</h2>
+  <p>
+    As no data is collected, no retention period applies. Local settings remain on your
+    device until you uninstall the app or clear site data.
+  </p>
+
+  <h2>10. Your rights</h2>
+  <p>
+    You have the rights set out in Art. 15–21 GDPR (access, rectification, erasure,
+    restriction, portability, objection) and the right to lodge a complaint with a
+    supervisory authority under Art. 77 GDPR. Because no personal data is collected, access
+    and erasure requests will normally have to be answered in the negative for want of any
+    data held.
+  </p>
+
+  <h2>11. Children</h2>
+  <p>
+    The application is aimed at clinical perfusion professionals and students. It is not
+    directed at children and collects no data from children.
+  </p>
+
+  <h2>12. Not a medical device</h2>
+  <p>
+    PerfusionCalc is a tool for education and personal use. It is <strong>not a medical
+    device</strong> within the meaning of Regulation (EU) 2017/745 (MDR), is not validated
+    for clinical use, and must not be relied upon for diagnosis, treatment decisions or
+    patient management. Results must always be verified against the primary literature and
+    your institution's own protocols.
+  </p>
+
+  <h2>13. Changes</h2>
+  <p>
+    Changes are published at this URL. The version available here, bearing the current date,
+    is the authoritative one.
+  </p>
+</div>
+
+<footer>
+  PerfusionCalc · GPL v3 ·
+  <a href="https://github.com/ThePerfusionist/perfusioncalc">github.com/ThePerfusionist/perfusioncalc</a> ·
+  <a href="./">zur App / back to the app</a>
+</footer>
+
+<script>
+  var TITLES = { de: 'Datenschutzerklärung', en: 'Privacy Policy' };
+  var STAND  = {
+    de: 'Stand: 01.08.2026 · PerfusionCalc (Android, iOS, Web, Offline-Windows)',
+    en: 'Last updated: 01 Aug 2026 · PerfusionCalc (Android, iOS, web, offline Windows)'
+  };
+
+  function setLang(lang) {
+    document.getElementById('content-de').style.display = (lang === 'de') ? '' : 'none';
+    document.getElementById('content-en').style.display = (lang === 'en') ? '' : 'none';
+    document.getElementById('page-title').textContent = TITLES[lang];
+    document.getElementById('stand').textContent = STAND[lang];
+    document.documentElement.lang = lang;
+    document.title = TITLES[lang] + ' – PerfusionCalc';
+    var btns = document.querySelectorAll('.lang-toggle button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].dataset.lang === lang);
+    }
+    try { localStorage.setItem('pcalc_lang', lang); } catch (e) {}
+  }
+
+  var btns = document.querySelectorAll('.lang-toggle button');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].addEventListener('click', function () { setLang(this.dataset.lang); });
+  }
+
+  function initialLang() {
+    var fromUrl = new URLSearchParams(location.search).get('lang');
+    if (fromUrl === 'de' || fromUrl === 'en') return fromUrl;
+    try {
+      var saved = localStorage.getItem('pcalc_lang');
+      if (saved === 'de' || saved === 'en') return saved;
+    } catch (e) {}
+    return (navigator.language || 'de').toLowerCase().indexOf('de') === 0 ? 'de' : 'en';
+  }
+  setLang(initialLang());
+</script>
+</body>
+</html>
