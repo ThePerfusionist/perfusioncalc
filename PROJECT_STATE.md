@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.8+30 · 12 Tabs · **213 Unit-Tests** (9 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.9+31 · 12 Tabs · **224 Unit-Tests** (10 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -685,3 +685,50 @@ darunter der Fall „ein voller Wert überlebt jeden Fehltipp".
 Prüfschritt wie der Befund, der ihn ausgelöst hat.* N-1 ist derselbe
 Fehlertyp wie 1.4 und 2.6, nur in der Gegenrichtung: eine plausible
 Behauptung über das Verhalten einer API, die niemand ausgeführt hat.
+
+### 7.9 Gegenkontrolle v0.4.8 → Umsetzung v0.4.9
+
+Diff-Prüfung der v0.4.8-Umsetzung. Sechs von sieben Punkten bestätigt, keine
+neue Regression — die erste Runde in dieser Kette ohne selbstverursachten
+Fehler. Drei Restpunkte, alle umgesetzt:
+
+| Punkt | Umsetzung |
+|---|---|
+| **R-1** `./` und `index.html` blieben tolerant precached | behoben, v0.4.9 |
+| **R-2** zwei Aufrufer umgingen `ensureReady()` | behoben, v0.4.9 |
+| **R-3** `_clampStep` ohne Test | behoben, v0.4.9 |
+
+**R-1 war der ernsteste** und eine direkte Folge von N-2: Der zweistufige
+Precache machte `BUILD_ASSETS` hart, aber `./` und `./index.html` kommen von
+dort nicht — `./` ist keine Datei im Build-Verzeichnis, `index.html` steht in
+der `skip_exact`-Liste des CI-Generators, weil es schon in `CORE_SHELL`
+geführt wird. Damit galt für die beiden weiterhin die alte Fehlersemantik.
+Scheitert der `index.html`-Fetch transient, aktiviert sich der Worker mit
+vollständigem Asset-Cache, `activate()` löscht den alten — und der
+Navigations-Fallback `caches.match('./')` greift ins Leere. Derselbe
+Endzustand wie N-2, verengt auf die eine Datei, ohne die der Rest des Caches
+nichts nützt.
+*Behebung:* `cache.addAll(['./', './index.html'])` vor Stufe 1; die
+Filterung für Stufe 2 zieht beide über ein `Set` mit ab.
+
+**R-2:** `requestPermission()` und `areNotificationsEnabled()` riefen
+`initialise()` direkt. Seit der Umordnung in N-4 war das praktisch harmlos —
+der Ausstieg kommt vor dem teuren Teil —, aber die Absicht des Flags galt nur
+an einer von drei Stellen, und beim nächsten Umbau der Reihenfolge wäre die
+Verschwendung stillschweigend zurück. Alle drei laufen jetzt über
+`ensureReady()`. Dazu ein öffentlicher Getter `platformUnsupported`: der
+„Wiederholen"-Knopf im Kardioplegie-Tab wird auf Windows/Linux gar nicht mehr
+angezeigt, statt garantiert zu scheitern und die Fehlersuche in die falsche
+Richtung zu schicken.
+
+**R-3** ist die Anwendung von Regel 8 auf den eigenen Fix: `_clampStep` nach
+`lib/utils/step_clamp.dart` gezogen (Muster wie `formatElapsed`) und mit 11
+Tests belegt. Der Test, der zählt, ist der auf Ranges mit negativer
+Untergrenze — dass Base Excess (−30…30) und ZVD (−5…30) ihre negativen Werte
+behalten, hängt an der einzelnen Bedingung `range.min >= 0`, die beim Lesen
+niemand nachprüft.
+
+**Anmerkung zur Paketierung:** Die ZIPs enthielten kein `.github/`, weil
+Dot-Verzeichnisse beim Packen wegfielen. Für künftige Runden gilt: die
+Workflows gehören mit ins Paket, sonst ist die Kopplung zwischen `sw.js` und
+CI-Generator nicht gegenprüfbar.

@@ -178,6 +178,15 @@ self.addEventListener('install', (event) => {
     // NICHT -> der alte bleibt mitsamt seinem Cache in Betrieb. Ein
     // fehlgeschlagenes Update ist ein Nicht-Ereignis; ein halbes Update ist
     // eine weisse Seite.
+    //
+    // './' und './index.html' gehoeren mit dazu, obwohl sie nicht aus
+    // BUILD_ASSETS kommen (Audit R-1): './' ist keine Datei im Build-
+    // Verzeichnis, 'index.html' steht in der skip_exact-Liste des
+    // CI-Generators, weil es schon in CORE_SHELL gefuehrt wird. Beide waren
+    // damit die letzten kritischen Eintraege mit toleranter Semantik - und
+    // ausgerechnet ohne sie nuetzt der Rest des Caches nichts: der
+    // Navigations-Fallback unten greift auf caches.match('./') zurueck.
+    await cache.addAll(['./', './index.html']);
     if (BUILD_ASSETS.length > 0) {
       await cache.addAll(BUILD_ASSETS);
     }
@@ -185,7 +194,8 @@ self.addEventListener('install', (event) => {
     // Stufe 2: die statischen Zusatzdateien weiterhin tolerant. Fehlt hier
     // etwas, ist ein Icon unscharf oder eine Nebenseite offline nicht da -
     // aergerlich, aber die App startet.
-    const optional = CORE_SHELL.filter((url) => !BUILD_ASSETS.includes(url));
+    const hard = new Set(['./', './index.html', ...BUILD_ASSETS]);
+    const optional = CORE_SHELL.filter((url) => !hard.has(url));
     await Promise.all(optional.map(async (url) => {
       try {
         const resp = await fetch(url, { cache: 'reload' });

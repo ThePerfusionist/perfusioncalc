@@ -743,20 +743,26 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
       if (!_notificationsAvailable) ...[
         _noteRow(Icons.error_outline, t('cardio_alarm_unavailable'),
             color: const Color(0xFFE57373), textColor: kTextSecondary),
-        const SizedBox(height: 4),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _timerBtn(
-            icon: Icons.refresh,
-            label: t('cardio_alarm_retry'),
-            filled: false,
-            onTap: () async {
-              await CardioplegiaNotifications.instance.initialise();
-              await _refreshPermission();
-              await _rescheduleReminder();
-            },
+        // Kein "Wiederholen" auf Plattformen, auf denen es nie klappen kann
+        // (Windows/Linux, Audit R-2). Ein Knopf, der garantiert scheitert,
+        // schickt die Fehlersuche in die falsche Richtung - die Meldung
+        // daneben sagt bereits, dass die Plattform nicht unterstuetzt wird.
+        if (!CardioplegiaNotifications.instance.platformUnsupported) ...[
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _timerBtn(
+              icon: Icons.refresh,
+              label: t('cardio_alarm_retry'),
+              filled: false,
+              onTap: () async {
+                await CardioplegiaNotifications.instance.ensureReady();
+                await _refreshPermission();
+                await _rescheduleReminder();
+              },
+            ),
           ),
-        ),
+        ],
       ],
       if (_notificationsAvailable && !_notificationsAllowed && st.enabled) ...[
         _noteRow(Icons.notifications_off_outlined, t('cardio_alarm_perm_missing'),

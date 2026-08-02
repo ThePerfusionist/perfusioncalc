@@ -68,6 +68,11 @@ class CardioplegiaNotifications {
   /// showNow() and every scheduleReminders() (audit N-4).
   bool _platformUnsupported = false;
 
+  /// True when scheduled notifications can never work here (Windows/Linux).
+  /// Lets the UI hide a "retry" affordance that could not succeed, instead
+  /// of offering a button that always fails.
+  bool get platformUnsupported => _platformUnsupported;
+
   /// Last initialisation error, surfaced in the UI. Swallowing this
   /// silently made a failed init indistinguishable from a denied
   /// permission: the button appeared to do nothing and no reminder ever
@@ -228,9 +233,11 @@ class CardioplegiaNotifications {
   /// Asks for notification permission (Android 13+ / iOS). Returns true if
   /// notifications may be posted.
   Future<bool> requestPermission() async {
-    // Retry initialisation rather than returning a dead false - otherwise a
-    // transient init failure permanently disables the button.
-    if (!_initialised) await initialise();
+    // ensureReady(), not a bare initialise(): retrying a transient init
+    // failure is right, retrying an unsupported platform is not (audit R-2).
+    // The three entry points into initialise() must agree on that, otherwise
+    // the next reordering brings the waste back unnoticed.
+    await ensureReady();
     if (!_initialised) return false;
     if (kIsWeb) {
       final ok = await WebNotifications.requestPermission();
@@ -262,7 +269,7 @@ class CardioplegiaNotifications {
   }
 
   Future<bool> areNotificationsEnabled() async {
-    if (!_initialised) await initialise();
+    await ensureReady();
     if (!_initialised) return false;
     if (kIsWeb) return WebNotifications.isGranted;
     try {
