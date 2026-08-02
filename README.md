@@ -4,13 +4,13 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.4.7-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.4.8-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.38-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
 [![WebApp](https://img.shields.io/badge/WebApp-live-success?style=flat-square)](https://perfusioncalc.de/)
 [![Languages](https://img.shields.io/badge/i18n-EN%20%2F%20DE-blueviolet?style=flat-square)](#-internationalization)
-[![Tests](https://img.shields.io/badge/tests-199%20passing-brightgreen?style=flat-square)](test/)
+[![Tests](https://img.shields.io/badge/tests-213%20passing-brightgreen?style=flat-square)](test/)
 [![PWA](https://img.shields.io/badge/PWA-offline%20capable-5A0FC8?style=flat-square)](#-progressive-web-app)
 
 </div>

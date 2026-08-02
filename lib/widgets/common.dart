@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import '../utils/decimal_input_formatter.dart';
 import '../models/ranges.dart';
 import '../i18n/app_strings.dart';
 import '../theme/app_theme.dart';
@@ -141,24 +142,38 @@ class _InputCardState extends State<InputCard> {
     return v;
   }
 
-  /// Keeps stepping inside the plausible range where one is defined.
-  /// Decrementing an empty weight field used to produce -0.1 kg.
-  double _clampToRange(double v) {
+  /// Bounds a +/- step WITHOUT enforcing the plausible range (audit N-3).
+  ///
+  /// The original problem was narrow: decrementing an EMPTY weight field
+  /// produced -0.1 kg. The first fix clamped every step to [min, max] - and
+  /// thereby broke a documented design intent. ranges.dart states it in its
+  /// header: calculations deliberately accept values outside the range, "to
+  /// deliberately work through extreme cases in training"; that is what the
+  /// orange warning icon is for. With a hard clamp an Hb could be typed as
+  /// 3 g/dl but no longer stepped below 4, which is exactly the case a
+  /// teaching tab wants to walk through.
+  ///
+  /// So: only prevent what is physically impossible, not what is unusual.
+  double _clampStep(double v) {
     final r = widget.range;
     if (r == null) return v;
-    if (v < r.min) return r.min;
-    if (v > r.max) return r.max;
+    // Starting from an empty field: step up to the lower bound rather than
+    // into negative territory.
+    if (widget.value == null && v < r.min) return r.min;
+    // Otherwise only stop at zero, and only where negatives are meaningless
+    // (a range whose minimum is negative - base excess - keeps them).
+    if (v < 0 && r.min >= 0) return 0;
     return v;
   }
 
   void _increment() {
     final v = double.parse(((widget.value ?? 0) + widget.step).toStringAsFixed(4));
-    widget.onChanged(_clampToRange(v));
+    widget.onChanged(_clampStep(v));
   }
 
   void _decrement() {
     final v = double.parse(((widget.value ?? 0) - widget.step).toStringAsFixed(4));
-    widget.onChanged(_clampToRange(v));
+    widget.onChanged(_clampStep(v));
   }
 
   @override
@@ -233,16 +248,12 @@ class _InputCardState extends State<InputCard> {
                 ),
                 // Input validation: max 10 chars, only digits/decimals/minus
                 maxLength: 10,
-                inputFormatters: [
-                  // Validates the WHOLE field, not single characters. The
-                  // previous per-character filter accepted "1.2.3" and
-                  // "--5"; _safeParse then returned null, the value
-                  // vanished silently, and the typed text stayed on screen -
-                  // the field looked filled while the calculation had
-                  // nothing. Partial input ("", "-", "1.") must stay
-                  // allowed or the field could not be typed into.
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'^-?[0-9]*[.,]?[0-9]*$')),
+                inputFormatters: const [
+                  // NICHT FilteringTextInputFormatter.allow mit einer auf ^…$
+                  // verankerten Regex - das leert bei einem Fehltipp das
+                  // ganze Feld. Begruendung und Testfaelle in
+                  // utils/decimal_input_formatter.dart.
+                  DecimalTextInputFormatter(),
                 ],
                 decoration: InputDecoration(
                   counterText: '', // hide the "x/10" counter

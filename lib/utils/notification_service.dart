@@ -59,6 +59,15 @@ class CardioplegiaNotifications {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialised = false;
 
+  /// Set once when the running platform can never support scheduled
+  /// notifications (Windows/Linux). Distinct from [_initialised] because the
+  /// two failures are different in kind: a failed initialise() on Android is
+  /// worth retrying (transient permission or plugin state), an unsupported
+  /// platform is not. Without this flag ensureReady() re-ran the whole of
+  /// initialise() - including tzdata.initializeTimeZones() - on every
+  /// showNow() and every scheduleReminders() (audit N-4).
+  bool _platformUnsupported = false;
+
   /// Last initialisation error, surfaced in the UI. Swallowing this
   /// silently made a failed init indistinguishable from a denied
   /// permission: the button appeared to do nothing and no reminder ever
@@ -105,6 +114,34 @@ class CardioplegiaNotifications {
       return;
     }
 
+    // NEU-2: flutter_local_notifications_windows/_linux are registered via
+    // generated_plugins.cmake since the v22 migration, but no windows:/
+    // linux: settings are passed below - the plugin then throws
+    // ArgumentError for the running platform. The icon-candidate loop
+    // catches it and the UI blames a broken notification icon, which sends
+    // the diagnosis in exactly the wrong direction.
+    //
+    // Desktop is not a shipping target: the Windows offline bundle is the
+    // WEB app behind Caddy, not a Flutter desktop build. So bail out with
+    // an honest message rather than pretending to initialise.
+    //
+    // Runs BEFORE the timezone block (audit N-4): on a platform that never
+    // schedules anything, reading several hundred zone definitions is pure
+    // waste. _platformUnsupported makes the exit permanent - see
+    // ensureReady().
+    //
+    // defaultTargetPlatform, not Platform.isWindows: this file is also
+    // compiled for web, where importing dart:io breaks the build.
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux)) {
+      lastError = 'Scheduled notifications are not supported on this '
+          'platform. Use the in-app alert instead.';
+      _initialised = false;
+      _platformUnsupported = true;
+      return;
+    }
+
     // Timezone setup is guarded separately: if it fails we can still post
     // immediate notifications, only scheduling would be affected.
     try {
@@ -126,27 +163,6 @@ class CardioplegiaNotifications {
       tz.setLocalLocation(tz.UTC);
     } catch (e) {
       debugPrint('[CardioplegiaNotifications] timezone setup failed: $e');
-    }
-
-    // NEU-2: flutter_local_notifications_windows/_linux are registered via
-    // generated_plugins.cmake since the v22 migration, but no windows:/
-    // linux: settings are passed below - the plugin then throws
-    // ArgumentError for the running platform. The icon-candidate loop
-    // catches it and the UI blames a broken notification icon, which sends
-    // the diagnosis in exactly the wrong direction.
-    //
-    // Desktop is not a shipping target: the Windows offline bundle is the
-    // WEB app behind Caddy, not a Flutter desktop build. So bail out with
-    // an honest message rather than pretending to initialise.
-    // defaultTargetPlatform, not Platform.isWindows: this file is also
-    // compiled for web, where importing dart:io breaks the build.
-    if (!kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.windows ||
-            defaultTargetPlatform == TargetPlatform.linux)) {
-      lastError = 'Scheduled notifications are not supported on this '
-          'platform. Use the in-app alert instead.';
-      _initialised = false;
-      return;
     }
 
     const darwin = DarwinInitializationSettings(
@@ -301,7 +317,8 @@ class CardioplegiaNotifications {
   /// Re-runs initialisation if a previous attempt failed, so the feature
   /// can recover without an app restart.
   Future<void> ensureReady() async {
-    if (!_initialised) await initialise();
+    if (_initialised || _platformUnsupported) return;
+    await initialise();
   }
 
   Future<void> scheduleReminders({

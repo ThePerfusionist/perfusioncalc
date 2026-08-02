@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.7+29 · 12 Tabs · **199 Unit-Tests** (8 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.8+30 · 12 Tabs · **213 Unit-Tests** (9 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -614,3 +614,74 @@ Aus den vier Regressionen und den drei Erstbefunden des ersten Testlaufs:
    `BUILD_ASSETS` brechen den Job ab, wenn ihr `sed` nicht greift. Ein
    stilles Fehlschlagen würde genau den Fehler wieder einführen, den der
    Schritt behebt.
+8. **Ein Fix, der ein Verhalten ändert, braucht denselben Prüfschritt wie der
+   Befund, der ihn ausgelöst hat.** Nachgetragen nach N-1 (siehe 7.8): der
+   Eingabefilter wurde auf Basis einer plausiblen Annahme über
+   `FilteringTextInputFormatter.allow` umgebaut, ohne sie auszuführen. Genau
+   das Muster von 1.4 und 2.6, nur in der Gegenrichtung.
+
+### 7.8 Nachprüfung v0.4.7 → Umsetzung v0.4.8
+
+Nachprüfung gegen `main` (`fd36309`), jeder der 36 Altbefunde einzeln im Code
+verifiziert. Ergebnis: 31 behoben, 5 bewusst offen — und **ein neuer Fehler,
+den die Abarbeitung selbst eingeführt hat**.
+
+| Befund | Umsetzung |
+|---|---|
+| **N-1** Fehltipp leerte das ganze Eingabefeld | behoben, v0.4.8 |
+| **N-2** `install()` schluckt Fehler, `activate()` löscht trotzdem | behoben, v0.4.8 |
+| **N-3** Schrittknöpfe verengten die Trainingsabsicht | behoben, v0.4.8 |
+| **N-4** Desktop: `initialise()` lief bei jedem Aufruf neu | behoben, v0.4.8 |
+| **N-5** zwei stale gstatic-Kommentare in `sw.js` | behoben, v0.4.8 |
+| **N-6** Postanschrift | offen, ausdrücklich zurückgestellt → 7.5 |
+| **N-7** `SECURITY.md` neun Zeilen | behoben, v0.4.8 |
+
+**N-1 war der ernsteste — und der lehrreichste.** In Block E wurde der
+Eingabefilter auf eine verankerte Regex umgestellt, mit dem Kommentar
+„validates the WHOLE field, not single characters". Genau das tut
+`FilteringTextInputFormatter.allow` **nicht**: es filtert segmentweise über
+`splitMapJoin`, und eine auf `^…$` verankerte Regex, die auf den Gesamtstring
+nicht passt, liefert null Treffer — übrig bleibt ein **leeres Feld**.
+Praktisch: 82,5 kg im Gewichtsfeld, ein Fehltipp daneben, Wert weg.
+
+Der Zustand davor war anders falsch (Text blieb stehen, Wert war `null`), der
+neue war konsistent, aber destruktiv. In einer OP-Situation ist Datenverlust
+die schlechtere der beiden Fehlfunktionen.
+
+*Behebung:* `DecimalTextInputFormatter` in `lib/utils/` — passt der neue
+Gesamtstring, wird er übernommen, sonst bleibt der alte stehen. Der
+Tastendruck verpufft, nichts geht verloren. `_safeParse` bleibt zweite
+Verteidigungslinie. Dazu `test/decimal_input_formatter_test.dart` (14 Tests),
+darunter der Fall „ein voller Wert überlebt jeden Fehltipp".
+
+**Zu den übrigen Punkten:**
+
+- **N-2:** Der Precache ist jetzt zweistufig. `BUILD_ASSETS` per `addAll` —
+  wirft bei jedem Fehlschlag, damit `install()` rejected und der **alte**
+  Worker samt Cache in Betrieb bleibt. `CORE_SHELL` weiter tolerant. Ein
+  fehlgeschlagenes Update ist ein Nicht-Ereignis; ein halbes Update ist eine
+  weiße Seite. Die zusammengeführte `APP_SHELL`-Konstante entfällt, weil
+  beide Listen jetzt unterschiedliche Fehlersemantik haben.
+- **N-3:** `_clampToRange` → `_clampStep`. Geklemmt wird nur noch, was
+  physikalisch unmöglich ist (Start aus dem leeren Feld, Werte unter 0 bei
+  nicht-negativer Range). Ein Hb lässt sich per Knopf wieder auf 3 g/dl
+  senken — `ranges.dart` hält im Kopf ausdrücklich fest, dass Extremwerte
+  fürs Training erlaubt sein sollen, und dafür existiert die orange Warnung.
+- **N-4:** Neues Flag `_platformUnsupported`. `ensureReady()` unterscheidet
+  jetzt zwischen „fehlgeschlagen, Wiederholung sinnvoll" (Android) und „kann
+  nie funktionieren" (Windows/Linux). Der Desktop-Ausstieg steht außerdem
+  **vor** dem Timezone-Block — mehrere hundert Zonendefinitionen einzulesen
+  ist auf einer Plattform, die nie plant, reine Verschwendung.
+- **N-5:** Die Regel (kein Cross-Origin im Cache) bleibt, nur die Begründung
+  war überholt. Der Release-Build lädt nichts Fremdes mehr.
+- **N-7:** `SECURITY.md` von 9 auf 81 Zeilen: unterstützte Versionen,
+  Private Vulnerability Reporting als bevorzugter Weg, ehrliche
+  Reaktionszeiten für ein Ein-Personen-Projekt, Scope. **Falsche klinische
+  Berechnungen stehen ausdrücklich im Scope** — kein klassischer
+  Sicherheitsfehler, aber die gefährlichste Fehlfunktion dieses Projekts.
+  Dazu die Bitte, Fehlerberichten keine echten Patientendaten beizulegen.
+
+**Regel 8 für 7.7:** *Ein Fix, der ein Verhalten ändert, braucht denselben
+Prüfschritt wie der Befund, der ihn ausgelöst hat.* N-1 ist derselbe
+Fehlertyp wie 1.4 und 2.6, nur in der Gegenrichtung: eine plausible
+Behauptung über das Verhalten einer API, die niemand ausgeführt hat.

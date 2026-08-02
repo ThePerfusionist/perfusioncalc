@@ -80,8 +80,13 @@ const CACHE_NAME = `perfusioncalc-${VERSION}`;
 // entfernt (Audit 4.8). Sollten COOP/COEP je zurueckkehren, gehoert die
 // Header-Manipulation an genau diese Stelle.
 
-// Nur Same-Origin-Requests cachen. Alles von externen Hosts
-// (z.B. gstatic.com fuer CanvasKit) direkt aus dem Netzwerk laden.
+// Nur Same-Origin-Requests cachen, alles Fremde direkt aus dem Netz.
+//
+// Die fruehere Begruendung ("z.B. gstatic.com fuer CanvasKit") stimmt nicht
+// mehr: CanvasKit kommt durch --no-web-resources-cdn vom eigenen Origin und
+// Roboto ist seit v0.4.3 gebuendelt. Der Release-Build laedt ueberhaupt
+// nichts Fremdes. Die Regel bleibt trotzdem richtig - fremde Antworten
+// gehoeren nicht in einen Cache, dessen Lebenszyklus wir verwalten.
 const ORIGIN = self.location.origin;
 
 // =============================================================================
@@ -94,7 +99,7 @@ const ORIGIN = self.location.origin;
 // Cache-Name an die Commit-SHA gekoppelt ist:
 //
 //   Deploy -> neuer CACHE_NAME -> install() legt einen LEEREN Cache an und
-//   fuellt nur APP_SHELL -> activate() loescht den alten Cache mitsamt
+//   fuellt nur die Shell -> activate() loescht den alten Cache mitsamt
 //   main.dart.js und canvaskit.wasm -> der bereits geladene Tab fragt diese
 //   Dateien nicht erneut an -> sie fehlen im neuen Cache -> offline weiss.
 //
@@ -145,23 +150,49 @@ const CORE_SHELL = [
   './assets/assets/finck_vv.jpg',
 ];
 
-// CORE_SHELL zuerst: diese Dateien haben Query-Strings (?v=9), unter denen
-// die App sie auch tatsaechlich anfragt. Set() entfernt Doppel, falls die
-// generierte Liste dieselbe Datei ohne Query enthaelt.
-const APP_SHELL = [...new Set([...CORE_SHELL, ...BUILD_ASSETS])];
+// Die beiden Listen werden bewusst NICHT mehr zu einer verschmolzen: seit
+// dem zweistufigen Precache unten hat jede eine eigene Fehlersemantik.
+// CORE_SHELL-Eintraege tragen Query-Strings (?v=9), unter denen die App sie
+// auch tatsaechlich anfragt; die Filterung dort entfernt Doppel.
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-    // addAll schlägt fehl, wenn auch nur eine Datei nicht lädt - daher
-    // einzeln und fehlertolerant cachen, damit ein fehlendes Icon nicht
-    // die ganze Installation blockiert.
-    await Promise.all(APP_SHELL.map(async (url) => {
+
+    // ZWEISTUFIG, und der Unterschied ist der Punkt (Audit N-2).
+    //
+    // Frueher lief ALLES fehlertolerant durch. Die Idee war richtig -
+    // cache.addAll() scheitert komplett an einer einzigen fehlenden Datei,
+    // ein fehlendes Icon darf die Installation nicht blockieren. Nur
+    // unterschied die Toleranz nicht zwischen einem Icon und main.dart.js.
+    //
+    // Scheitert ein kritischer Fetch transient (WLAN-Wechsel auf dem
+    // Stationstablet - genau der typische Moment), aktivierte sich der
+    // Worker trotzdem, activate() loeschte den alten Cache, und offline
+    // stand der Nutzer vor einer weissen Seite. Derselbe Endzustand wie
+    // v0.4.6, andere Ursache.
+    //
+    // Stufe 1: BUILD_ASSETS (im CI aus build/web erzeugt, enthaelt
+    // flutter_bootstrap.js, main.dart.* und canvaskit) per addAll. Wirft bei
+    // jedem Fehlschlag -> install() rejected -> der Worker aktiviert sich
+    // NICHT -> der alte bleibt mitsamt seinem Cache in Betrieb. Ein
+    // fehlgeschlagenes Update ist ein Nicht-Ereignis; ein halbes Update ist
+    // eine weisse Seite.
+    if (BUILD_ASSETS.length > 0) {
+      await cache.addAll(BUILD_ASSETS);
+    }
+
+    // Stufe 2: die statischen Zusatzdateien weiterhin tolerant. Fehlt hier
+    // etwas, ist ein Icon unscharf oder eine Nebenseite offline nicht da -
+    // aergerlich, aber die App startet.
+    const optional = CORE_SHELL.filter((url) => !BUILD_ASSETS.includes(url));
+    await Promise.all(optional.map(async (url) => {
       try {
         const resp = await fetch(url, { cache: 'reload' });
         if (resp && resp.ok) await cache.put(url, resp);
       } catch (_) { /* einzelne Datei fehlt - ignorieren */ }
     }));
+
     self.skipWaiting();
   })());
 });
@@ -193,7 +224,7 @@ self.addEventListener('fetch', (event) => {
   // (die App hat kein Backend), aber zur Sicherheit explizit.
   if (request.method !== 'GET') return;
 
-  // Cross-Origin nicht cachen (CanvasKit wird ggf. von gstatic.com geladen).
+  // Cross-Origin nicht cachen - siehe Kommentar bei ORIGIN.
   const url = new URL(request.url);
   if (url.origin !== ORIGIN) return;
 
