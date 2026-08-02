@@ -155,6 +155,32 @@ const CORE_SHELL = [
 // CORE_SHELL-Eintraege tragen Query-Strings (?v=9), unter denen die App sie
 // auch tatsaechlich anfragt; die Filterung dort entfernt Doppel.
 
+/**
+ * Laedt eine Liste HART in den Cache: jeder Fehlschlag wirft.
+ *
+ * Warum nicht cache.addAll(): addAll erlaubt KEINE fetch-Optionen und holt
+ * daher ueber den normalen HTTP-Cache des Browsers. GitHub Pages liefert mit
+ * `Cache-Control: max-age=600` aus - innerhalb dieser zehn Minuten haette
+ * addAll nach einem Deploy die ALTE Datei in den NEUEN Cache geschrieben.
+ * Bei den gehashten Flutter-Assets waere das folgenlos, aber
+ * flutter_bootstrap.js und main.dart.js tragen keinen Hash im Namen: der
+ * Nutzer liefe offline auf einem veralteten klinischen Build, und der
+ * SHA-gekoppelte Cache-Name haette genau das verhindern sollen.
+ *
+ * `cache: 'reload'` umgeht den HTTP-Cache; der explizite Wurf erhaelt die
+ * harte Fehlersemantik, um derentwillen addAll ueberhaupt gewaehlt wurde.
+ */
+async function precacheStrict(cache, urls) {
+  await Promise.all(urls.map(async (url) => {
+    const resp = await fetch(url, { cache: 'reload' });
+    if (!resp || !resp.ok) {
+      throw new Error('Precache fehlgeschlagen: ' + url +
+                      ' (' + (resp ? resp.status : 'kein Response') + ')');
+    }
+    await cache.put(url, resp);
+  }));
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
@@ -173,7 +199,7 @@ self.addEventListener('install', (event) => {
     // v0.4.6, andere Ursache.
     //
     // Stufe 1: BUILD_ASSETS (im CI aus build/web erzeugt, enthaelt
-    // flutter_bootstrap.js, main.dart.* und canvaskit) per addAll. Wirft bei
+    // flutter_bootstrap.js, main.dart.* und canvaskit) hart. Wirft bei
     // jedem Fehlschlag -> install() rejected -> der Worker aktiviert sich
     // NICHT -> der alte bleibt mitsamt seinem Cache in Betrieb. Ein
     // fehlgeschlagenes Update ist ein Nicht-Ereignis; ein halbes Update ist
@@ -186,9 +212,9 @@ self.addEventListener('install', (event) => {
     // damit die letzten kritischen Eintraege mit toleranter Semantik - und
     // ausgerechnet ohne sie nuetzt der Rest des Caches nichts: der
     // Navigations-Fallback unten greift auf caches.match('./') zurueck.
-    await cache.addAll(['./', './index.html']);
+    await precacheStrict(cache, ['./', './index.html']);
     if (BUILD_ASSETS.length > 0) {
-      await cache.addAll(BUILD_ASSETS);
+      await precacheStrict(cache, BUILD_ASSETS);
     }
 
     // Stufe 2: die statischen Zusatzdateien weiterhin tolerant. Fehlt hier

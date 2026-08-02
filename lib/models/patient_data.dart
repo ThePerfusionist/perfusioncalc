@@ -6,7 +6,13 @@ class PatientData {
   // This prevents extreme inputs (e.g. pow overflow) from crashing the UI.
   static double _safe(double v) {
     if (v.isNaN || v.isInfinite) return 0;
-    return v;
+    // Negative Null einfangen. IEEE-754 kennt -0.0, und Dart formatiert das
+    // als "-0.0": ein Base Excess von 0 ergab in nabic/tris rechnerisch
+    // -0.0 und stand als "-0.0 ml" auf der Karte. Fachlich ist das
+    // dieselbe Null, angezeigt sieht es nach einem Vorzeichenfehler aus.
+    // `v + 0.0` normalisiert -0.0 auf +0.0 und laesst alles andere
+    // unveraendert.
+    return v + 0.0;
   }
 
   // BSA/CO inputs
@@ -267,14 +273,16 @@ class PatientData {
     return ((calziumSoll! - calziumIst!) * bodyWeightElec! * 0.2) / 0.225;
   }
 
+  // _safe(): fangen die negative Null ab, die bei einem Base Excess von 0
+  // aus der Division durch -10 entsteht - siehe Kommentar bei _safe.
   double get nabic {
     if (baseExcess == null || bodyWeightElec == null) return 0;
-    return (baseExcess! * bodyWeightElec! * 3) / (-10);
+    return _safe((baseExcess! * bodyWeightElec! * 3) / (-10));
   }
 
   double get tris {
     if (baseExcess == null || bodyWeightElec == null) return 0;
-    return (baseExcess! * bodyWeightElec!) / (-10);
+    return _safe((baseExcess! * bodyWeightElec!) / (-10));
   }
 
   // ── Tube volume ───────────────────────────────────────────────────────────
@@ -366,9 +374,19 @@ class PatientData {
   /// Resulting circulating volume after the calculated amount has been
   /// filtered off. Only meaningful once ufVolumeToRemove is valid (>0).
   double get ufFinalVolume {
-    final removed = ufVolumeToRemove;
-    if (removed <= 0 || ufCurrentVolume == null) return 0;
-    return _safe(ufCurrentVolume! - removed);
+    // Frueher: `if (removed <= 0) return 0;` - das vermengte zwei Faelle.
+    // Wenn nichts entzogen wird, weil das Ziel bereits erreicht oder durch
+    // Filtration nicht erreichbar ist, ist das Endvolumen das AKTUELLE
+    // Volumen, nicht null. Auf dem Bildschirm stand dort "0 ml", also die
+    // Aussage "am Ende ist kein Blut mehr im Kreislauf".
+    //
+    // Dieselben Vorbedingungen wie ufVolumeToRemove, damit "Eingaben
+    // unvollstaendig" weiterhin 0 liefert und beide Karten gemeinsam auf
+    // "—" fallen.
+    if (ufCurrentVolume == null || ufCurrentVolume! <= 0) return 0;
+    final pair = _ufMetricPair;
+    if (pair == null || pair.m1 <= 0 || pair.m2 <= 0) return 0;
+    return _safe(ufCurrentVolume! - ufVolumeToRemove);
   }
 
   // ── Cardioplegia ─────────────────────────────────────────────────────────

@@ -1246,6 +1246,10 @@ List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
       if (delNido) ...[
         PdfRow.numeric(label: '${t('cardio_dn_crystalloid')} (del Nido)', value: pd.cardioplegiaDelNidoCrystalloid, unit: 'ml', decimals: 0),
         PdfRow.numeric(label: '${t('cardio_dn_pump_flow')} (del Nido)', value: pd.cardioplegiaDelNidoPumpFlow, unit: 'ml/min', decimals: 0),
+        // verify:ok dnPct stammt aus einer Einstellung, ist hier aber vom
+        // umschliessenden `if (delNido)` gedeckt - die Zeile entsteht nur,
+        // wenn tatsaechlich del-Nido-Eingaben vorliegen. Der Tab kann damit
+        // nicht dauerhaft "gefuellt" erscheinen (vgl. C-1 im Paediatrie-Tab).
         PdfRow.numeric(label: '${t('cardio_dn_cryst_percent')} (del Nido)', value: dnPct, unit: '%', decimals: 0),
       ],
     ]),
@@ -1255,10 +1259,48 @@ List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
             value: pd.calafioreTargetK.toStringAsFixed(0), unit: 'mmol/l'),
         PdfRow(label: '${t('cardio_mg_bolus_display')} (Calafiore)',
             value: pd.calafioreMgBolusMg.toStringAsFixed(0), unit: 'mg'),
-        PdfRow.numeric(label: '${t('cardio_syringe_k_conc')} (Calafiore)', value: pd.calafioreSyringeKConc, unit: 'mmol/ml', decimals: 2),
-        PdfRow.numeric(label: '${t('cardio_syringe_mg_conc')} (Calafiore)', value: pd.calafioreSyringeMgConc, unit: 'mmol/ml', decimals: 3),
-        PdfRow.numeric(label: '${t('cardio_perfusor_rate')} (Calafiore)', value: pd.calafiorePerfusorRate, unit: 'ml/h', decimals: 1),
-        PdfRow.numeric(label: '${t('cardio_mg_delivery')} (Calafiore)', value: pd.calafioreMgDeliveryRate, unit: 'mmol/h', decimals: 2),
+        // resultIf + zeroIsValid, wie bei den Elektrolyten: Auf dem
+        // Bildschirm zeigen diese Karten bei vollstaendigen Eingaben eine
+        // 0, das PDF zeigte "—".
+        //
+        // Der wichtigste Fall ist die Perfusorrate: calafioreDeltaK ist bei
+        // 0 geklemmt, wenn das Serum-Kalium den Zielwert bereits erreicht.
+        // Der Bildschirm sagt dann "0,0 ml/h" UND blendet den Hinweis
+        // cardio_no_dose_needed ein. Das PDF zeigte "—" und den Hinweis gar
+        // nicht - ein Leser konnte nicht unterscheiden, ob die Rechnung
+        // fehlschlug oder keine Zufuhr noetig war. Der Hinweis wandert
+        // deshalb als note in die Zeile.
+        //
+        // Magnesium ist optional: 0 heisst hier "kein Mg in der Spritze"
+        // bzw. "keine Mg-Zufuhr", nicht "nicht berechenbar". Deshalb haengt
+        // die Verfuegbarkeit nur an den KCl-Eingaben.
+        PdfRow.numeric(label: '${t('cardio_syringe_k_conc')} (Calafiore)',
+            value: resultIf([pd.cardioplegiaCalafioreKclVolume, pd.cardioplegiaCalafioreKclConc],
+                pd.calafioreSyringeKConc),
+            unit: 'mmol/ml', decimals: 2, zeroIsValid: true),
+        PdfRow.numeric(label: '${t('cardio_syringe_mg_conc')} (Calafiore)',
+            value: resultIf([pd.cardioplegiaCalafioreKclVolume, pd.cardioplegiaCalafioreKclConc],
+                pd.calafioreSyringeMgConc),
+            unit: 'mmol/ml', decimals: 3, zeroIsValid: true),
+        PdfRow.numeric(label: '${t('cardio_perfusor_rate')} (Calafiore)',
+            value: resultIf([
+              pd.cardioplegiaCalafioreKclVolume,
+              pd.cardioplegiaCalafioreKclConc,
+              pd.cardioplegiaCalafioreFlow,
+              pd.cardioplegiaCalafioreSerumK,
+            ], pd.calafiorePerfusorRate),
+            unit: 'ml/h', decimals: 1, zeroIsValid: true,
+            note: (pd.cardioplegiaCalafioreSerumK != null && pd.calafioreDeltaK == 0)
+                ? t('cardio_no_dose_needed')
+                : null),
+        PdfRow.numeric(label: '${t('cardio_mg_delivery')} (Calafiore)',
+            value: resultIf([
+              pd.cardioplegiaCalafioreKclVolume,
+              pd.cardioplegiaCalafioreKclConc,
+              pd.cardioplegiaCalafioreFlow,
+              pd.cardioplegiaCalafioreSerumK,
+            ], pd.calafioreMgDeliveryRate),
+            unit: 'mmol/h', decimals: 2, zeroIsValid: true),
       ],
       if (bretschneider)
         PdfRow.numeric(label: '${t('cardio_bret_volume')} (Bretschneider)', value: pd.bretschneiderVolumeFromFlow, unit: 'ml', decimals: 0),

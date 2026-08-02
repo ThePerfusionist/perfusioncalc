@@ -391,6 +391,41 @@ void main() {
       expect(pdLower.ufVolumeToRemove, 0);
     });
 
+    test('Nothing removed → the final volume is the CURRENT volume', () {
+      // Regression: the getter returned 0 whenever nothing was removed,
+      // so the card read "final volume 0 ml" - the statement that no blood
+      // remains in the circuit. The two cases "nothing to remove" and
+      // "inputs incomplete" had been collapsed into one return value.
+      final pdEqual = PatientData()
+        ..ufCurrentVolume = 4000..ufCurrentHct = 24..ufTargetHct = 24;
+      final pdLower = PatientData()
+        ..ufCurrentVolume = 4000..ufCurrentHct = 30..ufTargetHct = 24;
+      expect(pdEqual.ufFinalVolume, 4000);
+      expect(pdLower.ufFinalVolume, 4000);
+    });
+
+    test('Incomplete inputs still yield 0 for BOTH results', () {
+      // The distinction only works if the "not calculated" case survives -
+      // otherwise both cards would show a number where none exists.
+      final noPair = PatientData()..ufCurrentVolume = 4000..ufCurrentHct = 20;
+      expect(noPair.ufVolumeToRemove, 0);
+      expect(noPair.ufFinalVolume, 0);
+
+      final noVolume = PatientData()..ufCurrentHct = 20..ufTargetHct = 28;
+      expect(noVolume.ufFinalVolume, 0);
+    });
+
+    test('Removed + final always equals the current volume', () {
+      for (final target in [20.0, 24.0, 28.0, 35.0]) {
+        final pd = PatientData()
+          ..ufCurrentVolume = 4000
+          ..ufCurrentHct = 24
+          ..ufTargetHct = target;
+        expect(pd.ufVolumeToRemove + pd.ufFinalVolume, closeTo(4000, 0.001),
+            reason: 'Ziel-Hkt $target');
+      }
+    });
+
     test('Mixing Hct and Hb pairs is ignored (only a fully populated pair counts)', () {
       // Only ufCurrentHct is set, no ufTargetHct, and a stray ufTargetHb
       // without a matching ufCurrentHb - neither pair is complete, so the
@@ -1074,6 +1109,33 @@ void main() {
       expect(pd.do2.isNaN, false);
       expect(pd.o2er.isNaN, false);
       expect(pd.minCardiacOutput.isNaN, false);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Negative Null (Eigenbefund v0.4.11)
+  // ══════════════════════════════════════════════════════════════════════
+  group('Negative Null erreicht nie die Anzeige', () {
+    test('Base Excess 0 ergibt +0.0, nicht -0.0', () {
+      // IEEE-754: (0 x 80 x 3) / -10 ist -0.0, und Dart formatiert das als
+      // "-0.0". Auf der Karte stand damit "-0.0 ml NaBic" - fachlich
+      // dieselbe Null, aber es sieht nach einem Vorzeichenfehler aus.
+      final pd = PatientData()
+        ..bodyWeightElec = 80
+        ..baseExcess = 0;
+      expect(pd.nabic.toStringAsFixed(1), '0.0');
+      expect(pd.tris.toStringAsFixed(1), '0.0');
+      expect(pd.nabic.isNegative, isFalse);
+    });
+
+    test('Echte Vorzeichen bleiben erhalten', () {
+      // Die Normalisierung darf nur die Null treffen: ein negativer Base
+      // Excess bedeutet Azidose und muss eine positive Puffermenge ergeben,
+      // ein positiver eine negative.
+      final acid = PatientData()..bodyWeightElec = 80..baseExcess = -10;
+      final alk = PatientData()..bodyWeightElec = 80..baseExcess = 10;
+      expect(acid.nabic, closeTo(240, 0.01));
+      expect(alk.nabic, closeTo(-240, 0.01));
     });
   });
 }

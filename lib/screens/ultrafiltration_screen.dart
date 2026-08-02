@@ -193,6 +193,14 @@ class _UltrafiltrationScreenState extends State<UltrafiltrationScreen> {
   }
 }
 
+/// Non-null, sobald ein vollstaendiges Wertepaar vorliegt - Hkt ODER Hb.
+/// Der Rueckgabewert selbst ist bedeutungslos, nur null / nicht-null zaehlt.
+Object? _ufPairPresent(PatientData pd) {
+  final hctPair = pd.ufCurrentHct != null && pd.ufTargetHct != null;
+  final hbPair = pd.ufCurrentHb != null && pd.ufTargetHb != null;
+  return (hctPair || hbPair) ? true : null;
+}
+
 // ── PDF sections (extracted, for the single-tab export and the combined report) ─
 List<PdfSection> buildUltrafiltrationPdfSections(PatientData pd) => [
   PdfSection(title: t('pdf_inputs'), rows: [
@@ -202,8 +210,16 @@ List<PdfSection> buildUltrafiltrationPdfSections(PatientData pd) => [
     PdfRow.numeric(label: t('uf_current_hb'),     value: pd.ufCurrentHb,     unit: 'g/dl'),
     PdfRow.numeric(label: t('uf_target_hb'),      value: pd.ufTargetHb,      unit: 'g/dl'),
   ]),
+  // 0 ml ist hier ein Ergebnis: "das Ziel ist durch Filtration nicht
+  // erreichbar bzw. schon erreicht". Der Bildschirm zeigte 0, das PDF "—".
+  // Welches Wertepaar zaehlt, haengt am gewaehlten Modus (Hkt oder Hb) -
+  // deshalb wird geprueft, ob EINES der beiden Paare vollstaendig ist.
   PdfSection(title: t('pdf_results'), rows: [
-    PdfRow.numeric(label: t('uf_volume_remove'), value: pd.ufVolumeToRemove, unit: 'ml', decimals: 0),
-    PdfRow.numeric(label: t('uf_final_volume'),  value: pd.ufFinalVolume,    unit: 'ml', decimals: 0),
+    PdfRow.numeric(label: t('uf_volume_remove'),
+        value: resultIf([pd.ufCurrentVolume, _ufPairPresent(pd)], pd.ufVolumeToRemove),
+        unit: 'ml', decimals: 0, zeroIsValid: true),
+    PdfRow.numeric(label: t('uf_final_volume'),
+        value: resultIf([pd.ufCurrentVolume, _ufPairPresent(pd)], pd.ufFinalVolume),
+        unit: 'ml', decimals: 0, zeroIsValid: true),
   ]),
 ];

@@ -113,11 +113,26 @@ List<PdfSection> buildElectrolytesPdfSections(PatientData pd) => [
     // BE 0 is a normal, entered finding - not a missing input.
     PdfRow.numeric(label: t('elec_base_excess'),      value: pd.baseExcess,     unit: 'mmol/L', zeroIsValid: true),
   ]),
+  // resultIf + zeroIsValid: Hier ist 0 ein Ergebnis, keine fehlende Eingabe.
+  // Ist der Base Excess 0 - also normal - lautet die richtige Antwort
+  // "0 ml NaBic, keine Korrektur noetig"; das PDF druckte dafuer "—",
+  // waehrend die ResultCard daneben 0.0 zeigte. Dasselbe gilt, wenn Ist- und
+  // Sollwert eines Elektrolyts uebereinstimmen.
   PdfSection(title: t('pdf_results'), rows: [
-    PdfRow.numeric(label: t('elec_sodium_need'),    value: pd.natriumBedarf, unit: 'ml NaCl 10%',     decimals: 1),
-    PdfRow.numeric(label: t('elec_potassium_need'), value: pd.kaliumBedarf,  unit: 'ml KCl 7,45%',    decimals: 1),
-    PdfRow.numeric(label: t('elec_calcium_need'),   value: pd.calziumBedarf, unit: 'ml Ca.gluc. 10%', decimals: 1),
-    PdfRow.numeric(label: 'NaBic 8,4%',             value: pd.nabic,         unit: 'ml',              decimals: 1),
-    PdfRow.numeric(label: 'TRIS 36,34%',            value: pd.tris,          unit: 'ml',              decimals: 1),
+    PdfRow.numeric(label: t('elec_sodium_need'),
+        value: resultIf([pd.bodyWeightElec, pd.natriumIst, pd.natriumSoll], pd.natriumBedarf),
+        unit: 'ml NaCl 10%',     decimals: 1, zeroIsValid: true),
+    PdfRow.numeric(label: t('elec_potassium_need'),
+        value: resultIf([pd.bodyWeightElec, pd.kaliumIst, pd.kaliumSoll], pd.kaliumBedarf),
+        unit: 'ml KCl 7,45%',    decimals: 1, zeroIsValid: true),
+    PdfRow.numeric(label: t('elec_calcium_need'),
+        value: resultIf([pd.bodyWeightElec, pd.calziumIst, pd.calziumSoll], pd.calziumBedarf),
+        unit: 'ml Ca.gluc. 10%', decimals: 1, zeroIsValid: true),
+    PdfRow.numeric(label: 'NaBic 8,4%',
+        value: resultIf([pd.bodyWeightElec, pd.baseExcess], pd.nabic),
+        unit: 'ml',              decimals: 1, zeroIsValid: true),
+    PdfRow.numeric(label: 'TRIS 36,34%',
+        value: resultIf([pd.bodyWeightElec, pd.baseExcess], pd.tris),
+        unit: 'ml',              decimals: 1, zeroIsValid: true),
   ]),
 ];

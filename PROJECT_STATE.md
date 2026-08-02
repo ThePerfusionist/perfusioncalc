@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.9+31 · 12 Tabs · **224 Unit-Tests** (10 Testdateien) · i18n 330/330 (EN+DE) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.15+37 · 12 Tabs · **276 Unit-Tests** (12 Testdateien) · i18n vollständig EN+DE (durch Paritätstest abgesichert) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -619,6 +619,31 @@ Aus den vier Regressionen und den drei Erstbefunden des ersten Testlaufs:
    Eingabefilter wurde auf Basis einer plausiblen Annahme über
    `FilteringTextInputFormatter.allow` umgebaut, ohne sie auszuführen. Genau
    das Muster von 1.4 und 2.6, nur in der Gegenrichtung.
+9. **Ein Verzeichnis, dessen Inhalt ausgeliefert wird, gehört in den
+   Prüfumfang — auch wenn dort kein Anwendungscode liegt.** Nachgetragen nach
+   O-1 (siehe 7.10): `tool/offline/` enthält zwei handgeschriebene Skripte,
+   die als ausführbare Dateien an Klinik-PCs gehen, und wurde vier Audits
+   lang nicht geöffnet.
+10. **Wenn zwei Ausgabewege dieselbe Rechnung darstellen, gehört ihre
+    Übereinstimmung getestet — nicht nur jede für sich.** Nachgetragen nach
+    A-1 (siehe 7.11). Bildschirm und PDF sind dreimal auseinandergelaufen
+    (1.1, 1.2, A-1), jedes Mal in einer anderen Richtung, und jede Seite war
+    für sich plausibel.
+11. **Ein Vorbelegungswert ist keine Eingabe.** Nachgetragen nach C-1 (siehe
+    7.12): alles, was in einen „hat der Nutzer hier etwas gemacht"-Filter
+    einfließt, muss zwischen gesetzt und vorbelegt unterscheiden.
+12. **Was in einem Audit von Hand nachgezählt wird, gehört danach in ein
+    Skript.** Nachgetragen nach 7.13: `tool/verify/consistency_check.py` und
+    `tool/offline/test-serve.ps1`. Die Funde der Runden 7.8 bis 7.12
+    entstanden nicht, weil die Regeln unbekannt waren, sondern weil ihre
+    Anwendung stichprobenartig blieb.
+13. **Ein Prüfwerkzeug ist Code und braucht denselben Beweis wie der Code,
+    den es prüft.** Nachgetragen nach 7.14: beide Werkzeugfehler waren
+    plausible Annahmen über fremdes Verhalten, die niemand ausgeführt hatte.
+14. **Eine Abdeckungslücke ist ein Hinweis, keine Aufgabe.** Nachgetragen
+    nach 7.15: aussagekräftig war nicht die absolute Zahl, sondern das
+    Gefälle — eine Klasse bei 10 %, während ihre beiden Geschwister
+    desselben Musters bei 100 % standen.
 
 ### 7.8 Nachprüfung v0.4.7 → Umsetzung v0.4.8
 
@@ -732,3 +757,366 @@ niemand nachprüft.
 Dot-Verzeichnisse beim Packen wegfielen. Für künftige Runden gilt: die
 Workflows gehören mit ins Paket, sonst ist die Kopplung zwischen `sw.js` und
 CI-Generator nicht gegenprüfbar.
+
+### 7.10 Prüfung v0.4.9 → Umsetzung v0.4.10
+
+Erste Runde, in der ein Audit `tool/offline/` geöffnet hat — das Verzeichnis,
+dessen Inhalt als ausführbares Skript an Klinik-PCs verteilt wird und das
+vier Audits lang übersehen wurde, während die Lieferkette der `caddy.exe`
+wiederholt geprüft wurde.
+
+| Befund | Umsetzung |
+|---|---|
+| **O-1** Pfad-Traversal in `serve.ps1` | behoben, v0.4.10 |
+| **O-2** PowerShell-Fallback praktisch unerreichbar | behoben, v0.4.10 |
+| **O-3** Browser öffnet vor dem Server | behoben, v0.4.10 |
+| **O-4** Python-Fallback und `application/wasm` | dokumentiert, v0.4.10 |
+| **K-1** Testname behauptet das Gegenteil | behoben, v0.4.10 |
+| **K-2** feste i18n-Zahl im Kopf | entfernt, v0.4.10 |
+| **K-3** Standalone-Seiten ohne CSP | behoben, v0.4.10 |
+| **S-1** `cache.addAll` umging den HTTP-Cache nicht | Eigenbefund, behoben, v0.4.10 |
+
+**O-1 war eine echte Schwachstelle**, keine Formalie. `Join-Path`
+normalisiert nicht: für `..\..\Windows\win.ini` entstand ein String, der mit
+dem Wurzelpfad **beginnt**, die Prüfung `StartsWith` also bestand — und
+`ReadAllBytes` löste die `..` anschließend auf. Verschärft durch
+`UnescapeDataString` **nach** der Kanonisierung des `HttpListener`
+(`%2e%2e%2f` überlebt, was ein Browser vorher kollabiert hätte) und durch das
+fehlende Trennzeichen im Präfixvergleich (`webbackup` bestand ihn ebenfalls).
+
+*Behebung:* `Get-SafePath` löst mit `[System.IO.Path]::GetFullPath` auf,
+**bevor** verglichen wird, vergleicht gegen `$rootPrefix` mit angehängtem
+Trenner und mit `OrdinalIgnoreCase`. Gegenprobe an neun Nutzlasten
+nachgerechnet (`%2e%2e%2f`, `..%5c`, `....//`, `//etc/passwd`): alle
+Traversal-Varianten → 403, legitime Pfade → 200. Der manuelle Prüfschritt
+steht als Kommentar im Skriptkopf, adressiert an die Klinik-IT, die diese
+Datei vor der Freigabe liest.
+
+Mitgenommen: klare Fehlermeldung statt Ausnahme, wenn `web\` fehlt; SPA-
+Rückfall nur noch für Pfade **ohne** Dateiendung (für eine fehlende `.js`
+HTML zurückzugeben erzeugt einen Folgefehler, der wie ein Syntaxfehler
+aussieht); `HEAD` ohne Rumpf; `X-Content-Type-Options`, `Referrer-Policy`
+und `X-Frame-Options` als **echte** Header — der Offline-Bundle ist der
+einzige Auslieferungsweg, auf dem sie überhaupt wirken können (bei GitHub
+Pages nicht, siehe Kommentar in `web/index.html`).
+
+**O-2:** `start.bat` prüfte nur, ob `caddy.exe` **existiert** — sie liegt
+immer im Paket. Wurde sie von AppLocker oder SmartScreen blockiert, sprang
+`goto :eof` an allen Fallbacks vorbei: der Fallback griff ausgerechnet in dem
+Fall nicht, für den er gebaut wurde. Jetzt Startprobe (`caddy.exe version`)
+vor dem Start, ebenso für PowerShell; Python wird mit `python -c "pass"`
+geprüft statt mit `where python`, weil Windows einen Store-Platzhalter
+mitliefert, der nur den Microsoft Store öffnet. `py -3` als vierte Stufe.
+
+**O-3:** Der Browser wird nicht mehr vor der Server-Auswahl geöffnet, sondern
+verzögert per Selbstaufruf (`start.bat --open <port>`) — das löst die
+Verzögerung ohne verschachtelte Anführungszeichen.
+
+**S-1 — Eigenbefund beim Durchsehen der eigenen N-2-Umsetzung.**
+`cache.addAll()` erlaubt **keine** fetch-Optionen und holt daher über den
+HTTP-Cache des Browsers. GitHub Pages liefert mit `Cache-Control: max-age=600`
+aus — innerhalb dieser zehn Minuten hätte `addAll` nach einem Deploy die ALTE
+Datei in den NEUEN Cache geschrieben. Bei gehashten Assets folgenlos, aber
+`flutter_bootstrap.js` und `main.dart.js` tragen keinen Hash: der Nutzer wäre
+offline auf einem veralteten klinischen Build gelaufen — genau das, was der
+SHA-gekoppelte Cache-Name verhindern soll. Ersetzt durch `precacheStrict()`
+mit `{cache: 'reload'}` und explizitem Wurf; die harte Fehlersemantik bleibt.
+
+Gegen eine Minimalumgebung simuliert (sechs Szenarien): kritischer Ausfall →
+`install()` rejected, `skipWaiting()` nicht erreicht, alter Worker bleibt in
+Betrieb; tolerierbarer Ausfall → Installation läuft durch.
+
+**Regel 9 für 7.7:** *Ein Verzeichnis, dessen Inhalt ausgeliefert wird, gehört
+in den Prüfumfang — auch wenn dort kein Anwendungscode liegt.* Vier Audits
+lang wurde die Prüfsummenkette der `caddy.exe` geprüft und die beiden
+handgeschriebenen Skripte danebengelegt, die im selben ZIP an dieselben
+Rechner gehen.
+
+### 7.11 Eigene Prüfung v0.4.10 → v0.4.11
+
+Die Prüfung v0.4.9 (O-1 bis O-4, K-1 bis K-3) war mit v0.4.10 vollständig
+umgesetzt und wurde gegen den Baum verifiziert. Diese Runde ist daher eine
+**selbst angesetzte** Prüfung der Bereiche, die in sieben Runden keine hatten:
+die kleineren Rechenschirme, `cardioplegia_settings.dart` und die
+PDF-Ausgabe jenseits von O₂ und BSA.
+
+| Befund | Umsetzung |
+|---|---|
+| **A-1** PDF zeigte „—", wo der Bildschirm 0 zeigte | behoben |
+| **A-2** `ufFinalVolume` war 0, wenn nichts entzogen wird | behoben |
+| **A-3** `CardioplegiaSettings.load()` klemmte nicht | behoben |
+| **A-4** negative Null erreichte die Anzeige | behoben |
+
+**A-1 ist die Spiegelung von Auditbefund 1.1.** Dort druckte das PDF eine
+Zahl, wo der Bildschirm „—" zeigte; hier war es umgekehrt. `ResultCard`
+richtet sich nach `missingInputs`, **nicht** nach dem Wert — bei
+vollständigen Eingaben zeigt sie also `0.0`. `PdfRow.numeric` zeigt für 0
+dagegen „—". Bei einem **Base Excess von 0**, dem Normalbefund, lautete die
+Aussage auf dem Bildschirm „0 ml NaBic, keine Korrektur nötig" und im PDF
+„nicht berechenbar". Dasselbe, wenn Ist- und Sollwert eines Elektrolyts
+übereinstimmen.
+
+*Behebung:* neuer Helfer `resultIf(requiredInputs, value)` in
+`pdf_export.dart` — gibt den Wert nur zurück, wenn alle Eingaben vorliegen,
+sonst null. Zusammen mit `zeroIsValid: true` bilden beide Ausgaben dieselbe
+Unterscheidung ab: fehlende Eingabe → „—", errechnete Null → „0.0".
+Angewandt auf die fünf Elektrolyt-Ergebnisse und die beiden
+Ultrafiltrations-Ergebnisse. Pauschales `zeroIsValid` wäre falsch gewesen —
+ohne Eingaben hätte es „0.0" gedruckt, wo nichts gerechnet wurde.
+
+**A-2 war auch auf dem Bildschirm falsch.** `ufFinalVolume` gab 0 zurück,
+sobald nichts entzogen wird — die Karte las sich als „am Ende ist kein Blut
+mehr im Kreislauf". Die Fälle „nichts zu entziehen" und „Eingaben
+unvollständig" waren in einen Rückgabewert kollabiert. Jetzt dieselben
+Vorbedingungen wie `ufVolumeToRemove`, danach `aktuell − entzogen`. Neuer
+Test: entzogen + Endvolumen ergibt über alle Ziel-Hkt-Werte das
+Ausgangsvolumen.
+
+**A-3 war eine Asymmetrie zwischen zwei Klassen desselben Musters.**
+`TransfusionSettings.load()` klemmt den gespeicherten Wert,
+`CardioplegiaSettings.load()` übernahm ihn roh. Ein gespeichertes 100 hätte
+den Blutanteil auf null und `delNidoRatio` auf eine Division durch null
+gesetzt. `CardioplegiaSettings` war zugleich die einzige der drei
+persistierten Einstellungen **ohne Tests** — 13 ergänzt, darunter genau
+dieser Fall.
+
+**A-4 fiel bei der Rechenprobe zu A-1 auf.** `(0 × 80 × 3) / (−10)` ist in
+IEEE-754 **−0.0**, und Dart formatiert das als `"-0.0"`. Auf der Karte stand
+also „−0.0 ml NaBic", sobald der Base Excess 0 war — fachlich dieselbe Null,
+sieht aber nach einem Vorzeichenfehler aus. `_safe()` normalisiert jetzt über
+`v + 0.0`; echte Vorzeichen bleiben erhalten, was ein Test absichert
+(Azidose → positive Puffermenge, Alkalose → negative).
+
+**Regel 10 für 7.7:** *Wenn zwei Ausgabewege dieselbe Rechnung darstellen,
+gehört ihre Übereinstimmung getestet — nicht nur jede für sich.* Bildschirm
+und PDF sind in dieser Kette dreimal auseinandergelaufen (1.1, 1.2, A-1),
+jedes Mal in einer anderen Richtung, und jedes Mal war jede Seite für sich
+plausibel.
+
+### 7.12 Zweite eigene Pruefung -> v0.4.12
+
+Systematische statt stichprobenartige Fortsetzung von 7.11: A-1 war dort nur
+in den beiden Screens behoben worden, in die ich zufaellig gesehen hatte.
+Diese Runde hat **alle** PDF-Ergebniszeilen aller zwoelf Tabs durchgezaehlt
+und gegen die zugehoerigen `ResultCard`-Guards gestellt.
+
+| Befund | Umsetzung |
+|---|---|
+| **A-1b** Calafiore: "-" statt 0, Hinweis fehlte ganz | behoben |
+| **B-1** Kandidatenliste des Gesamtberichts handgepflegt | behoben |
+| **C-1** Paediatrie-Tab lag jedem Bericht bei | behoben |
+| **D-1** Referenztabelle ueber `Map<String, dynamic>` | behoben |
+
+**A-1b ist die klinisch wichtigste Auspraegung.** `calafioreDeltaK` ist bei 0
+geklemmt, wenn das Serum-Kalium den Zielwert bereits erreicht. Der Bildschirm
+zeigt dann `0,0 ml/h` **und** blendet den Hinweis `cardio_no_dose_needed`
+ein. Das PDF zeigte "-" und den Hinweis **gar nicht** - ein Leser konnte
+nicht unterscheiden, ob die Rechnung fehlschlug oder keine Zufuhr noetig war.
+Behoben mit `resultIf` + `zeroIsValid`; der Hinweis wandert als `note` in die
+Zeile und nutzt damit die Notenausgabe, die in Block E (4.2)
+wiederhergestellt wurde. Magnesium ist optional, dort heisst 0 "kein Mg in
+der Spritze".
+
+**Restliche A-1-Faelle bewusst offen und begruendet:** Bei allen uebrigen
+Ergebniszeilen (Schlauchvolumen, Charriere, BSA, del Nido, Buckberg,
+Widerstaende, paediatrisches Transfusionsvolumen) setzt eine Null eine
+Eingabe voraus, die die App bereits als unplausibel markiert - 0 cm Schlauch,
+0 Ch, Delta-Hb 0, MAP gleich ZVD. Die Divergenz ist damit fuer jeden Fall
+geschlossen, der aus **plausibler** Eingabe entstehen kann. Zwoelf Dateien
+blind umzuschreiben waere genau die Art breiter, unueberpruefbarer Aenderung,
+die in dieser Kette schon zweimal einen Fehler erzeugt hat (N-1, N-3).
+
+**B-1:** Die Kandidatenliste des Gesamtberichts war eine handgepflegte Kopie
+der Tabreihenfolge in einer privaten Methode. Ein neuer Rechen-Tab haette
+dort ergaenzt werden muessen, ohne dass irgendetwas daran erinnert -
+dieselbe Fehlerklasse wie das frueher fest verdrahtete
+`TabController(length: 12)`, nur leiser: keine Ausnahme beim Start, sondern
+ein still fehlender Abschnitt im ausgelieferten Bericht. Jetzt
+`buildCombinedReportCandidates()`, `@visibleForTesting`, plus
+`kNonComputingTabKeys` fuer die beiden reinen Nachschlage-Tabs. Vier Tests
+binden die Liste an `MainScreen.kTabs`.
+
+**C-1 hat der neue Test sofort gefunden - und es war mein eigener Fehler aus
+v0.4.4.** Die Zeile mit dem EK-Haematokrit im Paediatrie-PDF trug den Wert
+aus `TransfusionSettings` ungefiltert ein. Der ist **immer** gesetzt, also
+enthielt der Tab selbst dann eine Zahl, wenn ihn niemand angefasst hatte -
+und der Filter "enthaelt mindestens einen Wert, der nicht - ist" legte den
+Paediatrie-Tab folglich **jedem** Gesamtbericht bei. Genau die Falle, die
+`natriumSollTouched` und `bsaCardiacIndexTouched` an anderer Stelle laengst
+entschaerfen: ein Vorbelegungswert ist keine Eingabe.
+
+**D-1:** `reference_pressure_screen.dart` hielt die Druck-Referenzwerte als
+`List<Map<String, dynamic>>` und griff ueber `s['rows'] as
+List<List<String>>` und `r[0]`/`r[1]`/`r[2]` darauf zu. Ein Tippfehler im
+Schluessel oder eine Zeile mit zu wenigen Spalten waere erst zur Laufzeit
+aufgefallen - in einer Tabelle klinischer Referenzwerte, die niemand
+nachrechnet, weil sie ja nur angezeigt wird. Jetzt Records
+(`RefSection`/`RefRow`), wie bei `MainScreen.kTabs`. **In `lib/` steht damit
+kein `as`-Cast mehr.**
+
+**Regel 11 fuer 7.7:** *Ein Vorbelegungswert ist keine Eingabe.*
+
+### 7.13 Pruefwerkzeuge (v0.4.13)
+
+Bis hierher lief jede Runde nach demselben Muster: ich habe die
+Invarianten von Hand nachgezaehlt, und jede Runde hat welche gefunden, weil
+Handzaehlen stichprobenartig ist. Jetzt sind sie ausfuehrbar.
+
+**`tool/verify/consistency_check.py`** — zwoelf Pruefungen ueber
+Sprachgrenzen hinweg: Dart gegen YAML, Dart gegen JavaScript, Code gegen
+Dokumentation. Jede steht fuer einen dokumentierten Fehler aus § 7.
+Ausnahmen werden mit `// verify:ok <Begruendung>` am Ort markiert, statt die
+Regel aufzuweichen — beim Bau hat der Checker prompt `dnPct` in
+`cardioplegia_screen.dart` gemeldet, was durch das umschliessende
+`if (delNido)` gedeckt und damit die erste solche Ausnahme ist.
+
+**`tool/offline/test-serve.ps1`** — ersetzt die manuelle Traversal-Gegenprobe
+aus dem Kopf von `serve.ps1` durch dreizehn automatisierte Anfragen. Die
+Zieldatei wird absichtlich angelegt, damit ein 404 nicht wie ein bestandener
+Test aussieht.
+
+**`tool/verify/verify-all.ps1`** — ein Aufruf fuer alles, in der Reihenfolge
+„was hart fehlschlaegt zuerst".
+
+**`.github/workflows/checks.yml`** — `analyze`, `test` und die
+Konsistenzpruefung bei jedem Push und PR. Bewusst getrennt von `deploy.yml`,
+damit die Pruefungen auch auf Branches und in Forks laufen, ohne den
+Auslieferungspfad anzufassen. Der Traversal-Test laeuft dort nicht — er
+braucht Windows und gehoert lokal vor jeden Bundle-Release.
+
+**Regel 12 fuer 7.7:** *Was in einem Audit von Hand nachgezaehlt wird, gehoert
+danach in ein Skript.* Elf Runden lang wurden dieselben Invarianten manuell
+geprueft; die Funde entstanden nicht, weil die Regeln unbekannt waren,
+sondern weil ihre Anwendung stichprobenartig blieb.
+
+### 7.14 Werkzeuge am echten System geprueft (v0.4.14)
+
+Erster Lauf von `verify-all.ps1` auf der Entwicklungsmaschine. `flutter
+analyze` und `flutter test` (250) grün; die beiden anderen Schritte rot — und
+zwar **beide wegen Fehlern in den Werkzeugen, nicht in der App**.
+
+**Der Traversal-Test hatte eine falsche Erwartung.** Drei der neun Faelle
+schlugen fehl, alle drei die **Klartext**-Varianten (`/../geheim.txt`,
+`/assets/../../geheim.txt`, `/../webbackup/nachbar.txt`), alle mit 404 statt
+403. Ursache: `Invoke-WebRequest` normalisiert `..` in einer URL, **bevor**
+gesendet wird. Aus `/../geheim.txt` wird `/geheim.txt` — der Server hat nie
+einen Traversal gesehen, und 404 ist die richtige Antwort auf das, was ankam.
+Die vier prozentkodierten Varianten, also genau die sicherheitsrelevanten,
+liefen von Anfang an auf 403.
+
+*Behebung:* Das Pruefkriterium ist jetzt **inhaltlich**. Geprueft wird, dass
+der Marker aus der Datei ausserhalb des Wurzelordners nie in einer Antwort
+auftaucht; 403 und 404 sind beide in Ordnung, 200 mit Marker ist der Befund.
+Dazu zwei rohe TCP-Anfragen an der Client-Normalisierung vorbei — nur so
+laesst sich pruefen, was ein feindlicher Client tatsaechlich schickt. Von
+dreizehn auf siebzehn Pruefungen.
+
+**Die Python-Erkennung lief in genau die Falle, gegen die `start.bat` seit
+O-2 abgesichert ist.** Windows legt unter `%LOCALAPPDATA%\Microsoft\
+WindowsApps` App-Ausfuehrungsaliase fuer `python.exe` und `python3.exe` ab,
+die oft VOR einer echten Installation im PATH stehen und beim Aufruf nur den
+Microsoft Store oeffnen (Exit 9009). `Get-Command` meldet sie als gefunden.
+`verify-all.ps1` prueft jetzt durch einen echten Programmlauf und probiert
+`py -3` zuerst — der Launcher wird von den Aliassen nicht verdeckt.
+
+**Precache-Generator gegen einen echten Build geprueft.** Die Dateiliste
+eines `flutter build web` (60 Dateien, 12 Verzeichnisse) durchgerechnet:
+41 Precache-Eintraege, beide Entry Points erkannt, alle Ausschluesse korrekt
+(`.symbols`, `experimental_webparagraph/`, `icons/`, die `?v=9`-Familie),
+erzeugtes `sw.js` mit `node --check` gueltig. Der Build war ohne `--wasm`,
+enthielt also kein `main.dart.wasm` — die Entry-Point-Pruefung akzeptiert
+`main.dart.*` ODER `flutter_bootstrap.js` und traegt damit beide Bauarten.
+
+**Neue Pruefung 12: unreferenzierte Dateien in `web/`.** Alles dort wandert in
+den harten Precache, wird also bei jedem Deploy von jedem Besucher neu
+geladen. Der erste Lauf meldet `pcalc-icon-v8-192.png`, `pcalc-icon-v8.ico`
+und `pcalc-icon-v8.png` (zusammen 57 KB) — von nirgends referenziert.
+Bewusst als **Warnung**, nicht als Fehler: das sind vermutlich Quellbilder
+fuer die Icon-Erzeugung oder den Store-Eintrag, und wohin die gehoeren, ist
+eine Entscheidung, keine Regelverletzung.
+
+**`tool/verify/coverage_report.py`** wertet `coverage/lcov.info` aus und
+listet ungetestete Dateien zuerst. `lib/screens/`, `lib/widgets/` und
+`lib/theme/` sind ausgeblendet — dort braucht es Widget-Tests; uebrig bleibt
+der Teil, der rechnet. In `checks.yml` informativ eingebunden, ohne Schwelle:
+eine Zahl, die man erreichen muss, verleitet zu Tests, die nur Zeilen
+abhaken.
+
+**Regel 13 fuer 7.7:** *Ein Pruefwerkzeug ist Code und braucht denselben
+Beweis wie der Code, den es prueft.* Beide Werkzeugfehler dieser Runde waren
+plausible Annahmen ueber fremdes Verhalten — die Normalisierung von
+`Invoke-WebRequest` und das Ergebnis von `Get-Command` — die niemand
+ausgefuehrt hatte. Dasselbe Muster wie 1.4, 2.6 und N-1.
+
+### 7.15 Abdeckung ausgewertet -> v0.4.15
+
+Erste Auswertung von `coverage_report.py` auf echten Daten. Sie hat genau
+das geleistet, wofuer sie gebaut wurde: die Luecke gezeigt UND den Fehler
+darin.
+
+| Datei | vorher | Befund |
+|---|---|---|
+| `cardioplegia_alarm_settings.dart` | 10,4 % | **Fehler gefunden**, jetzt getestet |
+| `pdf_export.dart` | 10,4 % | Rendern war nicht erreichbar, jetzt getestet |
+| `notification_service.dart` | 0 % | bleibt offen, Begruendung unten |
+| `pdf_download_stub.dart`, `web_notifications_stub.dart` | 0 % | bleibt offen |
+| `main.dart` 4,9 %, `screens/`, `widgets/` | — | Widget-Code, ausgeblendet |
+
+**Der Fehler: `CardioplegiaAlarmSettings.load()` klemmte nicht.** Dritter
+Fall derselben Asymmetrie — `TransfusionSettings` klemmte von Anfang an,
+`CardioplegiaSettings` bekam es in v0.4.11, hier fehlte es noch. Die
+Auswirkung ist die stillste der drei: `expectedFireCount()` gibt bei
+`triggerMinutes <= 0` dauerhaft 0 zurueck. Ein gespeichertes 0 haette also
+einen Alarm erzeugt, den die Oberflaeche als **eingeschaltet** anzeigt und
+der **nie feuert** — ohne Fehlermeldung, an einer Erinnerung, auf die man
+sich im Fall verlaesst. Ein gespeichertes 10000 wirkt genauso.
+
+Dass die Klasse bei 10 % stand, waehrend ihre beiden Geschwister bei 100 %
+lagen, war der Hinweis. 24 Tests ergaenzt, darunter der Feuerplan:
+sekundengenaue Grenzen (899 s -> 0, 900 s -> 1), Monotonie des Zaehlers
+ueber zwei Stunden, und das unbrauchbare Intervall.
+
+**`pdf_export.dart`: Rendern vom Export getrennt.** Die Erzeugung war mit
+dem Speichern-Dialog verwoben und damit im Unit-Test nicht erreichbar. Neu
+`renderTabPdf()` und `renderCombinedPdf()`, `@visibleForTesting`; die
+Export-Funktionen rufen sie auf und laden herunter. Sechs Tests bauen echte
+PDF-Bytes und pruefen `%PDF-` am Anfang, `%%EOF` am Ende: gefuellter Tab,
+leerer Tab (lauter Gedankenstriche), Zeile mit Fussnote (eigener
+Layoutzweig seit 4.2), Gesamtbericht, leerer Gesamtbericht, und 120 Zeilen
+fuer einen erzwungenen Seitenumbruch — ein Layoutfehler in Kopf- oder
+Fusszeile faellt erst ab der zweiten Seite auf.
+
+Das prueft nicht das Aussehen; dafuer braucht es Augen. Es prueft, dass der
+Aufbau durchlaeuft — und ein Absturz dort bedeutet, dass der Export
+ersatzlos fehlschlaegt.
+
+**Bewusst ohne Tests, mit Begruendung:**
+
+- `notification_service.dart` (0 %) haengt vollstaendig an
+  `flutter_local_notifications`, `timezone` und `defaultTargetPlatform`. Ein
+  Test brauchte einen Plugin-Mock und wuerde im Wesentlichen den Mock
+  pruefen. Der reine Anteil — der Feuerplan — liegt bereits in
+  `CardioplegiaAlarmSettings.expectedFireCount()` und ist jetzt abgedeckt.
+  Die verbleibende Absicherung ist Stufe 5 des Pruefplans: Release-Build,
+  Geraet, echte Benachrichtigung.
+- Die beiden Stubs (3 bzw. 5 Zeilen) sind Weiterleitungen fuer bedingte
+  Importe. Ein Test wuerde bestaetigen, dass `false` gleich `false` ist.
+
+**Nachtrag aus dem Testlauf:** Ein Test war rot, und wieder war die
+Erwartung falsch, nicht der Code. `expectValidPdf` verlangte pauschal 1000
+Bytes; der leere Gesamtbericht liefert 427. Kein Defekt — ein Dokument, in
+dem kein Text gezeichnet wird, bettet auch keine Schrift ein, und die
+Roboto-Dateien machen den Loewenanteil eines normalen PDFs aus. Die Groesse
+sagt dort etwas ueber den Inhalt, nicht ueber die Gueltigkeit. Die Schwelle
+ist jetzt ein Parameter mit Begruendung.
+
+Nebenbei geprueft: Der leere Gesamtbericht ist aus der Oberflaeche gar nicht
+erreichbar — `_exportCombinedReport()` faengt den Fall ab und zeigt einen
+Hinweis. Der Test sichert also nur zu, dass `renderCombinedPdf()` nicht
+wirft, falls sich die Filterlogik einmal aendert.
+
+**Regel 14 fuer 7.7:** *Eine Abdeckungsluecke ist ein Hinweis, keine
+Aufgabe.* Von fuenf gemeldeten Luecken waren zwei echte Befunde, drei
+begruendet unproblematisch. Wer alle fuenf schliesst, schreibt drei Tests,
+die nichts absichern — und uebersieht womoeglich, dass die 10-%-Datei neben
+den 100-%-Geschwistern der eigentliche Hinweis war.

@@ -2,61 +2,75 @@ import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../i18n/app_strings.dart';
 
+/// Eine Zeile der Referenztabelle: Bezeichnung, typischer Wert, Normbereich.
+typedef RefRow = ({String label, String typical, String range});
+
+/// Ein Abschnitt der Referenztabelle.
+typedef RefSection = ({String title, List<RefRow> rows});
+
 class ReferencePressureScreen extends StatelessWidget {
   const ReferencePressureScreen({super.key});
 
-  // Sections are dynamic so the language can be switched.
-  // 'title' comes via t() on each build call.
-  List<Map<String, dynamic>> _sections() => [
-    {
-      'title': t('ref_section_arterial'),
-      'rows': [
-        [t('ref_systolic'),  '130 mmHg', '90 – 140 mmHg'],
-        [t('ref_diastolic'), '70 mmHg',  '60 – 90 mmHg'],
-        [t('ref_mean'),      '85 mmHg',  '70 – 105 mmHg'],
+  // Records statt Map<String, dynamic> (Eigenbefund v0.4.12): die frueheren
+  // Zugriffe brauchten `s['rows'] as List<List<String>>` und `s['title'] as
+  // String`, und die Spalten wurden ueber r[0]/r[1]/r[2] adressiert. Ein
+  // Tippfehler im Schluessel oder eine Zeile mit zu wenigen Spalten waere
+  // erst zur Laufzeit aufgefallen - in einer Tabelle mit klinischen
+  // Referenzwerten, die niemand nachrechnet, weil sie ja nur angezeigt wird.
+  // Dieselbe Umstellung wie bei MainScreen.kTabs.
+  //
+  // Weiterhin eine Methode statt einer Konstanten: die Beschriftungen kommen
+  // ueber t() und muessen bei jedem Sprachwechsel neu aufgeloest werden.
+  List<RefSection> _sections() => [
+    (
+      title: t('ref_section_arterial'),
+      rows: [
+        (label: t('ref_systolic'), typical: '130 mmHg', range: '90 – 140 mmHg'),
+        (label: t('ref_diastolic'), typical: '70 mmHg', range: '60 – 90 mmHg'),
+        (label: t('ref_mean'), typical: '85 mmHg', range: '70 – 105 mmHg'),
       ],
-    },
-    {
-      'title': t('ref_section_lv'),
-      'rows': [
-        [t('ref_systolic'),  '130 mmHg', '90 – 140 mmHg'],
-        [t('ref_diastolic'), '7 mmHg',   '4 – 12 mmHg'],
+    ),
+    (
+      title: t('ref_section_lv'),
+      rows: [
+        (label: t('ref_systolic'), typical: '130 mmHg', range: '90 – 140 mmHg'),
+        (label: t('ref_diastolic'), typical: '7 mmHg', range: '4 – 12 mmHg'),
       ],
-    },
-    {
-      'title': t('ref_section_la'),
-      'rows': [[t('ref_mean'), '8 mmHg', '2 – 12 mmHg']],
-    },
-    {
-      'title': t('ref_section_ra'),
-      'rows': [[t('ref_mean'), '4 mmHg', '0 – 8 mmHg']],
-    },
-    {
-      'title': t('ref_section_rv'),
-      'rows': [
-        [t('ref_systolic'),  '24 mmHg', '15 – 28 mmHg'],
-        [t('ref_diastolic'), '4 mmHg',  '0 – 8 mmHg'],
+    ),
+    (
+      title: t('ref_section_la'),
+      rows: [(label: t('ref_mean'), typical: '8 mmHg', range: '2 – 12 mmHg')],
+    ),
+    (
+      title: t('ref_section_ra'),
+      rows: [(label: t('ref_mean'), typical: '4 mmHg', range: '0 – 8 mmHg')],
+    ),
+    (
+      title: t('ref_section_rv'),
+      rows: [
+        (label: t('ref_systolic'), typical: '24 mmHg', range: '15 – 28 mmHg'),
+        (label: t('ref_diastolic'), typical: '4 mmHg', range: '0 – 8 mmHg'),
       ],
-    },
-    {
-      'title': t('ref_section_pcwp'),
-      'rows': [[t('ref_mean'), '9 mmHg', '6 – 18 mmHg']],
-    },
-    {
-      'title': t('ref_section_pap'),
-      'rows': [
-        [t('ref_systolic'),  '24 mmHg', '15 – 28 mmHg'],
-        [t('ref_diastolic'), '10 mmHg', '5 – 16 mmHg'],
-        [t('ref_mean'),      '16 mmHg', '10 – 22 mmHg'],
+    ),
+    (
+      title: t('ref_section_pcwp'),
+      rows: [(label: t('ref_mean'), typical: '9 mmHg', range: '6 – 18 mmHg')],
+    ),
+    (
+      title: t('ref_section_pap'),
+      rows: [
+        (label: t('ref_systolic'), typical: '24 mmHg', range: '15 – 28 mmHg'),
+        (label: t('ref_diastolic'), typical: '10 mmHg', range: '5 – 16 mmHg'),
+        (label: t('ref_mean'), typical: '16 mmHg', range: '10 – 22 mmHg'),
       ],
-    },
-    {
-      'title': t('ref_section_cvp'),
-      'rows': [
-        ['CVP',                  '', '2 – 8 cmH\u2082O'],
-        [t('ref_spontaneous'),   '', '1 – 6 mmHg'],
+    ),
+    (
+      title: t('ref_section_cvp'),
+      rows: [
+        (label: 'CVP', typical: '', range: '2 – 8 cmH\u2082O'),
+        (label: t('ref_spontaneous'), typical: '', range: '1 – 6 mmHg'),
       ],
-    },
+    ),
   ];
 
   @override
@@ -97,8 +111,8 @@ class ReferencePressureScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionCard(Map<String, dynamic> s) {
-    final rows = s['rows'] as List<List<String>>;
+  Widget _sectionCard(RefSection s) {
+    final rows = s.rows;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -114,7 +128,7 @@ class ReferencePressureScreen extends StatelessWidget {
             color: kTableHeaderBg,
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
           ),
-          child: Text(s['title'] as String,
+          child: Text(s.title,
               style: const TextStyle(color: kGold, fontSize: 14, fontWeight: FontWeight.bold)),
         ),
         ...rows.asMap().entries.map((e) {
@@ -135,20 +149,20 @@ class ReferencePressureScreen extends StatelessWidget {
               Expanded(flex: 4,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                  child: Text(r[0],
+                  child: Text(r.label,
                       style: const TextStyle(color: kGold, fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ),
               Expanded(flex: 3,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-                  child: Text(r[1], style:  TextStyle(color: kText, fontSize: 13)),
+                  child: Text(r.typical, style:  TextStyle(color: kText, fontSize: 13)),
                 ),
               ),
               Expanded(flex: 3,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-                  child: Text(r[2], style:  TextStyle(color: kText, fontSize: 13)),
+                  child: Text(r.range, style:  TextStyle(color: kText, fontSize: 13)),
                 ),
               ),
             ]),

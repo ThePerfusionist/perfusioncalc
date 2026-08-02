@@ -32,8 +32,9 @@ void main() {
       expect(clampStep(-0.1, Ranges.weight, fromEmpty: true), Ranges.weight.min);
     });
 
-    test('Inkrement aus dem Leeren wird nicht angehoben', () {
-      // 0.1 liegt unter Ranges.weight.min (0.5) -> auf min gesetzt.
+    test('Inkrement aus dem Leeren setzt auf die Untergrenze auf', () {
+      // 0.1 liegt unter Ranges.weight.min (0.5) und wird darauf angehoben:
+      // 0,5 kg ist die sinnvollere erste Position als 0,1 kg.
       expect(clampStep(0.1, Ranges.weight, fromEmpty: true), Ranges.weight.min);
     });
 

@@ -9,6 +9,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:perfusion_calc/i18n/app_strings.dart';
 import 'package:perfusion_calc/main.dart';
+import 'package:perfusion_calc/models/bga_model.dart';
+import 'package:perfusion_calc/models/patient_data.dart';
 
 void main() {
   group('MainScreen.kTabs', () {
@@ -37,6 +39,50 @@ void main() {
     test('Keys follow the tab_ naming convention', () {
       for (final tab in MainScreen.kTabs) {
         expect(tab.key, startsWith('tab_'));
+      }
+    });
+  });
+
+  group('Gesamtbericht deckt alle Rechen-Tabs ab', () {
+    // Die Kandidatenliste war eine handgepflegte Kopie der Tabreihenfolge.
+    // Ein neuer Rechen-Tab haette dort ergaenzt werden muessen, und nichts
+    // haette daran erinnert - im Unterschied zum frueher fest verdrahteten
+    // TabController haette das keine Ausnahme geworfen, sondern still einen
+    // Abschnitt im ausgelieferten Bericht weggelassen.
+    final candidates =
+        buildCombinedReportCandidates(PatientData(), BgaModel());
+
+    test('Anzahl entspricht kTabs ohne die reinen Nachschlage-Tabs', () {
+      final computing = MainScreen.kTabs
+          .where((t) => !kNonComputingTabKeys.contains(t.key))
+          .toList();
+      expect(candidates.length, computing.length);
+    });
+
+    test('Titel und Reihenfolge stimmen mit der Tableiste ueberein', () {
+      final expected = MainScreen.kTabs
+          .where((t) => !kNonComputingTabKeys.contains(t.key))
+          .map((t) => Strings.of(t.key, AppLocale.en))
+          .toList();
+      expect(candidates.map((c) => c.tabTitle).toList(), expected);
+    });
+
+    test('Die ausgenommenen Tabs existieren wirklich', () {
+      // Sonst wuerde ein Tippfehler in kNonComputingTabKeys die Pruefung
+      // oben stillschweigend aushebeln.
+      final keys = MainScreen.kTabs.map((t) => t.key).toSet();
+      for (final k in kNonComputingTabKeys) {
+        expect(keys, contains(k));
+      }
+    });
+
+    test('Ohne Eingaben besteht jeder Kandidat nur aus Gedankenstrichen', () {
+      // Das ist die Voraussetzung dafuer, dass der "nur gefuellte Tabs"-
+      // Filter im Gesamtbericht ueberhaupt funktioniert.
+      for (final tab in candidates) {
+        final values =
+            tab.sections.expand((s) => s.rows).map((r) => r.value).toSet();
+        expect(values, everyElement('—'), reason: tab.tabTitle);
       }
     });
   });

@@ -23,6 +23,9 @@
 //     ],
 //   );
 
+import 'dart:typed_data' show Uint8List;
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -113,16 +116,23 @@ Future<pw.ThemeData> _loadTheme() async {
 /// Exports the given sections as a PDF and triggers the download (on web),
 /// shows the share sheet (on Android/iOS), or is a no-op (on desktop
 /// without printing support).
-Future<void> exportTabAsPdf({
+/// Rendert das PDF und gibt die Bytes zurueck - ohne Download.
+///
+/// Getrennt vom Export, damit das Rendern testbar ist: Die Erzeugung war
+/// bis v0.4.15 mit dem Speichern-Dialog verwoben und damit in einem Unit-
+/// Test nicht erreichbar (Abdeckung 10 %). Das PDF ist aber das einzige
+/// Artefakt, das die App verlaesst - eine Ausnahme beim Aufbau, etwa durch
+/// eine Layout-Ueberschreitung oder eine fehlende Schrift, bedeutet
+/// vollstaendigen Ausfall des Exports und wurde von nichts abgesichert.
+@visibleForTesting
+Future<Uint8List> renderTabPdf({
   required String tabTitle,
-  required String filename,
   required List<PdfSection> sections,
+  DateTime? now,
 }) async {
   final theme = await _loadTheme();
   final pdf = pw.Document(theme: theme);
-
-  final now = DateTime.now();
-  final labels = _PdfLabels.forCurrentLocale(now);
+  final labels = _PdfLabels.forCurrentLocale(now ?? DateTime.now());
 
   pdf.addPage(
     pw.MultiPage(
@@ -139,9 +149,16 @@ Future<void> exportTabAsPdf({
       ],
     ),
   );
+  return pdf.save();
+}
 
-  // Generate PDF bytes, then trigger the download in the browser
-  final bytes = await pdf.save();
+Future<void> exportTabAsPdf({
+  required String tabTitle,
+  required String filename,
+  required List<PdfSection> sections,
+}) async {
+  final now = DateTime.now();
+  final bytes = await renderTabPdf(tabTitle: tabTitle, sections: sections, now: now);
   final ts = '${now.year}${_pad(now.month)}${_pad(now.day)}_'
              '${_pad(now.hour)}${_pad(now.minute)}';
   final fullFilename = 'perfusioncalc_${filename}_$ts.pdf';
@@ -176,14 +193,15 @@ class PdfTabReport {
 }
 
 /// Exports a combined report across multiple tabs as a single PDF.
-Future<void> exportCombinedReportAsPdf({
+/// Gegenstueck zu [renderTabPdf] fuer den Gesamtbericht.
+@visibleForTesting
+Future<Uint8List> renderCombinedPdf({
   required List<PdfTabReport> tabs,
+  DateTime? now,
 }) async {
   final theme = await _loadTheme();
   final pdf = pw.Document(theme: theme);
-
-  final now = DateTime.now();
-  final labels = _PdfLabels.forCurrentLocale(now);
+  final labels = _PdfLabels.forCurrentLocale(now ?? DateTime.now());
 
   pdf.addPage(
     pw.MultiPage(
@@ -201,7 +219,14 @@ Future<void> exportCombinedReportAsPdf({
     ),
   );
 
-  final bytes = await pdf.save();
+  return pdf.save();
+}
+
+Future<void> exportCombinedReportAsPdf({
+  required List<PdfTabReport> tabs,
+}) async {
+  final now = DateTime.now();
+  final bytes = await renderCombinedPdf(tabs: tabs, now: now);
   final ts = '${now.year}${_pad(now.month)}${_pad(now.day)}_'
              '${_pad(now.hour)}${_pad(now.minute)}';
   final fullFilename = 'perfusioncalc_combined_report_$ts.pdf';
@@ -237,6 +262,24 @@ pw.Widget _buildTabChapter(PdfTabReport tab) {
 // ════════════════════════════════════════════════════════════════════════════
 // Helpers
 // ════════════════════════════════════════════════════════════════════════════
+
+/// Gibt [value] nur zurueck, wenn ALLE benoetigten Eingaben vorliegen -
+/// sonst null.
+///
+/// Loest die Spiegelung von Auditbefund 1.1: Dort druckte das PDF eine Zahl,
+/// wo der Bildschirm "—" zeigte. Hier war es umgekehrt.
+///
+/// Ergebnis-Getter in PatientData geben 0 zurueck, wenn Eingaben fehlen -
+/// PdfRow.numeric zeigt dafuer "—". Bei manchen Rechnungen ist 0 aber ein
+/// gueltiges, klinisch bedeutsames Ergebnis: ein Base Excess von 0 heisst
+/// "0 ml NaBic, keine Korrektur noetig", nicht "nicht berechenbar". Die
+/// ResultCard auf dem Bildschirm zeigt dort korrekt 0.0, weil sie sich nach
+/// missingInputs richtet und nicht nach dem Wert - das PDF zeigte "—".
+///
+/// Mit resultIf(...) plus `zeroIsValid: true` bilden beide dieselbe
+/// Unterscheidung ab: fehlende Eingabe -> "—", errechnete Null -> "0.0".
+double? resultIf(List<Object?> requiredInputs, double value) =>
+    requiredInputs.any((i) => i == null) ? null : value;
 
 /// The handful of chrome strings both exports need, resolved once per
 /// document. These are not in app_strings.dart because they only ever

@@ -22,11 +22,18 @@ FALLS ETWAS NICHT FUNKTIONIERT
       "Abbrechen" genuegt - fuer localhost ist keine Freigabe noetig.
 
   caddy.exe wird blockiert
-      start.bat weicht automatisch auf PowerShell aus. Passiert das
-      nicht, caddy.exe loeschen und start.bat erneut ausfuehren.
+      start.bat prueft vor dem Start, ob caddy.exe ueberhaupt laufen
+      darf, und weicht sonst selbsttaetig auf PowerShell und danach
+      auf Python aus. Im Fenster steht dann, welcher Server benutzt
+      wird. Erscheint "Kein Webserver konnte gestartet werden", sind
+      alle drei Wege gesperrt - dann hilft nur die IT-Abteilung.
 
   Weisse Seite trotz Server
       Im Browser Strg+Umschalt+R druecken (Zwischenspeicher umgehen).
+
+  Browser zeigt "Verbindung abgelehnt"
+      Der Tab oeffnet sich zwei Sekunden nach dem Serverstart. Braucht
+      der Rechner laenger, einmal neu laden (F5).
 
   Port belegt
       start.bat sucht selbst einen freien Port (8080-8090).

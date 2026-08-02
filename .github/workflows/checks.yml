@@ -1,0 +1,77 @@
+name: Checks
+
+# Läuft bei jedem Push und jedem Pull Request auf main.
+#
+# Warum getrennt von deploy.yml: Diese Prüfungen sollen auch dann laufen,
+# wenn nicht deployt wird — auf einem Branch, in einem PR, in einem Fork.
+# deploy.yml bleibt der Auslieferungspfad und wird hier nicht angefasst.
+#
+# Zwei Ebenen:
+#   1. flutter analyze + flutter test   — was Dart selbst prüfen kann
+#   2. consistency_check.py             — was über Sprachgrenzen hinweg gilt:
+#      Dart gegen YAML, Dart gegen JavaScript, Code gegen Dokumentation.
+#      Jede Prüfung dort steht für einen Fehler, der in dieser Codebasis
+#      schon einmal aufgetreten ist (siehe PROJECT_STATE.md § 7).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Muss mit deploy.yml, release.yml, offline-bundle.yml und den
+  # Entwicklungsmaschinen übereinstimmen.
+  FLUTTER_VERSION: '3.44.8'
+
+jobs:
+  checks:
+    name: Analyse, Tests, Konsistenz
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Setup Flutter (pinned)
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-warnings
+
+      - name: Unit tests
+        run: flutter test
+
+      # Node wird nur für `node --check web/sw.js` gebraucht. Ohne Node
+      # überspringt der Checker diese eine Prüfung mit einer Warnung - hier
+      # soll sie aber laufen, denn der Service Worker trägt den Offlinebetrieb.
+      - name: Setup Node (für die sw.js-Syntaxprüfung)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Install PyYAML (für die Workflow-Prüfung)
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Repository consistency
+        run: python3 tool/verify/consistency_check.py
+
+      # Informativ, bricht den Lauf NICHT ab. Eine Schwelle waere hier
+      # verfrueht: die Screens haben bewusst keine Widget-Tests, und eine
+      # Zahl, die man erreichen muss, verleitet zu Tests, die nur Zeilen
+      # abhaken. Der Bericht macht Luecken sichtbar - entscheiden muss ein
+      # Mensch.
+      - name: Coverage (informativ)
+        run: |
+          flutter test --coverage
+          python3 tool/verify/coverage_report.py

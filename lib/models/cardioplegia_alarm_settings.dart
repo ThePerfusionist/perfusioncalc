@@ -39,12 +39,19 @@ class CardioplegiaAlarmSettings extends ChangeNotifier {
   static final CardioplegiaAlarmSettings instance = CardioplegiaAlarmSettings._();
   CardioplegiaAlarmSettings._();
 
+  /// Default 15 = the lower bound of the Calafiore re-dose window.
+  static const double kDefaultTriggerMinutes = 15;
+
+  /// Unter 1 min waere die Erinnerung nutzlos, ueber 240 min liegt sie
+  /// jenseits des Fensters jedes Protokolls.
+  static const double kMinTriggerMinutes = 1;
+  static const double kMaxTriggerMinutes = 240;
+
   /// Master switch. Off by default so the app never makes noise unasked.
   bool _enabled = false;
 
   /// Minutes after the recorded delivery at which the alert fires.
-  /// Default 15 = the lower bound of the Calafiore re-dose window.
-  double _triggerMinutes = 15;
+  double _triggerMinutes = kDefaultTriggerMinutes;
 
   bool _sound = true;
   bool _vibration = true;
@@ -63,7 +70,17 @@ class CardioplegiaAlarmSettings extends ChangeNotifier {
     try {
       final p = await SharedPreferences.getInstance();
       _enabled = p.getBool(_kEnabled) ?? false;
-      _triggerMinutes = p.getDouble(_kMinutes) ?? 15;
+      // GEKLEMMT, nicht roh uebernommen. Dritter Fall derselben Asymmetrie:
+      // TransfusionSettings.load() klemmte von Anfang an,
+      // CardioplegiaSettings.load() bekam es in v0.4.11, hier fehlte es noch.
+      //
+      // Die Folgen sind hier die stillsten von den dreien: ein gespeichertes
+      // 0 laesst expectedFireCount() dauerhaft 0 zurueckgeben - der Alarm
+      // ist eingeschaltet und feuert nie. Ein gespeichertes 10000 wirkt
+      // genauso, nur mit anderer Begruendung. Beides ohne Fehlermeldung, an
+      // einer Erinnerung, auf die man sich im Fall verlaesst.
+      _triggerMinutes = _clampMinutes(
+          p.getDouble(_kMinutes) ?? kDefaultTriggerMinutes);
       _sound = p.getBool(_kSound) ?? true;
       _vibration = p.getBool(_kVibration) ?? true;
       _repeat = p.getBool(_kRepeat) ?? false;
@@ -93,10 +110,13 @@ class CardioplegiaAlarmSettings extends ChangeNotifier {
     await _save((p) => p.setBool(_kEnabled, v));
   }
 
-  /// Clamped to a plausible band: below 1 min the alert would be useless,
-  /// above 240 min it is past every protocol's window.
+  static double _clampMinutes(double v) => v < kMinTriggerMinutes
+      ? kMinTriggerMinutes
+      : (v > kMaxTriggerMinutes ? kMaxTriggerMinutes : v);
+
+  /// Auf [kMinTriggerMinutes]..[kMaxTriggerMinutes] geklemmt.
   Future<void> setTriggerMinutes(double v) async {
-    final clamped = v < 1 ? 1.0 : (v > 240 ? 240.0 : v);
+    final clamped = _clampMinutes(v);
     if (_triggerMinutes == clamped) return;
     _triggerMinutes = clamped;
     notifyListeners();

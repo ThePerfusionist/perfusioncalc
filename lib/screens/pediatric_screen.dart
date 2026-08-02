@@ -219,7 +219,19 @@ List<PdfSection> buildPediatricPdfSections(PatientData pd) {
     PdfSection(title: t('pdf_inputs'), rows: [
       PdfRow.numeric(label: t('bsa_body_weight'), value: pd.pediatricWeight,   unit: 'kg'),
       PdfRow.numeric(label: t('ped_desired_hb'),  value: pd.desiredHbIncrease, unit: 'g/dl', decimals: 1),
-      PdfRow.numeric(label: t('ped_hct_in_ek'),   value: hctPercent,           unit: '%', decimals: 0),
+      // resultIf, NICHT der nackte Wert (Eigenbefund v0.4.12): Der
+      // EK-Haematokrit kommt aus einer Einstellung und ist IMMER gesetzt -
+      // hier ungefiltert eingetragen, enthielt der Pädiatrie-Tab damit
+      // selbst dann eine Zahl, wenn niemand ihn angefasst hatte. Der
+      // Gesamtbericht filtert ueber "enthaelt mindestens einen Wert, der
+      // nicht — ist" und haette den Tab folglich JEDEM Bericht beigelegt.
+      //
+      // Dieselbe Falle, die natriumSollTouched und bsaCardiacIndexTouched
+      // an anderer Stelle bereits entschaerfen: ein Vorbelegungswert ist
+      // keine Eingabe.
+      PdfRow.numeric(label: t('ped_hct_in_ek'),
+          value: resultIf([pd.pediatricWeight, pd.desiredHbIncrease], hctPercent),
+          unit: '%', decimals: 0),
     ]),
     PdfSection(title: t('pdf_results'), rows: [
       PdfRow.numeric(label: t('ped_transfusion_vol'),

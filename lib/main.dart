@@ -26,7 +26,7 @@ import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.4.9';
+const kAppVersion = '0.4.15';
 
 void main() async {
   // Load language + theme from SharedPreferences before the UI is rendered,
@@ -63,6 +63,39 @@ class PerfusionCalcApp extends StatelessWidget {
     );
   }
 }
+
+/// Alle Tabs, die etwas in den Gesamtbericht beitragen koennen - in der
+/// Reihenfolge der Tableiste.
+///
+/// Ausgelagert und @visibleForTesting (Eigenbefund v0.4.12): Die Liste war
+/// eine handgepflegte Kopie der Tabreihenfolge mitten in einer privaten
+/// Methode. Ein neuer Rechen-Tab haette hier ergaenzt werden muessen, und
+/// nichts haette daran erinnert - dieselbe Fehlerklasse wie das frueher fest
+/// verdrahtete `TabController(length: 12)`, nur leiser: statt einer
+/// Ausnahme beim Start haette schlicht ein Abschnitt im ausgelieferten
+/// Bericht gefehlt.
+///
+/// [MainScreen.kTabs] enthaelt zwei weitere Tabs, die bewusst NICHT
+/// auftauchen: `tab_reference` und `tab_anatomy` zeigen ausschliesslich
+/// statische Nachschlagewerte und haben keine PDF-Sektionen. Ein Test
+/// prueft genau diese Differenz.
+@visibleForTesting
+List<PdfTabReport> buildCombinedReportCandidates(PatientData pd, BgaModel bga) => [
+  PdfTabReport(tabTitle: t('tab_bsa'),             sections: buildBsaPdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_o2'),              sections: buildO2PdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_hypothermia'),     sections: buildHypothermiaPdfSections(bga)),
+  PdfTabReport(tabTitle: t('tab_cardioplegia'),    sections: buildCardioplegiaPdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_electrolytes'),    sections: buildElectrolytesPdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_ultrafiltration'), sections: buildUltrafiltrationPdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_resistances'),     sections: buildResistancesPdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_pediatric'),       sections: buildPediatricPdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_tube_volume'),     sections: buildTubeVolumePdfSections(pd)),
+  PdfTabReport(tabTitle: t('tab_zoll'),            sections: buildZollPdfSections(pd)),
+];
+
+/// Tabs ohne Rechenergebnisse - reine Nachschlagewerke.
+@visibleForTesting
+const kNonComputingTabKeys = {'tab_reference', 'tab_anatomy'};
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -267,19 +300,7 @@ class _MainScreenState extends State<MainScreen>
   // rows has a real value (not just "—"). This keeps the report compact
   // even if the user has only worked through part of the tabs.
   Future<void> _exportCombinedReport() async {
-    final pd = _patientData;
-    final candidates = [
-      PdfTabReport(tabTitle: t('tab_bsa'),          sections: buildBsaPdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_o2'),           sections: buildO2PdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_hypothermia'),  sections: buildHypothermiaPdfSections(_bgaModel)),
-      PdfTabReport(tabTitle: t('tab_cardioplegia'), sections: buildCardioplegiaPdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_electrolytes'), sections: buildElectrolytesPdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_ultrafiltration'), sections: buildUltrafiltrationPdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_resistances'),  sections: buildResistancesPdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_pediatric'),    sections: buildPediatricPdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_tube_volume'),  sections: buildTubeVolumePdfSections(pd)),
-      PdfTabReport(tabTitle: t('tab_zoll'),         sections: buildZollPdfSections(pd)),
-    ];
+    final candidates = buildCombinedReportCandidates(_patientData, _bgaModel);
     final filled = candidates.where((tab) =>
         tab.sections.any((s) => s.rows.any((r) => r.value != '—'))).toList();
 

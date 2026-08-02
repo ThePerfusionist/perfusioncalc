@@ -119,6 +119,17 @@ start "" http://localhost:8080
 python -m http.server 8080
 ```
 
+> **Zu Variante B:** `python -m http.server` bestimmt den Content-Type über das
+> `mimetypes`-Modul. Ob `.wasm` dort auf `application/wasm` abgebildet ist,
+> hängt an der Python-Version — in älteren Versionen fehlt der Eintrag, und
+> dann wird `application/octet-stream` geliefert. Die App läuft trotzdem: der
+> CanvasKit-Loader hat für `WebAssembly.instantiateStreaming` einen
+> `arrayBuffer()`-Rückfallweg. Der **Start dauert dann aber spürbar länger**,
+> weil das Modul nicht mehr während des Downloads kompiliert wird. Ein
+> langsamer erster Start unter Variante B ist also erwartbar und kein Defekt.
+> Die von `start.bat` bevorzugten Varianten (Caddy, `serve.ps1`) setzen den
+> Typ korrekt.
+
 ## Schritt 4 — Auf dem Zielrechner starten
 
 Ordner vom Stick auf die Festplatte kopieren (z. B. nach `C:\PerfusionCalc`),
