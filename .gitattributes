@@ -1,0 +1,118 @@
+###############################################################################
+# PerfusionCalc - .gitattributes
+#
+# Goal: identical line endings on Windows workstations and the Ubuntu CI,
+#       no phantom diffs after `flutter pub get`, correct binary handling.
+###############################################################################
+
+# --- Base rule --------------------------------------------------------------
+# Everything Git detects as text is stored with LF in the repository AND in the
+# working tree. This matches what the Flutter tooling writes when generating.
+* text=auto eol=lf
+
+# --- Windows scripts: must keep CRLF ----------------------------------------
+# cmd.exe mishandles LF-only .bat files in some cases (labels, GOTO, blocks).
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+
+# Offline bundle: this readme is opened in a Windows editor on clinical PCs.
+tool/offline/LIESMICH.txt text eol=crlf
+
+# --- Explicit text (LF) -----------------------------------------------------
+*.dart          text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.rst           text eol=lf
+*.html          text eol=lf
+*.js            text eol=lf
+*.css           text eol=lf
+*.xml           text eol=lf
+*.svg           text eol=lf
+*.gradle        text eol=lf
+*.kts           text eol=lf
+*.kt            text eol=lf
+*.java          text eol=lf
+*.swift         text eol=lf
+*.h             text eol=lf
+*.cc            text eol=lf
+*.cpp           text eol=lf
+*.cmake         text eol=lf
+*.properties    text eol=lf
+*.plist         text eol=lf
+*.entitlements  text eol=lf
+*.xcconfig      text eol=lf
+*.pro           text eol=lf
+*.sh            text eol=lf
+CMakeLists.txt  text eol=lf
+Dockerfile      text eol=lf
+.gitignore      text eol=lf
+.metadata       text eol=lf
+
+# --- Binary files: never convert, never diff --------------------------------
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.ico       binary
+*.icns      binary
+*.pdf       binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+*.zip       binary
+*.jar       binary
+*.aar       binary
+*.so        binary
+*.dll       binary
+*.dylib     binary
+*.exe       binary
+*.apk       binary
+*.aab       binary
+*.jks       binary
+*.keystore  binary
+*.p12       binary
+*.pfx       binary
+*.docx      binary
+*.pptx      binary
+*.xlsx      binary
+
+# Do not normalize Xcode asset catalogs.
+*.xcassets/** binary
+*.car         binary
+
+# --- Flutter-generated files ------------------------------------------------
+# These stay under version control (the build needs them), but GitHub collapses
+# them in diffs and excludes them from the language statistics.
+**/generated_plugin_registrant.cc     linguist-generated=true
+**/generated_plugin_registrant.h      linguist-generated=true
+**/generated_plugins.cmake            linguist-generated=true
+**/GeneratedPluginRegistrant.swift    linguist-generated=true
+**/GeneratedPluginRegistrant.java     linguist-generated=true
+ios/Flutter/Generated.xcconfig        linguist-generated=true
+macos/Flutter/Flutter-*.xcconfig      linguist-generated=true
+pubspec.lock                          linguist-generated=true
+
+# --- Xcode project file -----------------------------------------------------
+# Line-wise merge; otherwise parallel work produces recurring conflicts.
+*.pbxproj text eol=lf -diff merge=union
+
+# --- GitHub language statistics ---------------------------------------------
+# So the repository is detected as a Dart project, not as HTML/C++.
+web/**            linguist-documentation=true
+windows/runner/** linguist-vendored=true
+linux/runner/**   linguist-vendored=true
+macos/Runner/**   linguist-vendored=true
+ios/Runner/**     linguist-vendored=true
+test/**           linguist-detectable=true
+
+# --- Keep release archives lean ---------------------------------------------
+# Affects `git archive` / the GitHub source download only, not a normal clone.
+.github/          export-ignore
+.gitattributes    export-ignore
+.gitignore        export-ignore
