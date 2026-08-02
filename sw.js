@@ -58,7 +58,7 @@
 //     dadurch auf CPU-Rendering zurückfiel -> langsamer als ohne. GPU-Rendering
 //     ist der größere Hebel. Diese Version verwirft die mit COI-Headern
 //     gecachten Responses aus v5.
-const BUILD_ID = 'fa4e5cc0ed0b77b779b7fd349c146c6aabe42d37';
+const BUILD_ID = '3a53fa57b25a62fc71f7e845e4e883bcdffae248';
 const VERSION = `pcalc-${BUILD_ID}`;
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
@@ -222,6 +222,15 @@ self.addEventListener('install', (event) => {
     // NICHT -> der alte bleibt mitsamt seinem Cache in Betrieb. Ein
     // fehlgeschlagenes Update ist ein Nicht-Ereignis; ein halbes Update ist
     // eine weisse Seite.
+    //
+    // './' und './index.html' gehoeren mit dazu, obwohl sie nicht aus
+    // BUILD_ASSETS kommen (Audit R-1): './' ist keine Datei im Build-
+    // Verzeichnis, 'index.html' steht in der skip_exact-Liste des
+    // CI-Generators, weil es schon in CORE_SHELL gefuehrt wird. Beide waren
+    // damit die letzten kritischen Eintraege mit toleranter Semantik - und
+    // ausgerechnet ohne sie nuetzt der Rest des Caches nichts: der
+    // Navigations-Fallback unten greift auf caches.match('./') zurueck.
+    await cache.addAll(['./', './index.html']);
     if (BUILD_ASSETS.length > 0) {
       await cache.addAll(BUILD_ASSETS);
     }
@@ -229,7 +238,8 @@ self.addEventListener('install', (event) => {
     // Stufe 2: die statischen Zusatzdateien weiterhin tolerant. Fehlt hier
     // etwas, ist ein Icon unscharf oder eine Nebenseite offline nicht da -
     // aergerlich, aber die App startet.
-    const optional = CORE_SHELL.filter((url) => !BUILD_ASSETS.includes(url));
+    const hard = new Set(['./', './index.html', ...BUILD_ASSETS]);
+    const optional = CORE_SHELL.filter((url) => !hard.has(url));
     await Promise.all(optional.map(async (url) => {
       try {
         const resp = await fetch(url, { cache: 'reload' });
