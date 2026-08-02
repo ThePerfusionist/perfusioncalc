@@ -364,374 +364,253 @@ Bei Bretschneider wird stattdessen der protokollspezifische Druck gezeigt.
 
 - **Play-Store-Release**: Internal-Test-Track (20 Tester / 14 Tage), Paketname
   `com.perfusioncalc`, `versionCode` muss strikt steigen. Datenschutz-URL für
-  die Console: `https://perfusioncalc.de/privacy.html` (nach dem nächsten
-  Web-Deploy erreichbar). **Anschrift des Verantwortlichen fehlt noch** – in
-  `privacy_policy.md` und `web/privacy.html` als Platzhalter markiert.
+  die Console: `https://perfusioncalc.de/privacy.html` (erreichbar seit
+  v0.4.1). **Offen: Data-Safety-Formular in der Play Console mit der Policy
+  abgleichen** — Abweichungen sind dort der häufigste Ablehnungsgrund.
+  Anzugeben ist: keine Datenerhebung, keine Weitergabe, Verschlüsselung bei
+  Übertragung *nicht zutreffend*, kein Löschmechanismus erforderlich.
 - St.-Thomas- und Eppendorf-Protokoll (in den Studienunterlagen ausgearbeitet).
 - Perfusionsprotokoll mit Zeitstempeln (Bypass-/Klemmzeit, Temperaturverlauf).
 - Heparin/Protamin + ACT-Rechner.
 - Natives Share-Sheet (`share_plus`) – PDF kann aktuell nur gespeichert werden.
 - Versionsnummer wird auf Zuruf angehoben (3 Stellen: `pubspec.yaml`,
-  `kAppVersion` in `main.dart`, README-Badge).
+  `kAppVersion` in `main.dart`, README-Badge). Alles andere leitet ab:
+  Android über `flutter.versionName/versionCode`, iOS/macOS über
+  `$(FLUTTER_BUILD_NAME)`, Windows/Linux über CMake, die PDF-Fußzeile über
+  `kAppVersion`, der Bundle-Dateiname über `grep '^version:' pubspec.yaml`.
+  `sw.js` trägt bewusst die Commit-SHA statt der App-Version.
 
 ---
 
-## 7. Audit-Abarbeitung (v0.3.3 / v0.4.0)
+## 7. Audit v0.3.3 / v0.4.0 — Abarbeitung, Entscheidungen, Lehren
 
-Zwei Audits, zu fünf Blöcken zusammengefasst. Blöcke A–C ändern keinen
-Dart-Code und sind daher ohne Toolchain verantwortbar; D und E brauchen
-`flutter analyze` + Testlauf.
+Zwei Audits, zu 47 deduplizierten Befunden und fünf Blöcken zusammengefasst,
+abgearbeitet zwischen v0.4.1 und v0.4.7 (01.08.2026). Dieser Abschnitt ist als
+**Ausgangspunkt für das nächste Audit** geschrieben: er hält fest, was geändert
+wurde, warum es so und nicht anders entschieden wurde, was bewusst offen
+blieb — und welche Fehler die Abarbeitung selbst produziert hat.
 
-| Block | Inhalt | Status |
+### 7.1 Blockschnitt
+
+Der Schnitt folgte nicht der Priorität der Befunde, sondern der
+**Verifizierbarkeit**: Blöcke A–C ändern keine Datei, die kompiliert wird
+(YAML, Manifest, Gradle, `sw.js`, HTML, Markdown), D und E sind fast
+ausschließlich Dart. Das war entscheidend, weil die Umsetzung in einer
+Umgebung ohne Dart/Flutter-Toolchain stattfand.
+
+| Block | Inhalt | Ergebnis |
 |---|---|---|
-| **A** | Release-Blocker: `USE_EXACT_ALARM`, Datenschutzerklärung, `allowBackup`, `minSdk` | **erledigt (v0.4.1)** |
-| **B** | Supply Chain / CI: Action-SHA-Pins, `flutter-version`, Gradle-SHA, Caddy-Pin, Expression Injection, `flutter test \|\| echo` | **erledigt (v0.4.1)** |
-| **C** | Web / Service Worker: `notificationclick`-Handler, Cache an Build-SHA, CSP | **erledigt (v0.4.1)** |
-| **D** | Klinische Rechenpfade: `expectedHb`, Transfusionsvolumen (Davies 2007), `fTPercent`, Nadler, PDF-Guards | **erledigt (v0.4.2)**, außer Nadler |
-| **E** | Dart-Fehler, tote Pfade, Hygiene, fehlende Tests | **erledigt (v0.4.2)** |
+| **A** | Release-Blocker: `USE_EXACT_ALARM`, Datenschutzerklärung, `allowBackup`, `minSdk` | erledigt (v0.4.1) |
+| **B** | Supply Chain / CI: Action-SHA-Pins, Flutter-Pin, Gradle-SHA, Caddy-Pin, Expression Injection, `flutter test \|\| echo` | erledigt (v0.4.1) |
+| **C** | Web / Service Worker: `notificationclick`, Cache an Build-SHA, CSP | erledigt (v0.4.1), **drei Folgefehler** → 7.4 |
+| **D** | Klinische Rechenpfade | erledigt (v0.4.2), außer Nadler → 7.5 |
+| **E** | Dart-Fehler, tote Pfade, Hygiene, Tests | erledigt (v0.4.2) |
 
-### Entscheidungen aus Block A
+### 7.2 Verifikationsprotokoll
 
-- **`USE_EXACT_ALARM` entfernt.** Play-Restricted-Permission, nur für Apps mit
-  Alarm-/Timer-/Kalender-Kernfunktion. `SCHEDULE_EXACT_ALARM` bleibt und deckt
-  dieselbe Funktion ab; `requestExactAlarmsPermission()` und der
-  `PlatformException`-Fallback auf `inexactAllowWhileIdle` existierten bereits.
-  → Kein Dart-Code geändert.
-- **`allowBackup="false"` + `data_extraction_rules.xml`.** Die
-  Geräte-zu-Gerät-Übertragung wird von `allowBackup` *nicht* mitabgeschaltet,
-  deshalb die zusätzliche Regeldatei. Patientendaten waren nie betroffen
-  (nur im RAM), es geht um die SharedPreferences.
-- **`minSdk = maxOf(24, flutter.minSdkVersion)`.** Plugin v21 verlangt API 24;
-  Flutters Default liegt aktuell ebenfalls bei 24, ist aber beweglich.
-- **Datenschutzerklärung** doppelt gepflegt: `privacy_policy.md` (Repo) und
-  `web/privacy.html` (erreichbare URL für Play). **Beide Dateien und die
-  Data-Safety-Angaben in der Play Console müssen zusammen geändert werden.**
-
-### Entscheidungen aus Block B
-
-- **Alle Actions auf vollständige Commit-SHAs gepinnt**, Tag als Kommentar
-  dahinter. Bewusst innerhalb der bisherigen Major-Version geblieben
-  (`checkout` v6.1.0, nicht v7) — Pinnen und Major-Sprung gehören nicht in
-  denselben Commit. `.github/dependabot.yml` hält die SHAs nach.
-- **`FLUTTER_VERSION: '3.44.8'`** als workflow-weite Variable in allen drei
-  Workflows. **Muss mit der lokalen Version übereinstimmen** (`flutter --version`)
-  — sonst testet man gegen eine andere Toolchain, als die CI baut. Beim
-  Anheben: alle drei Workflows plus die Entwicklungsmaschinen gemeinsam.
-- **Caddy 2.11.4 mit SHA-512 gepinnt** statt „neuestes Release aus dem API-Feed".
-  Hash gegen `caddy_2.11.4_checksums.txt` verifiziert; Version, SHA-256 und
-  SHA-512 sind in `OFFLINE_WINDOWS.md` dokumentiert, damit Klinik-IT das
-  ausgelieferte Bundle selbst prüfen kann.
-- **`distributionSha256Sum` im Gradle-Wrapper.** Quelle:
-  gradle.org/release-checksums, „Complete (-all) ZIP" für 8.14. Beim Anheben
-  der Gradle-Version muss der Hash mitwandern, sonst schlägt jeder
-  Android-Build fehl.
-- **Kein stilles Debug-Signing mehr im Release-Workflow.** Fehlt
-  `KEYSTORE_BASE64`, bricht der Job ab, bevor gebaut wird; zusätzlich wirft
-  Gradle, wenn `PERFUSIONCALC_REQUIRE_RELEASE_SIGNING=true` gesetzt ist und
-  `key.properties` fehlt. Lokale Builds ohne diese Variable verhalten sich
-  unverändert.
-- **`commit_message` im gh-pages-Deploy ist jetzt nur noch die SHA.**
-  `github.event.head_commit.message` war nicht vertrauenswürdiger Input in
-  einer Action-Eingabe.
-- **`permissions` in `deploy.yml` auf `contents: write` reduziert** —
-  `pages:`/`id-token: write` gehören zum `actions/deploy-pages`-Weg, der hier
-  nicht benutzt wird.
-- **`web: any` → `^1.1.0`** (aufgelöst ist 1.1.1, Resolution ändert sich nicht).
-
-### Entscheidungen aus Block C
-
-- **`notificationclick`-Handler in `web/sw.js`.** Der Service-Worker-
-  Zustellweg in `web_notifications_web.dart` (Chrome/Android) hatte keinen
-  Klick-Empfaenger — die Erinnerung erschien, ein Tipp darauf tat nichts.
-  Handler fokussiert ein vorhandenes Fenster (`includeUncontrolled: true`,
-  sonst wird ein vor der Aktivierung geoeffneter Tab nicht gefunden) oder
-  oeffnet eines. **Kopplung dokumentiert**: Kommentar in beiden Dateien, damit
-  nicht eine Seite ohne die andere entfernt wird.
-- **Cache-Name an die Commit-SHA gekoppelt.** `const BUILD_ID = 'DEV';` wird
-  im CI per `sed` durch `$GITHUB_SHA` ersetzt — in allen drei Workflows, jeweils
-  mit anschliessender `grep`-Verifikation, die den Job abbricht, wenn die
-  Ersetzung nicht greift. Ein stilles Fehlschlagen wuerde genau den alten
-  Fehler wieder einfuehren. **Der Platzhalter-String darf nicht geaendert
-  werden, ohne das sed-Muster mit anzupassen.**
-- **`flutter_bootstrap.js` und `main.dart.js` auf Network-First.** Beide tragen
-  keinen Hash im Dateinamen und lagen im Cache-First-Zweig. Der SHA-Cache-Name
-  loest das bereits; Network-First ist der zweite Riegel, falls ein Browser
-  die alte `sw.js` noch nicht ersetzt hat. Offline greift weiter der Cache.
-- **`passThrough()` (7 Aufrufe) und `NEVER_CACHE` (leer) entfernt.**
-- **CSP entschlackt**: `gstatic.com` raus (beide Builds nutzen
-  `--no-web-resources-cdn`). `X-Content-Type-Options` und `Permissions-Policy`
-  als `<meta>` entfernt — sie werden von keinem Browser ausgewertet und
-  suggerierten Schutz, den es nicht gab. Eine Tabelle im Kommentar haelt fest,
-  welche Header als `<meta>` ueberhaupt wirken.
-- **Eine Dart-Zeile in diesem Block**: `icon:` in `NotificationOptions`
-  (sonst generisches Browser-Symbol statt App-Icon).
-
-### Entscheidungen aus Block D
-
-- **1.4 Transfusionsvolumen: kein Fehler.** Davies 2007 lautet
-  `Gewicht x ΔHb x 3 / Hkt(EK)`, wobei der Hkt als **Bruch** im Nenner steht
-  und der Faktor 3 ihn *nicht* bereits enthält. Davies' eigenes Beispiel
-  (20 kg x 2 g/dl x 3 / 0,6 = 200 ml = 10 ml/kg) reproduziert die Formel
-  exakt. Der Auditbefund „Doppelkorrektur" war falsch begründet.
-  Der Divisor ist jetzt die dokumentierte Konstante
-  `PatientData.kRbcUnitHematocrit = 0.55`. **Gegen das Etikett des
-  eingesetzten EK prüfen** — deutsche EKs in Additivlösung sind mit
-  Hkt 0,50–0,70 spezifiziert, bei Neugeborenen ist die Differenz relevant.
-- **`expectedHb` → `expectedHbMale`/`expectedHbFemale`**, exakte
-  Verdünnungsformel gegen das eigene Blutvolumenmodell. Der alte Wert war
-  systematisch +0,70 g/dl zu optimistisch. Der BSA-Tab zeigt jetzt zwei
-  Karten statt einer, analog zu Hct.
-- **`cavDO2` beidseitig abgesichert.** Damit fallen VO₂, VO₂i und O₂-ER auf
-  „nicht berechnet" zurück, sobald der venöse Satz unvollständig ist —
-  Bildschirm *und* PDF. Das war der Weg, auf dem „O₂-ER 100 %" ins
-  ausgelieferte Dokument kam.
-- **`PdfRow.numeric` bekommt `zeroIsValid`** statt die 0-Regel global zu
-  streichen: Ein echter Nullwert wird nur dort gedruckt, wo 0 eine Messung
-  ist (BE, ZVD, LAP). Der „nur gefüllte Tabs"-Filter des Gesamtberichts
-  bleibt dadurch funktionsfähig.
-- **1.5 Nadler bleibt offen — bewusst.** Ein Wechsel würde jedes angezeigte
-  Blutvolumen *und* beide Erwartungswerte verschieben und die Körpergröße zur
-  Pflichteingabe für sie machen. Das ist eine klinische Produktentscheidung.
-  Bis dahin sind die beiden Blutvolumen-Karten im UI als Näherung
-  gekennzeichnet (`bsa_bv_approx`), und die Alternativformel steht
-  ausformuliert im Kommentar von `bloodVolumeMale`.
-
-### Entscheidungen aus Block E
-
-- **`Range.note` → `Range.noteKey`**, alle 40 Hinweise über i18n; englische
-  Fassungen ergänzt. Vorher hing an einem übersetzten Tooltip ein deutsches
-  Literal.
-- **`_kTabs` ist jetzt `MainScreen.kTabs`**, Record-Typ, `@visibleForTesting`;
-  `TabController` leitet seine Länge daraus ab. Sechs Casts weniger.
-- **NEU-6 ProGuard: bewusst NICHT geändert.** Die beiden `-keep class`-Zeilen
-  kosten APK-Größe, aber ihr Wegfall zeigt sich erst im Release-Build und der
-  Fehlerfall ist ein Absturz beim Feuern einer geplanten Benachrichtigung.
-  Der Kommentar in `proguard-rules.pro` nennt jetzt den konkreten Test, nach
-  dem sie entfernt werden können.
-- **`analysis_options.yaml` verschärft** (`strict-casts`, `avoid_dynamic_calls`,
-  `unawaited_futures`, `use_build_context_synchronously`,
-  `always_declare_return_types`, `prefer_final_locals`). `strict-raw-types`
-  bewusst nicht — feuert auf Fremdbibliotheks-Signaturen.
-  **Das ist die Änderung, die am ehesten neue Analyzer-Ausgaben erzeugt.**
-- **Schließen-Button nur noch auf Android** (`SystemNavigator.pop()` ist im
-  Web wirkungslos und auf iOS ein Ablehnungsgrund).
-- **`formatElapsed` nach `lib/utils/duration_format.dart` extrahiert**, damit
-  die Zeitanzeige von Timer-Karte und Banner testbar identisch bleibt.
-
-### Hotfix v0.4.3 — Web-Version rendert ohne Text
-
-**Symptom:** Nach dem Deploy von v0.4.2 zeigte perfusioncalc.de Layout, Karten,
-+/−-Buttons und Material-Icons, aber **keine einzige Beschriftung**.
-
-**Ursache:** Auditbefund 2.6 hatte `gstatic.com` in der CSP für ungenutzt
-gehalten, weil beide Builds mit `--no-web-resources-cdn` laufen. Das Flag holt
-aber nur `canvaskit.js`/`.wasm` vom eigenen Origin — **nicht die Schrift**.
-CanvasKit lädt Roboto zur Laufzeit von `fonts.gstatic.com`; die verschärfte CSP
-sperrte den Abruf, und ohne Schrift rendert Flutter Web gar keinen Text. Die
-Material-Icons blieben sichtbar, weil sie ein gebündeltes Asset sind — das
-machte den Fehler wie ein Layout-, nicht wie ein Schriftproblem aussehen.
-
-**Behebung, zweistufig:**
-1. `font-src` und `connect-src` erlauben `https://fonts.gstatic.com` wieder.
-   `script-src` bleibt ohne `www.gstatic.com` — dieser Teil des Befundes war
-   richtig.
-2. Roboto ist jetzt als `fonts:`-Familie in `pubspec.yaml` gebündelt und in
-   `buildAppTheme()` als `fontFamily` gesetzt. Die App braucht den Netzabruf
-   damit gar nicht mehr.
-
-**Der zweite Punkt ist der eigentliche Fund.** Die Schrift hing die ganze Zeit
-an einem Abruf zu Google — auch vor der CSP-Verschärfung. Betroffen wären
-davon gewesen:
-- die **Offline-Windows-Distribution** (per Definition ohne Internet)
-- jedes Klinik-Netz, das `fonts.gstatic.com` sperrt
-- der Datenschutz: bei jedem Aufruf ging eine Verbindung zu Google, was die
-  Datenschutzerklärung so nicht abbildete („keine externen Ressourcen")
-
-**Lehre:** `--no-web-resources-cdn` deckt Schriften nicht ab. Und: einen
-Befund, der eine Ressource für „ungenutzt" erklärt, nicht ohne einen Build
-umsetzen, der es zeigt.
-
-### v0.4.4 — EK-Hämatokrit als Einstellung
-
-Aus Stufe 4 des Prüfplans wurde statt einer einmaligen Entscheidung ein
-Eingabefeld: `TransfusionSettings` (persistiertes Singleton wie
-`CardioplegiaSettings`), Schlüssel `tx_rbc_unit_hct_percent`, Default 55 %,
-geklemmt auf 40–80 %.
-
-- `PatientData.transfusionVolume` ist **keine Getter-Property mehr**, sondern
-  `transfusionVolume(double rbcUnitHematocritPercent)`. Damit bleibt die
-  Formel rein und testbar; die Einstellung wird an der Aufrufstelle gelesen —
-  dasselbe Muster wie beim del-Nido-Verhältnis.
-- Der Wert steht **im PDF als Eingabezeile und als Fußnote am Ergebnis**. Ohne
-  ihn ist das Transfusionsvolumen nicht reproduzierbar: ein Leser sieht
-  sonst nicht, für welches Präparat gerechnet wurde.
-- Solange der Auslieferungswert unverändert ist, weist ein Hinweis darauf hin
-  (`ped_hct_ek_default`). Nach der ersten Bestätigung verschwindet er.
-- Datenschutzerklärung ergänzt: der Wert ist eine weitere lokal gespeicherte
-  Einstellung.
-
-**Adresse in der Datenschutzerklärung:** Platzhalter auf Wunsch entfernt.
-Statt einer Anschrift steht dort jetzt der Satz, dass eine Postanschrift auf
-Anfrage mitgeteilt wird. Art. 13 Abs. 1 lit. a DSGVO verlangt formal die
-Angabe; der Verzicht ist eine bewusste Entscheidung des Verantwortlichen.
-
-### Dependabot-Nachjustierung
-
-Die erste Woche hat gezeigt, dass die Konfiguration aus Block B das Gegenteil
-dessen vorschlug, was dort entschieden wurde: vier von fünf PRs waren
-Major-Sprünge (checkout 6→7, setup-java 4→5, gh-release 2→3,
-upload-artifact 4→**7**).
-
-- `github-actions`: **Major-Updates ignoriert** (`dependency-name: "*"`).
-  Innerhalb der Major werden die SHAs weiter automatisch nachgezogen — das
-  war der Sicherheitszweck des Pinnens. Major-Wechsel gehören einzeln
-  gemacht, mit Testlauf, am besten gemeinsam mit dem nächsten Anheben von
-  `FLUTTER_VERSION`. Sicherheits-Updates meldet Dependabot Alerts unabhängig
-  davon.
-- Patch- und Minor-Updates von Actions laufen jetzt **gruppiert** in einem PR
-  pro Woche statt fünf einzelnen.
-- `pub`: unverändert. Major-PRs sind hier als Erinnerung erwünscht, gesperrt
-  bleiben nur `flutter_local_notifications` und `pdf`.
-
-**Offene PRs im Repo:** #2–#5 (Actions, Major) können geschlossen werden —
-Dependabot öffnet sie mit dieser Konfiguration nicht erneut. #6
-(`pdf` 3.12.0 → 3.13.0) ist ein Minor innerhalb von `^3.11.1` und kann nach
-einem lokalen `flutter test` gemergt werden.
-
-### Prüfstatus v0.4.4 (Stand 01.08.2026)
-
-| Stufe | Inhalt | Status |
+| Stufe | Inhalt | Ergebnis |
 |---|---|---|
-| 1 | `pub get`, `analyze`, `test` | **grün** (199 Tests; drei Erstbefunde behoben: Testerwartung, `unnecessary_non_null_assertion`, `unawaited_futures`) |
-| 2 | Verschärfter Analyzer | **grün** — `strict-casts` und `use_build_context_synchronously` ohne Treffer |
-| 3 | Klinische Rechenwege am laufenden System | **verifiziert** |
+| 1 | `pub get`, `analyze`, `test` | grün — drei Erstbefunde behoben (falsche Testerwartung, `unnecessary_non_null_assertion`, `unawaited_futures`) |
+| 2 | verschärfter Analyzer | `No issues found!` — `strict-casts` und `use_build_context_synchronously` ohne Treffer |
+| 3 | klinische Rechenwege am Gerät | verifiziert |
 | 4 | EK-Hämatokrit | aus der Entscheidung wurde ein persistiertes Eingabefeld (v0.4.4) |
-| 5 | Benachrichtigungen im Release-Build, Android | **verifiziert** — geplante Benachrichtigung feuert und stürzt nicht ab |
-| 6 | Web / Service Worker | Cache-Name ✔, Fontfix ✔ (0 gstatic-Requests), **Offline-Laden war defekt → v0.4.5** |
-| 7 | CI | **verifiziert** am Release-Lauf v0.4.6 (analyze sauber, 199 Tests, Keystore-Pflicht, Caddy-SHA-512, Precache-Generator, Cleanup) |
+| 5 | Benachrichtigungen, Release-Build Android | verifiziert — feuert im Hintergrund, kein Absturz, Tap öffnet die App |
+| 6 | Web / Service Worker | verifiziert nach v0.4.6: 22 Requests, **0 B transferred**, 10,7 MB aus dem Cache |
+| 7 | CI | verifiziert am Release-Lauf v0.4.7: analyze sauber, 199 Tests, Keystore-Pflicht, Caddy-SHA-512, Precache-Generator, Cleanup |
 
 **Was Stufe 5 nebenbei beantwortet hat:** Die ProGuard-`-keep`-Regeln greifen
 weiterhin, und der Wegfall von `USE_EXACT_ALARM` hat die Funktion nicht
-beschädigt — `SCHEDULE_EXACT_ALARM` allein trägt sie. Der Play-Store-Blocker
-ist damit ohne Funktionsverlust weg.
+beschädigt — `SCHEDULE_EXACT_ALARM` allein trägt sie.
 
-**Toolchain angeglichen:** lokal läuft Flutter **3.44.8** / Dart 3.12.2
-(Framework-Revision 058e0af2c2, 23.07.2026). `FLUTTER_VERSION` in allen drei
-Workflows steht jetzt auf demselben Wert — vorher 3.44.7, was bedeutet hätte,
-dass lokal gegen eine andere Toolchain getestet wird als die CI baut.
+### 7.3 Entscheidungen, die kein Befund war
 
-### Hotfix v0.4.5 — zwei Service Worker um denselben Scope
+Diese Punkte sind bewusst so und nicht anders entschieden. Wer sie ändert,
+sollte den Grund kennen.
 
-**Symptom:** Online lief alles. Mit DevTools → Network → Offline brach die App
-ab: Dokument und `flutter_bootstrap.js` kamen noch aus dem Cache, dann blieben
-`main.dart.js`, `canvaskit.js` und `canvaskit.wasm` auf *pending* stehen, und
-der Reload endete in `ERR_INTERNET_DISCONNECTED`.
+**Block A**
+- `USE_EXACT_ALARM` entfernt: Play-Restricted-Permission, nur für Apps mit
+  Alarm-/Timer-/Kalender-Kernfunktion. `SCHEDULE_EXACT_ALARM` deckt dieselbe
+  Funktion ab, der `PlatformException`-Fallback auf `inexactAllowWhileIdle`
+  existierte bereits. Kein Dart-Code geändert.
+- `allowBackup="false"` **plus** `data_extraction_rules.xml`: Die
+  Geräte-zu-Gerät-Übertragung wird von `allowBackup` *nicht* mitabgeschaltet.
+- `minSdk = maxOf(24, flutter.minSdkVersion)` statt fester 24 — bleibt
+  korrekt, egal wohin sich Flutters Default bewegt.
+- Datenschutzerklärung doppelt gepflegt: `privacy_policy.md` und
+  `web/privacy.html`. **Beide Dateien und das Data-Safety-Formular müssen
+  zusammen geändert werden.** Anschrift auf ausdrücklichen Wunsch des
+  Verantwortlichen nicht veröffentlicht (Art. 13 Abs. 1 lit. a DSGVO verlangt
+  sie formal); stattdessen der Hinweis, dass sie auf Anfrage mitgeteilt wird.
 
-**Ursache:** Alle drei Web-Builds liefen mit `--pwa-strategy offline-first`.
-Flutter erzeugt damit ein eigenes `flutter_service_worker.js`, das
-`flutter_bootstrap.js` beim Start registriert — **im selben Scope `/` wie
-unser `web/sw.js`**. Ein Service Worker wird pro Scope registriert, nicht pro
-Dateiname; die spätere Registrierung ersetzt die frühere. Unser gerade
-verdrängter Worker löste seine offenen `respondWith`-Promises nie auf, daher
-die hängenden Requests.
+**Block B**
+- Actions auf volle Commit-SHAs gepinnt, **innerhalb der bisherigen Major**
+  (`checkout` v6.1.0, nicht v7). Pinnen und Major-Sprung gehören nicht in
+  denselben Commit.
+- `FLUTTER_VERSION` als workflow-weite Variable in allen drei Workflows.
+  **Muss mit `flutter --version` auf den Entwicklungsmaschinen übereinstimmen**
+  — sonst testet man gegen eine andere Toolchain, als die CI baut.
+- Caddy mit **SHA-512** gepinnt (nicht SHA-256): Der Hersteller veröffentlicht
+  in `caddy_<version>_checksums.txt` SHA-512, damit ist der Wert direkt
+  gegenprüfbar. Version, SHA-256 und SHA-512 stehen in `OFFLINE_WINDOWS.md`,
+  damit Klinik-IT eine unbekannte `.exe` freigeben kann.
+- Kein stilles Debug-Signing mehr: fehlt `KEYSTORE_BASE64`, bricht der Job ab,
+  bevor gebaut wird. Ein debug-signiertes APK unter dem Release-Namen sieht
+  echt aus, lässt sich sideloaden und ist nie wieder durch ein korrekt
+  signiertes Update ersetzbar.
+- `commit_message` im gh-pages-Deploy nur noch die SHA — `head_commit.message`
+  war nicht vertrauenswürdiger Input in einer Action-Eingabe.
 
-Der Kommentar in `index.html` behauptete das Gegenteil („unser sw.js hat einen
-anderen Namen/Scope und stört sich nicht daran"). Das war der eigentliche
-Fehler: eine falsche Annahme, schriftlich festgehalten und dadurch nie wieder
-hinterfragt.
+**Block C**
+- `notificationclick`-Handler in `sw.js`: Beim Service-Worker-Zustellweg wird
+  der Klick an den Worker zugestellt, nicht an die Seite — `onclick` im
+  Dart-Code kann dort strukturell nicht greifen. **Kopplung in beiden Dateien
+  kommentiert**, damit nicht eine Seite ohne die andere entfernt wird.
+- Cache-Name an die Commit-SHA gekoppelt, Ersetzung im CI mit `grep`
+  verifiziert. **Der Platzhalter-String darf nicht geändert werden, ohne das
+  `sed`-Muster in allen drei Workflows mit anzupassen.**
 
-**Behebung:**
-- Alle drei Builds auf `--pwa-strategy=none`. Unser `sw.js` übernimmt das
-  Caching vollständig; Flutter braucht dafür keinen zweiten Worker.
-- `index.html` löst vor der eigenen Registrierung eine eventuell vorhandene
-  Registrierung von `flutter_service_worker.js` — einmalige Migration für
-  Nutzer, die eine ältere Fassung geöffnet hatten. Bewusst nur diese eine.
-- Kommentar korrigiert.
+**Block D**
+- **1.4 Transfusionsvolumen war kein Fehler.** Davies 2007 lautet
+  `Gewicht × ΔHb × 3 / Hkt(EK)`, mit dem Hkt als **Bruch** im Nenner; der
+  Faktor 3 enthält ihn *nicht* bereits. Davies' eigenes Beispiel
+  (20 kg × 2 g/dl × 3 / 0,6 = 200 ml = 10 ml/kg) reproduziert die Formel
+  exakt. Die Auditbegründung „Doppelkorrektur" war falsch. Der Divisor ist
+  seit v0.4.4 eine persistierte Einstellung → 7.6.
+- `expectedHb` → `expectedHbMale`/`expectedHbFemale`, exakte Verdünnung gegen
+  das eigene Blutvolumenmodell. Der alte Wert war systematisch +0,71 g/dl zu
+  optimistisch (11,38 statt 10,67 bei 80 kg / Hb 14 / 1500 ml).
+- `cavDO2` beidseitig abgesichert — damit fallen VO₂, VO₂i und O₂-ER auf
+  „nicht berechnet" zurück, sobald der venöse Satz unvollständig ist,
+  **Bildschirm und PDF**. Das war der Weg, auf dem „O₂-ER 100 %" ins
+  ausgelieferte Dokument kam.
+- `PdfRow.numeric` bekam `zeroIsValid` statt die 0-Regel global zu streichen:
+  Ein echter Nullwert wird nur dort gedruckt, wo 0 eine Messung ist (BE, ZVD,
+  LAP). Der „nur gefüllte Tabs"-Filter des Gesamtberichts bleibt so
+  funktionsfähig.
 
-**Warum es online unsichtbar war:** Beide Worker liefern online aus dem Netz.
-Der Konflikt zeigt sich ausschließlich, wenn der Cache tatsächlich gebraucht
-wird — also im Offline-Fall und damit in der Windows-Distribution.
+**Block E**
+- `Range.note` → `Range.noteKey`, alle 40 Hinweise über i18n.
+- `MainScreen.kTabs` als Record-Typ, `@visibleForTesting`; `TabController`
+  leitet seine Länge daraus ab.
+- **ProGuard bewusst NICHT entschlackt.** Die beiden `-keep class`-Zeilen
+  kosten APK-Größe, aber ihr Wegfall zeigt sich erst im Release-Build und der
+  Fehlerfall ist ein Absturz beim Feuern einer klinischen Erinnerung. Der
+  konkrete Test dafür steht in `proguard-rules.pro`.
+- `analysis_options.yaml` verschärft (`strict-casts`, `avoid_dynamic_calls`,
+  `unawaited_futures`, `use_build_context_synchronously`,
+  `always_declare_return_types`, `prefer_final_locals`).
+  `strict-raw-types` bewusst nicht — feuert auf Fremdbibliotheks-Signaturen.
+- Schließen-Button nur noch auf Android: `SystemNavigator.pop()` ist im Web
+  wirkungslos und auf iOS ein Ablehnungsgrund.
 
-### App-Shell-Precache erweitert
+### 7.4 Regressionen aus der Abarbeitung selbst
 
-`anatomy.html`, `cannulas.html` und `privacy.html` samt ihrer sechs Bilder
-werden jetzt bei der Installation vorgeladen. Vorher landeten sie nur im
-Cache, wenn sie jemand einmal geöffnet hatte — wer die App offline nahm, ohne
-vorher die Anatomieseite besucht zu haben, bekam dort eine Fehlerseite.
+Vier Fehler wurden **durch** die Auditumsetzung eingeführt. Sie sind hier
+vollständig dokumentiert, weil sie zusammen ein Muster ergeben (→ 7.7).
 
-### Hotfix v0.4.6 — Precache wird im CI generiert
+**v0.4.3 — Web-Version ohne Text.** Befund 2.6 hielt `gstatic.com` in der CSP
+für ungenutzt, weil die Builds mit `--no-web-resources-cdn` laufen. Das Flag
+holt aber nur `canvaskit.js`/`.wasm` lokal, **nicht die Schrift**. CanvasKit
+lud Roboto von `fonts.gstatic.com`; die verschärfte CSP sperrte den Abruf, und
+ohne Schrift rendert Flutter Web gar keinen Text. Material-Icons blieben
+sichtbar (gebündeltes Asset) — dadurch sah es wie ein Layout-, nicht wie ein
+Schriftproblem aus.
+*Behebung:* `font-src`/`connect-src` erlauben `fonts.gstatic.com` wieder,
+**und** Roboto ist als `fonts:`-Familie gebündelt (`fontFamily: 'Roboto'` in
+`buildAppTheme`). Die Schrift hing vorher an einem Google-Abruf — betroffen
+wären auch die Offline-Distribution, gesperrte Klinik-Netze und die Aussage
+der Datenschutzerklärung gewesen.
 
-**Symptom nach v0.4.5:** Der Worker-Konflikt war weg (kein
-`flutter_service_worker.js` mehr in den Requests), `canvaskit.js` und
-`canvaskit.wasm` kamen offline aus dem Cache — aber `main.dart.js` schlug mit
-`ERR_FAILED` fehl (`sw.js:205`, der Entry-Point-Zweig). Ergebnis: Ladekreis,
-dann weißer Bildschirm.
+**v0.4.5 — zwei Service Worker um denselben Scope.** Alle drei Builds liefen
+mit `--pwa-strategy offline-first`; Flutter erzeugt dabei ein eigenes
+`flutter_service_worker.js`, das `flutter_bootstrap.js` registriert — im
+selben Scope `/` wie `web/sw.js`. **Ein Service Worker wird pro Scope
+registriert, nicht pro Dateiname**; die spätere Registrierung ersetzt die
+frühere. Online unsichtbar, offline tödlich: der verdrängte Worker löste
+seine offenen `respondWith`-Promises nie auf.
+Der Kommentar in `index.html` behauptete das Gegenteil („anderer
+Name/Scope, stört sich nicht daran") — eine falsche Annahme, schriftlich
+festgehalten und dadurch nie wieder hinterfragt.
+*Behebung:* `--pwa-strategy=none` in allen drei Builds; `index.html` löst vor
+der eigenen Registrierung eine vorhandene Registrierung von
+`flutter_service_worker.js` (einmalige Migration).
 
-**Ursache — eine Folge der eigenen Cache-Invalidierung aus Block C:**
+**v0.4.6 — Precache unvollständig.** Folge der eigenen Cache-Invalidierung aus
+Block C: neuer Cache-Name pro Deploy → `install()` füllt nur `APP_SHELL` →
+`activate()` löscht den alten Cache samt `main.dart.js` → der laufende Tab
+fragt sie nicht erneut an → offline weiß. **Runtime-Caching füllt einen
+frischen Cache nur mit dem, was nach der Übernahme noch einmal angefragt
+wird.** Solange der Cache-Name konstant war, fiel das nicht auf.
+*Behebung:* `sw.js` trennt `CORE_SHELL` (statisch, mit `?v=9`) von
+`BUILD_ASSETS` (Platzhalter). Der CI-Schritt erzeugt die Liste aus dem
+tatsächlichen Inhalt von `build/web` — mit Abbruch, wenn kein
+`main.dart.*`/`flutter_bootstrap.js` gefunden wird oder die Ersetzung nicht
+greift.
 
-```
-Deploy → neuer CACHE_NAME → install() legt einen LEEREN Cache an
-       → füllt nur APP_SHELL
-       → activate() löscht den alten Cache samt main.dart.js
-       → der bereits geladene Tab fragt main.dart.js nicht erneut an
-       → die Datei fehlt im neuen Cache → offline weiß
-```
+**v0.4.7 — Precache zu groß.** Der Generator schloss `.map` aus, aber nicht
+`.symbols` (Symboltabellen neben jeder CanvasKit-Variante, zur Laufzeit nie
+geladen) und nicht `canvaskit/experimental_webparagraph/`.
+*Gemessen:* 45,5 MB → **33,2 MB**, 49 → 41 Dateien. Größte verbleibende
+Einträge laut Release-Lauf v0.4.7: `canvaskit.wasm` 6,9 MB,
+`chromium/canvaskit.wasm` 5,5 MB, `skwasm_heavy.wasm` 4,9 MB, `main.dart.js`
+3,6 MB, `skwasm.wasm` 3,4 MB. Das sind Größen auf der Platte; ausgeliefert
+wird komprimiert.
+Die übrigen Renderer-Varianten bleiben **bewusst** drin — welche greift,
+entscheidet erst der Browser. Der Schritt gibt seit v0.4.7 die fünf größten
+Einträge aus, damit ein Zuwachs sichtbar wird statt still mitzulaufen.
 
-Runtime-Caching füllt einen frischen Cache eben nur mit dem, was **nach** der
-Übernahme noch einmal angefragt wird. Solange der Cache-Name konstant war,
-fiel das nicht auf. Die Kopplung an die Commit-SHA war richtig — sie hat nur
-eine zweite Voraussetzung sichtbar gemacht: **wenn der Cache pro Deploy neu
-ist, muss der Precache vollständig sein.**
+### 7.5 Bewusst offen gelassen
 
-**Behebung:** `sw.js` trennt jetzt `CORE_SHELL` (statisch, mit `?v=9`) von
-`BUILD_ASSETS` (Platzhalter `const BUILD_ASSETS = [];`). Der CI-Schritt
-erzeugt die Liste aus dem tatsächlichen Inhalt von `build/web` und ersetzt den
-Platzhalter — analog zum `BUILD_ID`-Stamping und mit denselben zwei Riegeln:
+| Punkt | Warum offen |
+|---|---|
+| **1.5 Nadler statt gewichtsbasierter Näherung** | Verschiebt jedes angezeigte Blutvolumen *und* beide Erwartungswerte und macht die Körpergröße zur Pflichteingabe. Klinische Produktentscheidung, kein Bugfix. Formel ausformuliert im Kommentar von `bloodVolumeMale`; die Karten sind bis dahin als Näherung gekennzeichnet (`bsa_bv_approx`). |
+| **NEU-6 ProGuard entschlacken** | Kleineres APK, aber Wirkung erst im Release-Build sichtbar und Fehlerfall = Absturz beim Feuern einer klinischen Erinnerung. Testrezept steht in `proguard-rules.pro`. |
+| **EK-Hkt 0,55** | Institutionelle Annahme, seit v0.4.4 einstellbar. Gegen das Etikett des eingesetzten Präparats prüfen (deutsche EK in Additivlösung: 0,50–0,70). |
+| **Play Console Data Safety** | Muss mit der Policy abgeglichen werden. |
+| **Major-Updates der GitHub Actions** | Dependabot ignoriert sie seit der Nachjustierung; bewusst einzeln und mit Testlauf zu machen, sinnvollerweise gemeinsam mit dem nächsten `FLUTTER_VERSION`-Anheben. |
 
-- Abbruch, wenn kein `main.dart.*` oder `flutter_bootstrap.js` im Build liegt
-  (halber Build → wertloser Precache)
-- Abbruch, wenn die Ersetzung nicht greift
+### 7.6 Nachträgliche Erweiterungen (nicht aus dem Audit)
 
-Ausgenommen sind `.map`-Dateien und alles, was schon mit `?v=9` in
-`CORE_SHELL` steht. `APP_SHELL` ist die Vereinigung beider Listen über ein
-`Set`, Doppel fallen weg.
+- **v0.4.4 — EK-Hämatokrit als Einstellung.** `TransfusionSettings`
+  (persistiertes Singleton wie `CardioplegiaSettings`), Schlüssel
+  `tx_rbc_unit_hct_percent`, Default 55 %, geklemmt auf 40–80 %.
+  `PatientData.transfusionVolume` ist **keine Getter-Property mehr**, sondern
+  nimmt den Hkt als Parameter — dasselbe Muster wie beim del-Nido-Verhältnis,
+  damit `PatientData` frei von externen Abhängigkeiten und die Formel rein
+  testbar bleibt. Der Wert steht **im PDF als Eingabezeile und als Fußnote**:
+  ohne ihn ist das Volumen nicht reproduzierbar.
+- **Dependabot-Nachjustierung.** Die erste Woche brachte vier Major-Sprünge
+  auf einmal — genau das Gegenteil der Block-B-Entscheidung. Seither:
+  `github-actions` ohne Majors, Patch/Minor gruppiert in einem PR pro Woche;
+  `pub` unverändert, gesperrt nur `flutter_local_notifications` und `pdf`.
 
-**Nebeneffekt:** Der Precache umfasst jetzt den kompletten Build (~12 MB statt
-~1 MB). Für eine App, die im OP ohne Netz funktionieren muss, ist das die
-richtige Seite des Kompromisses — und es ist genau das, was Flutters eigene
-`offline-first`-Strategie getan hätte, die wir in v0.4.5 abschalten mussten.
+### 7.7 Regeln für künftige Audits
 
-**Lehre:** Der Umbau in Block C hat zwei Dinge geändert, die zusammengehören —
-Cache-Invalidierung und Precache-Umfang — aber nur eines davon wurde
-angefasst. Offline war der einzige Testfall, der das aufgedeckt hätte, und der
-stand in Stufe 6.
+Aus den vier Regressionen und den drei Erstbefunden des ersten Testlaufs:
 
-### v0.4.7 — Precache entschlackt
-
-Der Release-Lauf v0.4.6 meldete `Precache: 49 Dateien, 45.5 MB`, während der
-Offline-Betrieb tatsächlich nur 10,7 MB anforderte. Die Differenz waren
-Dateien, die der Browser nie lädt:
-
-- **`.symbols`** — Symboltabellen zum Entschlüsseln von Stacktraces. Flutter
-  legt neben jede CanvasKit-Variante eine; zusammen der größte Posten. Beim
-  Bau des Generators war `.map` ausgeschlossen, `.symbols` nicht.
-- **`canvaskit/experimental_webparagraph/`** — experimentelle Renderer-
-  Variante, wird nur mit gesetztem Flag geladen.
-
-**Bewusst drin geblieben** sind die übrigen Renderer-Varianten (`canvaskit/`,
-`canvaskit/chromium/`, `skwasm`, `skwasm_heavy`, `wimp`). Welche greift,
-entscheidet erst der Browser zur Laufzeit — Offline-Robustheit über
-verschiedene Browser hinweg wiegt hier schwerer als ein paar MB.
-
-Zusätzlich gibt der Schritt jetzt die **fünf größten Einträge** aus. Damit ist
-beim nächsten Lauf ohne Nachmessen sichtbar, wohin das Gewicht geht, falls
-Flutter neue Varianten mitliefert.
-
-Gegen einen nachgebauten Build-Baum (64 Dateien, 43,1 MB) geprüft: 44 Dateien
-/ 21,2 MB im Precache, alle vier Entry Points erkannt, erzeugtes `sw.js` mit
-`node --check` validiert.
-
-**Warum das zählt:** Für die Windows-Distribution ist die Größe folgenlos,
-dort liegt ohnehin alles lokal. Für die Web-PWA lädt jeder Besucher den
-Precache bei **jedem** Deploy neu — der Cache-Name hängt an der Commit-SHA.
-Auf einem Klinik-Tablet über Mobilfunk ist das der Unterschied.
+1. **Einen Befund, der eine Ressource für „ungenutzt" erklärt, nicht ohne
+   Build umsetzen.** `gstatic` (v0.4.3) ist das Musterbeispiel: die Begründung
+   klang schlüssig und war falsch.
+2. **Kommentare im Code sind keine Belege.** Der Satz „stört sich nicht daran"
+   in `index.html` hat den Service-Worker-Konflikt zwei Releases lang gedeckt,
+   und der Header von `cardioplegia_alarm_settings.dart` beschrieb zwei
+   Versionen lang das Gegenteil des Codes. Wo ein Kommentar eine Annahme
+   trägt, gehört ein Test oder ein Prüfschritt daneben.
+3. **Zusammengehörige Mechanismen gemeinsam ändern.** Cache-Invalidierung und
+   Precache-Umfang bedingen einander (v0.4.6); CSP und Schriftbeschaffung
+   ebenso (v0.4.3).
+4. **Online-Tests decken Service-Worker-Fehler nicht auf.** Der Cache zeigt
+   sich erst, wenn er gebraucht wird. Offline gehört in jeden Web-Prüfplan —
+   und damit auch die Windows-Distribution, die dieselbe Web-App ist.
+5. **Erwartungswerte in Tests nachrechnen, nicht schätzen.** Der erste
+   Testlauf scheiterte an einem Wert, den der Autor im Kopf gerechnet hatte
+   (10,6733 statt 10,6719). Die enge Toleranz hat es aufgedeckt — genau dafür
+   ist sie da.
+6. **Der Analyzer findet, was Menschen übersehen.** `unnecessary_non_null_assertion`
+   und `unawaited_futures` waren beides echte Treffer im frisch geschriebenen
+   Code. Die verschärfte Konfiguration hat sich innerhalb einer Stunde
+   bezahlt gemacht.
+7. **Jede CI-Ersetzung verifiziert sich selbst.** `BUILD_ID` und
+   `BUILD_ASSETS` brechen den Job ab, wenn ihr `sed` nicht greift. Ein
+   stilles Fehlschlagen würde genau den Fehler wieder einführen, den der
+   Schritt behebt.
