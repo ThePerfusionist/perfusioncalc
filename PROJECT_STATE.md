@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.19+41 · 12 Tabs · **276 Unit-Tests** (12 Testdateien) · i18n vollständig EN+DE (durch Paritätstest abgesichert) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.21+43 · 12 Tabs · **276 Unit-Tests** (12 Testdateien) · i18n vollständig EN+DE (durch Paritätstest abgesichert) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -1275,3 +1275,88 @@ nicht auf, weil Major-Updates fuer Actions bewusst ignoriert werden — solche
 Spruenge gehoeren einzeln und mit Testlauf gemacht. Genau das ist hier
 geschehen: v5.0.0 auf Commit-SHA gepinnt, `node-version` von 20 auf 22
 angehoben. Node wird ausschliesslich fuer `node --check web/sw.js` gebraucht.
+
+### 7.20 Stufe 7 abgeschlossen, Major-Updates durchgefuehrt (v0.4.20)
+
+**Stufe 7 ist damit vollstaendig.** Drei Laeufe zu v0.4.19, alle gruen, kein
+`##[error]` in keinem davon.
+
+| | Release-Lauf (ohne `--wasm`) | Deploy-Lauf (`--wasm`) |
+|---|---|---|
+| Precache | 41 Dateien, 33,2 MB | 43 Dateien, 36,9 MB |
+| Entry Points | `flutter_bootstrap.js`, `main.dart.js` | zusaetzlich `main.dart.mjs`, `main.dart.wasm` |
+| groesster Eintrag | `canvaskit.wasm` 6,9 MB | `canvaskit.wasm` 6,9 MB |
+
+**Beide Bauarten sind damit belegt.** Die Entry-Point-Pruefung im Generator
+akzeptiert `main.dart.*` ODER `flutter_bootstrap.js` — der Release-Lauf zeigt,
+warum das ODER noetig ist: ohne `--wasm` gibt es kein `main.dart.wasm`, und
+eine Pruefung, die es verlangt haette, haette den Release-Build blockiert.
+
+Weiter belegt: `caddy.zip: OK` (SHA-512 gegen die offizielle Pruefsummenliste),
+`Signing material removed from workspace.`, drei Artefakte hochgeladen,
+`analyze` sauber, 276 Tests in beiden Laeufen.
+
+**Major-Updates aller GitHub Actions.** Vorgehen: fuer jede Action die
+`action.yml` des Zielstands von `raw.githubusercontent.com` geladen und
+geprueft, ob jeder von uns benutzte Input dort noch existiert und ob sich
+Defaults geaendert haben — statt auf „duerfte passen" zu setzen.
+
+| Action | von | auf | Befund der Pruefung |
+|---|---|---|---|
+| `actions/checkout` | v6.1.0 | **v7.0.1** | keine Aenderung an Inputs oder Defaults |
+| `actions/setup-java` | v4.9.0 | **v5.7.0** | nur neue optionale Inputs |
+| `actions/upload-artifact` | v4.6.2 | **v7.0.1** | ein neuer optionaler Input (`archive`) |
+| `softprops/action-gh-release` | v2.6.2 | **v3.0.2** | keine Aenderung an Inputs oder Defaults |
+| `actions/setup-node` | v4.4.0 | **v5.0.0** | bereits in v0.4.19 |
+
+Alle vier laufen jetzt auf `node24` — damit ist die Deprecation-Warnung aus
+7.19 nicht bloss umgangen, sondern die Ursache beseitigt.
+`peaceiris/actions-gh-pages` (v4) und `subosito/flutter-action` (v2) sind
+bereits auf ihrer neuesten Major.
+
+**`file_picker` 8.3.7 -> 11.0.3.** Der einzige pub-Major mit einer echten
+Bruchstelle: v11 hat `FilePicker` auf **statische Methoden** umgestellt und
+den instanzbasierten Zugriff ueber `.platform` entfernt. Genau eine
+Aufrufstelle betroffen (`utils/pdf_download_stub.dart`), Signatur von
+`saveFile()` gegen die Quelle von v11.0.3 geprueft — alle fuenf uebergebenen
+Parameter existieren unveraendert.
+
+Der Sprung ist nicht nur Pflege: v11 enthaelt einen Fix fuer eine
+**Path-Traversal-Schwachstelle (CWE-22)** beim Aufloesen von Pfaden aus
+externen Content-Providern. Dieselbe Fehlerklasse, die in `serve.ps1`
+behoben wurde (O-1) — in einer Bibliothek, die das PDF auf dem Geraet
+ablegt.
+
+**Nicht betroffen:** Der `withData`-Bruch aus v11 (#1987) gilt fuer
+`pickFiles()` im Web; die App benutzt ausschliesslich `saveFile()`.
+
+**Zu pruefen nach `flutter pub get`:** `flutter analyze` faellt sofort auf,
+falls die statische Signatur doch abweicht — das ist der Grund, warum diese
+Migration trotz fehlender Toolchain vertretbar ist: der Fehlerfall ist ein
+Compilerfehler, kein stiller Ausfall. Danach der PDF-Export **auf einem
+Geraet**, weil der Speichern-Dialog nur dort laeuft.
+
+### 7.21 Sperrdatei-Pruefung (v0.4.21)
+
+Beim Anheben von `file_picker` auf `^11.0.3` fiel auf, dass `pubspec.lock`
+im ausgelieferten Paket weiter auf 8.3.7 steht — in dieser Umgebung laesst
+sich `flutter pub get` nicht ausfuehren, die Sperrdatei also nicht neu
+schreiben. Lokal faellt das sofort auf, weil `pub get` sie erneuert; ein
+Commit oder ein weitergereichtes Paket kann die alte Fassung aber
+mitschleppen. Dann baut die CI gegen andere Versionen als die
+Entwicklungsmaschine — genau das, was eine Sperrdatei verhindern soll.
+
+Neue Pruefung 14: jede gesperrte Version muss die Constraint aus
+`pubspec.yaml` erfuellen. Die Caret-Logik ist gegen zwoelf Faelle
+gegengerechnet, einschliesslich der Sonderregel fuer Major 0
+(`^0.11.0` erlaubt 0.11.x, nicht 0.12.0).
+
+**Die Pruefung schlaegt im ausgelieferten Paket bewusst an.** Gruen werden
+kann sie nur auf der Entwicklungsmaschine, weil nur dort `flutter pub get`
+die korrekte Sperrdatei erzeugt. Die Fehlermeldung nennt genau diesen
+Schritt.
+
+**Merkposten fuer kuenftige Paketuebergaben:** Wenn ein ZIP von hier ueber
+eine Arbeitskopie entpackt wird, ueberschreibt es `pubspec.lock` mit dem
+Stand von hier. Nach jedem Entpacken gehoert daher `flutter pub get`
+ausgefuehrt — und die dabei neu geschriebene Sperrdatei in den Commit.

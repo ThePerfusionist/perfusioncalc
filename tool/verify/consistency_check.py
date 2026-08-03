@@ -482,7 +482,77 @@ def check_sdk_table() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 14. Workflows: YAML gültig, Shell-Blöcke syntaktisch korrekt
+# 14. pubspec.lock passt zu den Constraints in pubspec.yaml
+#     Beim Anheben von file_picker auf ^11.0.3 blieb die Sperrdatei zunächst
+#     auf 8.3.7 stehen — lokal fällt das sofort auf, weil `flutter pub get`
+#     sie neu schreibt, aber ein Paket oder ein Commit kann die alte Fassung
+#     mitschleppen. Dann baut die CI gegen andere Versionen als die
+#     Entwicklungsmaschine, und genau das soll die Sperrdatei verhindern.
+# ═══════════════════════════════════════════════════════════════════════════
+def _satisfies(version: str, constraint: str) -> bool | None:
+    """True/False, oder None wenn die Constraint-Form nicht geprüft wird."""
+    def parse(v: str) -> tuple[int, ...]:
+        core = v.split("+")[0].split("-")[0]
+        return tuple(int(x) for x in core.split(".") if x.isdigit())
+
+    constraint = constraint.strip()
+    if constraint in ("any", ""):
+        return True
+    if not constraint.startswith("^"):
+        return None                      # Bereiche etc. hier nicht bewertet
+    try:
+        low = parse(constraint[1:])
+        cur = parse(version)
+    except ValueError:
+        return None
+    if cur < low:
+        return False
+    # Caret: bis zur nächsten Major (bzw. Minor, wenn Major 0 ist)
+    if low and low[0] > 0:
+        return cur[0] == low[0]
+    if len(low) > 1:
+        return cur[:2] == low[:2]
+    return True
+
+
+def check_lockfile() -> None:
+    section("pubspec.lock")
+    try:
+        import yaml
+    except ImportError:
+        return warn("pubspec.lock", "PyYAML nicht installiert - Prüfung übersprungen")
+
+    pub = yaml.safe_load(read("pubspec.yaml"))
+    lock = yaml.safe_load(read("pubspec.lock"))
+    packages = lock.get("packages") or {}
+
+    problems, unchecked = [], 0
+    for name, constraint in (pub.get("dependencies") or {}).items():
+        if name == "flutter" or not isinstance(constraint, str):
+            continue
+        entry = packages.get(name)
+        if not entry:
+            problems.append(f"{name}: in pubspec.yaml, aber nicht in pubspec.lock")
+            continue
+        version = str(entry.get("version", ""))
+        verdict = _satisfies(version, constraint)
+        if verdict is None:
+            unchecked += 1
+        elif not verdict:
+            problems.append(f"{name}: gesperrt auf {version}, verlangt ist {constraint}")
+
+    if problems:
+        fail("pubspec.lock",
+             "\n        ".join(problems)
+             + "\n        → `flutter pub get` ausführen und die neu geschriebene"
+               "\n          pubspec.lock mit committen.")
+    else:
+        note = f", {unchecked} nicht bewertbar" if unchecked else ""
+        ok(f"alle gesperrten Versionen erfüllen ihre Constraints{note}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 15. Workflows: YAML gültig, Shell-Blöcke syntaktisch korrekt
 # ═══════════════════════════════════════════════════════════════════════════
 def check_workflows() -> None:
     section("Workflows")
@@ -523,7 +593,7 @@ def main() -> int:
                   check_defaults_not_in_pdf, check_listeners, check_code_hygiene,
                   check_privacy_pair, check_html_csp,
                   check_unreferenced_web_files, check_sdk_table,
-                  check_workflows):
+                  check_lockfile, check_workflows):
         try:
             check()
         except Exception as e:  # eine kaputte Prüfung darf den Lauf nicht abbrechen

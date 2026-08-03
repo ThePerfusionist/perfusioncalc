@@ -47,6 +47,14 @@ updates:
     # werden die SHAs weiter automatisch nachgezogen, und
     # Sicherheits-Updates meldet Dependabot Alerts unabhaengig von dieser
     # Regel.
+    #
+    # Die Regel hat sich bewaehrt: Der erste checks.yml-Lauf meldete
+    # "Node.js 20 is deprecated", woraufhin setup-node einzeln auf v5
+    # angehoben wurde. In v0.4.20 folgten checkout v7, setup-java v5,
+    # upload-artifact v7 und action-gh-release v3 - gebuendelt, nachdem fuer
+    # jede Action geprueft war, dass alle benutzten Inputs unveraendert
+    # existieren. Genau so soll es laufen: bewusst, gemeinsam, mit
+    # anschliessendem Testlauf.
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]

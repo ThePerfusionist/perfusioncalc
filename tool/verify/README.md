@@ -28,7 +28,7 @@ schlicht `py -3` benutzen, der Launcher wird von den Aliassen nicht verdeckt.
 ### `tool/verify/consistency_check.py`
 
 Sprachübergreifende Zusicherungen — Dart gegen YAML, Dart gegen JavaScript,
-Code gegen Dokumentation. Dreizehn Prüfungen, jede davon steht für einen Fehler,
+Code gegen Dokumentation. Vierzehn Prüfungen, jede davon steht für einen Fehler,
 der in `PROJECT_STATE.md` § 7 dokumentiert ist:
 
 | Prüfung | Verhinderter Fehler |
@@ -45,6 +45,7 @@ der in `PROJECT_STATE.md` § 7 dokumentiert ist:
 | Beide Datenschutzfassungen im Gleichstand | Block A: müssen zusammen geändert werden |
 | CSP auf allen `web/*.html` | K-3: Seiten im harten Precache ohne Absicherung |
 | Jede Abhängigkeit in der Data-Safety-SDK-Tabelle | ein neues Paket macht die Play-Angabe „keine Datenerhebung" unbemerkt falsch |
+| `pubspec.lock` erfuellt die Constraints | die CI baut sonst gegen andere Versionen als die Entwicklungsmaschine |
 | Workflows: YAML + Shell-Syntax | ein kaputter `run`-Block fällt sonst erst im CI auf |
 
 **Dokumentierte Ausnahmen:** Ein Fund lässt sich mit
