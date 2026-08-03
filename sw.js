@@ -58,7 +58,7 @@
 //     dadurch auf CPU-Rendering zurückfiel -> langsamer als ohne. GPU-Rendering
 //     ist der größere Hebel. Diese Version verwirft die mit COI-Headern
 //     gecachten Responses aus v5.
-const BUILD_ID = 'fae5389f41ec0ba46f0c751cf9d8012fae252e89';
+const BUILD_ID = 'e3c8547b635e2ef9e1d03947a3041fadf43cf411';
 const VERSION = `pcalc-${BUILD_ID}`;
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
@@ -156,9 +156,6 @@ const BUILD_ASSETS = [
   "./main.dart.js",
   "./main.dart.mjs",
   "./main.dart.wasm",
-  "./pcalc-icon-v8-192.png",
-  "./pcalc-icon-v8.ico",
-  "./pcalc-icon-v8.png",
   "./privacy.html",
   "./version.json",
 ];
