@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.15+37 · 12 Tabs · **276 Unit-Tests** (12 Testdateien) · i18n vollständig EN+DE (durch Paritätstest abgesichert) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.19+41 · 12 Tabs · **276 Unit-Tests** (12 Testdateien) · i18n vollständig EN+DE (durch Paritätstest abgesichert) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -365,10 +365,10 @@ Bei Bretschneider wird stattdessen der protokollspezifische Druck gezeigt.
 - **Play-Store-Release**: Internal-Test-Track (20 Tester / 14 Tage), Paketname
   `com.perfusioncalc`, `versionCode` muss strikt steigen. Datenschutz-URL für
   die Console: `https://perfusioncalc.de/privacy.html` (erreichbar seit
-  v0.4.1). **Offen: Data-Safety-Formular in der Play Console mit der Policy
-  abgleichen** — Abweichungen sind dort der häufigste Ablehnungsgrund.
-  Anzugeben ist: keine Datenerhebung, keine Weitergabe, Verschlüsselung bei
-  Übertragung *nicht zutreffend*, kein Löschmechanismus erforderlich.
+  v0.4.1). **Ausfüllhilfe für das Data-Safety-Formular: `docs/PLAY_DATA_SAFETY.md`**
+  — Feld für Feld, mit Code-Beleg je Antwort und einer Konsistenztabelle
+  gegen die Datenschutzerklärung. Kernantwort: keine Datenerhebung, weil der
+  Release-Build keine `INTERNET`-Berechtigung deklariert.
 - St.-Thomas- und Eppendorf-Protokoll (in den Studienunterlagen ausgearbeitet).
 - Perfusionsprotokoll mit Zeitstempeln (Bypass-/Klemmzeit, Temperaturverlauf).
 - Heparin/Protamin + ACT-Rechner.
@@ -415,8 +415,8 @@ Umgebung ohne Dart/Flutter-Toolchain stattfand.
 | 3 | klinische Rechenwege am Gerät | verifiziert |
 | 4 | EK-Hämatokrit | aus der Entscheidung wurde ein persistiertes Eingabefeld (v0.4.4) |
 | 5 | Benachrichtigungen, Release-Build Android | verifiziert — feuert im Hintergrund, kein Absturz, Tap öffnet die App |
-| 6 | Web / Service Worker | verifiziert nach v0.4.6: 22 Requests, **0 B transferred**, 10,7 MB aus dem Cache |
-| 7 | CI | verifiziert am Release-Lauf v0.4.7: analyze sauber, 199 Tests, Keystore-Pflicht, Caddy-SHA-512, Precache-Generator, Cleanup |
+| 6 | Web / Service Worker | verifiziert nach v0.4.6 (22 Requests, **0 B transferred**) und erneut nach v0.4.15 — siehe 7.19 |
+| 7 | CI | verifiziert am Release-Lauf v0.4.7 und am ersten `checks.yml`-Lauf v0.4.15 — siehe 7.19. Offen bleibt nur der Release-Pfad der aktuellen Version. |
 
 **Was Stufe 5 nebenbei beantwortet hat:** Die ProGuard-`-keep`-Regeln greifen
 weiterhin, und der Wegfall von `USE_EXACT_ALARM` hat die Funktion nicht
@@ -1120,3 +1120,158 @@ Aufgabe.* Von fuenf gemeldeten Luecken waren zwei echte Befunde, drei
 begruendet unproblematisch. Wer alle fuenf schliesst, schreibt drei Tests,
 die nichts absichern — und uebersieht womoeglich, dass die 10-%-Datei neben
 den 100-%-Geschwistern der eigentliche Hinweis war.
+
+### 7.16 Verwaiste Icons entfernt (v0.4.16)
+
+Die Warnung aus 7.14 aufgeloest. Alle drei Dateien waren **byte-identische
+Duplikate** von Dateien, die bereits im Repo liegen:
+
+| Datei | MD5-gleich mit |
+|---|---|
+| `web/pcalc-icon-v8.png` (32x32) | `web/favicon.png` |
+| `web/pcalc-icon-v8.ico` | `web/favicon.ico` |
+| `web/pcalc-icon-v8-192.png` | `web/icons/Icon-192.png` |
+
+Also kein Quellmaterial, sondern Ueberbleibsel einer Icon-Neuerzeugung — das
+`v8` im Namen entspricht dem Cache-Buster `?v=8`, mit dem `anatomy.html` und
+`cannulas.html` `favicon.png` anfordern. Damit ist Loeschen die richtige
+Antwort und nicht Verschieben: 57 KB exakte Kopien umzulagern haette nichts
+gewonnen. Geht nichts verloren — wer je ein 32x32-Icon braucht, findet
+dasselbe Byte fuer Byte unter `web/favicon.png`.
+
+**Der Checker meldet jetzt den Zwilling mit.** Aus „von nirgends
+referenziert" wurde „von nirgends referenziert — inhaltsgleich mit
+favicon.png". Das ist der Unterschied zwischen einer Warnung und einer
+Entscheidungsgrundlage: eine Kopie kann weg, ein Original muss umziehen.
+Gegengeprueft, indem eine Testkopie angelegt und die Meldung kontrolliert
+wurde.
+
+### 7.17 Icons verschoben, Serverpruefung bestanden, Data Safety vorbereitet (v0.4.17)
+
+**Icons nach `assets/branding/`.** Auf Wunsch verschoben statt geloescht. Der
+Ordner ist nicht in `pubspec.yaml` als Asset eingetragen, landet also in
+keinem Build; das `README.md` dort haelt fest, dass alle drei Dateien
+byte-identische Kopien von `web/favicon.png`, `web/favicon.ico` und
+`web/icons/Icon-192.png` sind — wer sie spaeter loescht, verliert nichts.
+Aus `web/` sind sie damit raus, und der harte Precache traegt 57 KB weniger.
+
+**`test-serve.ps1`: 17 von 17 bestanden.** Aussagekraeftig sind vor allem die
+beiden **rohen TCP-Anfragen**: Sie kamen mit `403 Forbidden` zurueck, nicht
+mit 404. Das heisst, `http.sys` hat den unnormalisierten Pfad
+`/../geheim.txt` durchgereicht und `Get-SafePath` hat ihn abgelehnt — die
+Pruefung greift also tatsaechlich und wird nicht bloss von einer
+Normalisierung weiter vorne verdeckt. Genau diese Unterscheidung war mit der
+ersten Testfassung nicht moeglich.
+
+**EK-Haematokrit bleibt auf 0,55** — bewusste Entscheidung des
+Verantwortlichen, nicht mehr offen. Der Wert ist seit v0.4.4 im
+Paediatrie-Tab einstellbar und steht im PDF; wer ein Praeparat mit anderem
+Hkt einsetzt, aendert ihn dort.
+
+**`docs/PLAY_DATA_SAFETY.md`** ergaenzt: Abgleich des
+Datensicherheits-Formulars gegen die Datenschutzerklaerung, Feld fuer Feld,
+mit Code-Beleg je Antwort. Kern: Google definiert „erheben" als *Daten
+verlassen das Geraet* — lokal gespeicherte Einstellungen und ein vom Nutzer
+selbst abgelegtes PDF fallen nicht darunter. Der belastbarste Beleg ist die
+fehlende `INTERNET`-Berechtigung im Release-Build.
+
+Drei Punkte darin brauchen eine Entscheidung: die Gesundheits-Deklaration
+und die Store-Kategorie (Medizin vs. Bildung), die Abgrenzung der Web-App
+(GitHub-Pages-Logfiles gehoeren NICHT ins Formular, weil es die Android-App
+beschreibt), und die SDK-Tabelle, die bei jeder neuen Abhaengigkeit erneut
+zu pruefen ist — dort wird ein „Nein" spaeter unbemerkt falsch.
+
+### 7.18 Play-Entscheidungen getroffen (v0.4.18)
+
+**ProGuard-Regeln bleiben.** Entscheidung des Verantwortlichen, meiner
+Empfehlung folgend. Kosten: ein paar hundert Kilobyte APK-Groesse und
+Optimierungsspielraum, den R8 nicht nutzen kann. Kein funktionaler oder
+sicherheitsrelevanter Nachteil — der Code ist ohnehin quelloffen,
+Verschleierung schuetzt hier nichts. Damit ist NEU-6 nicht mehr „offen",
+sondern entschieden.
+
+**Store-Kategorie: Bildung, nicht Medizin.** *Medizin* zieht in mehreren
+Regionen Nachfragen zum Medizinprodukte-Status nach sich — eine Kategorie zu
+waehlen, die genau die Pruefung ausloest, deren Ergebnis man vorab verneint,
+schafft Aufwand ohne Gegenwert. *Bildung* deckt den erklaerten Zweck
+(Ausbildung und persoenliche Nutzung) und ist die zutreffendere Einordnung,
+keine Ausweichbewegung.
+
+Damit die Wahl traegt, muss der Store-Text zu ihr passen: gelesen wird die
+Beschreibung, nicht die Kategoriezeile. `docs/PLAY_DATA_SAFETY.md` § 3.1
+enthaelt dafuer eine Gegenueberstellung „gehoert hinein / gehoert nicht
+hinein" und den MDR-Ausschluss zur woertlichen Uebernahme. **Die
+Gesundheits-Deklaration haengt an der Funktion, nicht an der Kategorie** —
+falls Play sie abfragt, ist sie wahrheitsgemaess auszufuellen.
+
+**Web-App abgegrenzt.** Die GitHub-Pages-Logfiles gehoeren nicht ins
+Datensicherheits-Formular: es beschreibt die ueber Play ausgelieferte
+Android-App, nicht eine Website. Die Datenschutzerklaerung behandelt beide
+Faelle getrennt und belegt die Trennung, falls die Pruefung darauf
+zurueckkommt.
+
+**SDK-Tabelle: keine Entscheidung, sondern eine Pflicht mit Verfallsdatum.**
+Das „Nein" im Formular gilt fuer den Stand der Abhaengigkeitsliste. Kommt ein
+Paket dazu, das Daten uebertraegt, wird die Angabe falsch, ohne dass jemand
+etwas Falsches getan haette. `consistency_check.py` prueft die Tabelle
+deshalb jetzt mechanisch gegen `pubspec.yaml` (Pruefung 13): Jede
+Laufzeitabhaengigkeit muss bewertet sein, sonst schlaegt der Lauf fehl —
+lokal und in der CI. Gegengeprueft, indem `firebase_analytics` versuchsweise
+eingetragen wurde; die Pruefung schlug an und nannte den naechsten Schritt.
+
+Das ist Regel 12 auf eine Compliance-Zusage angewandt: Was sonst in einem
+Dokument steht und dort veraltet, haengt jetzt am Build.
+
+### 7.19 Erster CI-Lauf von checks.yml und Stufe 6 (v0.4.19)
+
+**Stufe 6 — Web/Service Worker, bestaetigt an v0.4.15.** Zwei Screenshots
+kurz nacheinander: erst `pcalc-8d174017…` UND `pcalc-78cb32d0…`
+nebeneinander, dann nur noch der neue. Das ist nicht doppelt, sondern der
+vorgesehene Ablauf sichtbar gemacht — `install()` legt den neuen Cache an
+und fuellt ihn hart, **erst danach** raeumt `activate()` die alten weg. Bei
+umgekehrter Reihenfolge staende ein Nutzer bei abgebrochenem Download ohne
+jeden Cache da.
+
+**Fuer kuenftige Pruefungen:** Zwei Caches unmittelbar nach einem Deploy sind
+erwartet. Bleiben sie ueber mehrere Neuladungen bestehen, waere das ein
+Befund.
+
+Ebenfalls belegt: Text rendert (gebuendelte Schrift), Sprachumschaltung
+funktioniert, keine CSP-Verstoesse. Die `script.js`-Fehlermeldung ist
+endgueltig geklaert — der Screenshot zeigt die volle Herkunft
+`chrome-extension://…/script.js:2`, also ein Content-Script einer
+Browser-Erweiterung, kein Bestandteil der Seite.
+
+**Stufe 7 — erster Lauf von `checks.yml`, vollstaendig gruen.**
+
+| Schritt | Ergebnis |
+|---|---|
+| `flutter analyze --no-fatal-warnings` | `No issues found!` (11,6 s) |
+| `flutter test` | 276 Tests |
+| Konsistenzpruefung | alle 13 bestanden, 1 Warnung (die Icons, in v0.4.17 erledigt) |
+| Coverage | informativ, bricht nicht ab |
+
+Die Konsistenzpruefung lief damit zum ersten Mal ausserhalb meines
+Containers und bestaetigte unter anderem, dass die `sed`-Muster **aller
+drei** Workflows zu `web/sw.js` passen und alle zehn PDF-Bauer im
+Gesamtbericht eingebunden sind.
+
+**Die Abdeckungsauswertung zeigt die Wirkung von 7.15 in Zahlen:**
+
+| Datei | v0.4.14 | v0.4.15 |
+|---|---|---|
+| `cardioplegia_alarm_settings.dart` | 10,4 % | **100 %** |
+| `pdf_export.dart` | 10,4 % | **85,5 %** |
+| gesamt | 17,2 % | 21,4 % |
+
+Die drei verbleibenden Nullen sind die in 7.15 begruendeten:
+`notification_service.dart` (Plugin-gebunden, Absicherung ueber Stufe 5) und
+die beiden Stubs fuer bedingte Importe.
+
+**Ein Befund aus dem Lauf:** GitHub meldete
+„Node.js 20 is deprecated … actions/setup-node@… are being forced to run on
+Node.js 24". `setup-node` v4 laeuft selbst auf Node 20. Dependabot faengt das
+nicht auf, weil Major-Updates fuer Actions bewusst ignoriert werden — solche
+Spruenge gehoeren einzeln und mit Testlauf gemacht. Genau das ist hier
+geschehen: v5.0.0 auf Commit-SHA gepinnt, `node-version` von 20 auf 22
+angehoben. Node wird ausschliesslich fuer `node --check web/sw.js` gebraucht.

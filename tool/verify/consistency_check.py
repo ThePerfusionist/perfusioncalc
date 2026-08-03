@@ -19,6 +19,7 @@ Beendet mit 0, wenn alles passt, sonst 1.
 """
 
 import glob
+import hashlib
 import os
 import re
 import subprocess
@@ -396,6 +397,23 @@ def check_unreferenced_web_files() -> None:
             with open(f, encoding="utf-8", errors="replace") as fh:
                 haystack += fh.read()
 
+    # Inhaltsgleiche Dateien mitmelden. Das war der Fall bei den drei
+    # pcalc-icon-v8-Dateien: keine Quellbilder, sondern byte-identische
+    # Kopien von favicon.png, favicon.ico und icons/Icon-192.png -
+    # Ueberbleibsel einer Icon-Neuerzeugung. Der Hinweis "identisch mit X"
+    # macht aus einer vagen Warnung eine Entscheidungsgrundlage: eine Kopie
+    # kann weg, ein Original muss umziehen.
+    by_hash: dict[str, list[str]] = {}
+    for f in glob.glob(os.path.join(web, "**", "*"), recursive=True):
+        if os.path.isdir(f):
+            continue
+        try:
+            with open(f, "rb") as fh:
+                digest = hashlib.md5(fh.read()).hexdigest()
+        except OSError:
+            continue
+        by_hash.setdefault(digest, []).append(os.path.relpath(f, web).replace(os.sep, "/"))
+
     orphans = []
     for f in sorted(glob.glob(os.path.join(web, "*"))):
         if os.path.isdir(f):
@@ -404,19 +422,67 @@ def check_unreferenced_web_files() -> None:
         if name in always:
             continue
         # Query-Strings (?v=9) abstreifen, indem nur der Name gesucht wird.
-        if name not in haystack:
-            kb = os.path.getsize(f) / 1024
-            orphans.append(f"{name} ({kb:.0f} KB)")
+        if name in haystack:
+            continue
+        kb = os.path.getsize(f) / 1024
+        with open(os.path.join(web, name), "rb") as fh:
+            digest = hashlib.md5(fh.read()).hexdigest()
+        twins = [t for t in by_hash.get(digest, []) if t != name]
+        note = f" — inhaltsgleich mit {', '.join(twins)}" if twins else ""
+        orphans.append(f"{name} ({kb:.0f} KB){note}")
 
     if orphans:
-        warn("web/", "von nirgends referenziert, landen aber im Precache: "
-                     + ", ".join(orphans))
+        warn("web/", "von nirgends referenziert, landen aber im Precache:\n        "
+                     + "\n        ".join(orphans))
     else:
         ok("jede Datei in web/ wird auch referenziert")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 13. Workflows: YAML gültig, Shell-Blöcke syntaktisch korrekt
+# 13. Jede Laufzeitabhängigkeit steht in der Data-Safety-SDK-Tabelle
+#     Google rechnet Daten, die ein eingebundenes SDK überträgt, der App zu.
+#     Die Angabe "keine Datenerhebung" im Play-Formular gilt also immer nur
+#     für den Stand der Abhängigkeitsliste. Kommt ein Paket dazu, das etwas
+#     sendet, wird die Angabe falsch — ohne dass jemand etwas Falsches getan
+#     hätte. Diese Prüfung erzwingt eine bewusste Zeile pro Paket, statt auf
+#     ein Erinnern zu bauen.
+# ═══════════════════════════════════════════════════════════════════════════
+def check_sdk_table() -> None:
+    section("Data-Safety-SDK-Tabelle")
+    doc_rel = "docs/PLAY_DATA_SAFETY.md"
+    doc_path = os.path.join(ROOT, doc_rel)
+    if not os.path.exists(doc_path):
+        return warn("SDK-Tabelle", f"{doc_rel} nicht gefunden")
+    try:
+        import yaml
+    except ImportError:
+        return warn("SDK-Tabelle", "PyYAML nicht installiert - Prüfung übersprungen")
+
+    pub = yaml.safe_load(read("pubspec.yaml"))
+    deps = [d for d in (pub.get("dependencies") or {}) if d != "flutter"]
+    doc = read(doc_rel)
+
+    missing = [d for d in deps if f"`{d}`" not in doc]
+    if missing:
+        fail("SDK-Tabelle",
+             f"nicht in {doc_rel} aufgeführt: {missing}\n"
+             f"        → In der Paketdokumentation nachsehen, ob es Daten vom\n"
+             f"          Gerät sendet, und eine Zeile in der SDK-Tabelle ergänzen.\n"
+             f"          Bei 'ja' muss auch das Play-Formular geändert werden.")
+    else:
+        ok(f"alle {len(deps)} Laufzeitabhängigkeiten sind in {doc_rel} bewertet")
+
+    # Umgekehrt: eine Zeile für ein längst entferntes Paket ist irreführend,
+    # aber kein Fehler.
+    listed = set(re.findall(r"^\| `([a-z0-9_]+)` \|", doc, re.M))
+    stale = sorted(listed - set(deps))
+    if stale:
+        warn("SDK-Tabelle", f"in {doc_rel} bewertet, aber nicht mehr in "
+                            f"pubspec.yaml: {stale}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 14. Workflows: YAML gültig, Shell-Blöcke syntaktisch korrekt
 # ═══════════════════════════════════════════════════════════════════════════
 def check_workflows() -> None:
     section("Workflows")
@@ -456,7 +522,8 @@ def main() -> int:
                   check_sw_placeholders, check_sw_syntax, check_combined_report,
                   check_defaults_not_in_pdf, check_listeners, check_code_hygiene,
                   check_privacy_pair, check_html_csp,
-                  check_unreferenced_web_files, check_workflows):
+                  check_unreferenced_web_files, check_sdk_table,
+                  check_workflows):
         try:
             check()
         except Exception as e:  # eine kaputte Prüfung darf den Lauf nicht abbrechen

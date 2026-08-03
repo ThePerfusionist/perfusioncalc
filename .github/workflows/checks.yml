@@ -55,10 +55,21 @@ jobs:
       # Node wird nur für `node --check web/sw.js` gebraucht. Ohne Node
       # überspringt der Checker diese eine Prüfung mit einer Warnung - hier
       # soll sie aber laufen, denn der Service Worker trägt den Offlinebetrieb.
+      # v5, nicht v4: der erste Lauf dieses Workflows meldete
+      # "Node.js 20 is deprecated ... actions/setup-node@... are being forced
+      # to run on Node.js 24". setup-node v4 laeuft selbst auf Node 20; v5
+      # zielt auf Node 24. Dependabot faengt das nicht auf, weil Majors fuer
+      # Actions bewusst ignoriert werden (siehe dependabot.yml) - solche
+      # Spruenge gehoeren einzeln und mit Testlauf gemacht, und genau das
+      # ist dies hier.
+      #
+      # node-version 22: aktuelle LTS. Gebraucht wird Node ausschliesslich
+      # fuer `node --check web/sw.js`; die Version ist dafuer unkritisch,
+      # sollte aber nicht selbst veraltet sein.
       - name: Setup Node (für die sw.js-Syntaxprüfung)
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install PyYAML (für die Workflow-Prüfung)
         run: python3 -m pip install --quiet pyyaml
