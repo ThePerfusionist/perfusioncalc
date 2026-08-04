@@ -4,7 +4,7 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.4.21-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.4.23-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.38-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
@@ -57,7 +57,7 @@ protection, then downstream/derived quantities, and finally the pure reference t
 | ⚗️ **Electrolytes / Buffer** | Sodium, potassium, calcium needs · NaBic 8.4% · TRIS 36.34% |
 | 💧 **Ultrafiltration** | Volume to remove to reach a target haematocrit **or** haemoglobin, resulting circulating volume (mass-conservation principle) |
 | 🔁 **Resistances** | SVR and PVR in dyn·s·cm⁻⁵ |
-| 👶 **Pediatric** | Tube sizes (Oldeen) · Perfusion rates (Ramakrishnan) · VA/VV cannula sizes (Finck) · Blood volume (Linderkamp) · Transfusion volume (Davies) |
+| 👶 **Pediatric** | Tube sizes (Oldeen) · Perfusion rates (Ramakrishnan) · VA/VV cannula sizes (Finck) · Blood volume (Linderkamp) · Transfusion volume (Davies) with a **configurable haematocrit of the red cell concentrate** (persisted, printed in the PDF — the calculated volume scales directly with it) |
 | 📏 **Tube Volume & Flow Rate** | Fill volume (ml) for 3/16", 1/4", 3/8", 1/2" per entered length · max. flow and drainage reference table by tube size |
 | 📐 **Zoll / Charrière** | Diameter reference table · Ch ↔ mm converter |
 | 📊 **Reference Values Pressure** | Haemodynamic pressure reference values with normal ranges |
@@ -155,7 +155,11 @@ compact for OR documentation.
 ### 📱 Progressive Web App
 
 The web version is a fully-featured PWA:
-- **Offline capable:** custom service worker caches all assets after first load
+- **Offline capable:** a custom service worker precaches the complete build during
+  installation — not only what has been visited. The cache name carries the commit
+  SHA, so every deployment invalidates it and nobody keeps running an outdated build.
+- **No external requests:** Roboto is bundled with the app rather than fetched from
+  a font CDN, so the app also renders in networks that block third-party hosts.
 - **Installable:** add to home screen on iOS, install button in Chrome/Edge on desktop
 - **App-like:** runs in standalone window, no browser chrome
 
@@ -165,32 +169,65 @@ Android release builds run R8. `android/app/proguard-rules.pro` keeps the
 generic signatures Gson needs, without which scheduled notifications crash
 when they fire. Keep those rules if you change the build configuration.
 
+The release build declares **no `INTERNET` permission** and is excluded from
+Google cloud backup and device-to-device transfer. Release signing is mandatory
+in CI: if the keystore secret is missing, the workflow aborts rather than
+producing debug-signed artifacts under a release name.
+
 ### 🔬 Browser Compatibility
 
 Tested in privacy-focused browsers (Ungoogled Chromium, Brave on Aggressive Shields,
-LibreWolf) with WebGL disabled. Images use `Image.network` with
+LibreWolf) with WebGL disabled. On the web, images use `Image.network` with
 `webHtmlElementStrategy: prefer` to render via native `<img>` tags in the DOM,
-working in any browser regardless of CanvasKit availability.
+working in any browser regardless of CanvasKit availability; on Android and iOS the
+same widget loads from the asset bundle directly, since the release build has no
+network permission at all.
 
-### 🧪 Test Coverage
+With WebGL unavailable, Flutter falls back to CPU rendering and logs a warning.
+Drawing is slower, the calculations are unaffected.
 
-**144 unit tests** verify all medical formulas against published reference values:
+### 🧪 Tests and Verification
+
+**276 unit tests** across 12 files verify the medical formulas against published
+reference values:
 - BSA (DuBois), CO, blood volume (Silbernagl/Nadler)
-- CaO₂/CvO₂/DO₂i/VO₂/O₂-ER (Hüfner/Ranucci) with goal-directed perfusion threshold
+- CaO₂/CvO₂/DO₂i/VO₂/O₂-ER (Hüfner/Ranucci) with goal-directed perfusion threshold,
+  including the guard that keeps an incomplete venous data set from reporting O₂-ER 100 %
 - Electrolyte and buffer corrections (Mellemgaard/Astrup · Nahas · Adrogué/Madias)
 - Severinghaus 1979 temperature correction (incl. published P50 of 26.86 mmHg),
   Rosenthal 1948 pH coefficient, Henderson-Hasselbalch
 - Ultrafiltration mass conservation in both Hct and Hb mode (Klineberg 1984)
 - Cardioplegia: Calafiore Perfusor rate verified against the institutional
   reference calculator, per-dose K⁺ schedule, optional magnesium, Bretschneider
-  volume, re-dose interval status thresholds
-- Pediatric transfusion volume (Davies/Howie)
+  volume, re-dose alert schedule down to the second
+- Pediatric transfusion volume (Davies 2007), reproducing the paper's own worked example
+- Persisted settings: clamping, restoration after restart, listener behaviour
+- PDF generation: real documents are built and checked, including the empty case
+  and a forced page break
 - NaN/Infinity input safety, plausibility ranges, full i18n key coverage
 
-Run tests with:
 ```bash
 flutter test
 ```
+
+Beyond what Dart can check, the repository ships checks for the invariants that
+span languages — Dart against YAML, Dart against JavaScript, code against
+documentation:
+
+```bash
+python3 tool/verify/consistency_check.py     # 14 cross-cutting checks
+python3 tool/verify/coverage_report.py       # untested files first
+```
+
+On Windows, one command runs everything including the path-traversal test for
+the offline server:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tool\verify\verify-all.ps1
+```
+
+Details in [tool/verify/README.md](tool/verify/README.md). The same checks run on
+every push and pull request via `.github/workflows/checks.yml`.
 
 ---
 
@@ -283,7 +320,7 @@ initially 100–110 mmHg, after cardiac arrest 40–50 mmHg; perfusion time 6–
 | Perfusion rate | Ramakrishnan et al., 2023 / Oldeen et al., 2020 |
 | VA/VV cannula sizes | Finck et al., APSA Pediatric Surgery NaT |
 | Blood volume (premature, infant, child, adolescent) | Linderkamp et al., 1977 |
-| Transfusion volume | `Δ Hb × BV × 3 / Hct(EK 55%)` (Davies 2007) |
+| Transfusion volume | `Δ Hb × weight × 3 / Hct(RBC unit)` (Davies 2007) — the unit's hematocrit is a setting, default 55 %, and is printed in the PDF |
 
 ---
 
@@ -635,25 +672,6 @@ Questions, bug reports or clinical feedback: **perfusioncalc@unbox.at**
 
 For reproducible bug reports, please include the app version (burger menu →
 info button), the platform (Web/Android/iOS) and the tab concerned.
-
----
-
-## ✅ Verification
-
-Beyond `flutter analyze` and `flutter test`, the repository ships checks for
-the invariants that span languages — Dart against YAML, Dart against
-JavaScript, code against documentation:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tool\verify\verify-all.ps1
-```
-
-```bash
-python3 tool/verify/consistency_check.py
-```
-
-Details in [tool/verify/README.md](tool/verify/README.md). The same checks run
-on every push and pull request via `.github/workflows/checks.yml`.
 
 ---
 

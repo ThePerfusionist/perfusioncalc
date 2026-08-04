@@ -5,7 +5,7 @@
 > Konventionen und Entscheidungen.
 > Bei jeder Änderung mitpflegen.
 
-**Stand:** v0.4.21+43 · 12 Tabs · **276 Unit-Tests** (12 Testdateien) · i18n vollständig EN+DE (durch Paritätstest abgesichert) · Kontakt: perfusioncalc@unbox.at
+**Stand:** v0.4.23+45 · 12 Tabs · **276 Unit-Tests** (12 Testdateien) · i18n vollständig EN+DE (durch Paritätstest abgesichert) · Kontakt: perfusioncalc@unbox.at
 
 ---
 
@@ -644,6 +644,10 @@ Aus den vier Regressionen und den drei Erstbefunden des ersten Testlaufs:
     nach 7.15: aussagekräftig war nicht die absolute Zahl, sondern das
     Gefälle — eine Klasse bei 10 %, während ihre beiden Geschwister
     desselben Musters bei 100 % standen.
+15. **Nichts ausliefern, von dem man weiß, dass es falsch ist, und den
+    Hinweis darauf in Prosa auslagern.** Nachgetragen nach 7.23:
+    `pubspec.lock` lag im Paket, obwohl sie dort nicht stimmen konnte.
+    Entweder es ist richtig, oder es gehört nicht ins Paket.
 
 ### 7.8 Nachprüfung v0.4.7 → Umsetzung v0.4.8
 
@@ -1360,3 +1364,78 @@ Schritt.
 eine Arbeitskopie entpackt wird, ueberschreibt es `pubspec.lock` mit dem
 Stand von hier. Nach jedem Entpacken gehoert daher `flutter pub get`
 ausgefuehrt — und die dabei neu geschriebene Sperrdatei in den Commit.
+
+### 7.22 Alle Action-Majors belegt, Dokumentation nachgezogen (v0.4.22)
+
+**Die fuenf Major-Spruenge aus 7.20 sind vollstaendig durch die CI gegangen.**
+`checks.yml` deckt nur `checkout` und `setup-node` ab; die drei uebrigen
+laufen ausschliesslich in anderen Workflows:
+
+| Action | belegt durch |
+|---|---|
+| `checkout` v7.0.1 | checks, release, offline-bundle |
+| `setup-node` v5.0.0 | checks |
+| `setup-java` v5.7.0 | release |
+| `action-gh-release` v3.0.2 | release |
+| `upload-artifact` v7.0.1 | offline-bundle (35,7 MB Artefakt) |
+
+`peaceiris/actions-gh-pages` ist indirekt belegt: GitHubs eigener
+„pages build and deployment"-Lauf wird ausschliesslich durch einen Push auf
+`gh-pages` ausgeloest, und den macht nur diese Action. Die Dateiliste dort
+zeigt `main.dart.wasm` — der `--wasm`-Build ist live.
+
+**Verwaiste Icons: geloescht.** Die drei Dateien lagen doppelt im Repo, weil
+ein ZIP nichts loeschen kann — beim Entpacken kamen die Kopien in
+`assets/branding/` dazu, die Originale in `web/` blieben liegen. Gefunden hat
+das die Pruefung aus 7.14, die urspruenglich fuer genau solche Reste gebaut
+wurde und hier eine Schwaeche der Uebergabe aufgedeckt hat.
+
+**Merkposten:** Loeschungen und Verschiebungen gehoeren ab jetzt explizit in
+den Begleittext eines Pakets. Der Liefermechanismus kann sie nicht
+transportieren.
+
+**Dokumentation nachgezogen.** README auf den aktuellen Stand:
+- Testabschnitt von 144 auf 276 Tests, mit den seither dazugekommenen
+  Gruppen (Feuerplan sekundengenau, persistierte Einstellungen,
+  PDF-Erzeugung inklusive Leerfall und Seitenumbruch)
+- Abschnitt zu den Pruefwerkzeugen an dieselbe Stelle gezogen, den
+  doppelten weiter unten entfernt
+- PWA: der Service Worker precacht den kompletten Build bei der
+  Installation, nicht „nach dem ersten Laden"; Roboto ist gebuendelt
+- Browser-Kompatibilitaet: `Image.network` gilt nur noch fuer Web, mobil
+  wird direkt aus dem Asset-Bundle geladen; CPU-Rendering erklaert
+- Release-Hinweise: keine `INTERNET`-Berechtigung, kein Cloud-Backup,
+  Signaturpflicht in der CI
+- Paediatrie: der EK-Haematokrit ist einstellbar und steht im PDF
+
+**`AI_POLICY.rst`:** Erwaehnung von Matrix entfernt — das Projekt betreibt
+keinen Matrix-Raum, die Aufzaehlung stammte aus der uebernommenen Vorlage.
+
+### 7.23 Paketierungsregel: keine generierten Dateien (v0.4.23)
+
+Rueckfrage aus der Zusammenarbeit, und sie trifft: „Wenn meine
+`pubspec.lock` hineingehoert — wieso legst du deine ins ZIP?"
+
+Beim Anheben von `file_picker` auf `^11.0.3` konnte ich die Sperrdatei nicht
+neu schreiben, weil hier kein `flutter pub get` laeuft. Ich habe sie
+trotzdem mitgeliefert und im Begleittext darauf hingewiesen, dass sie zu
+ignorieren ist — also eine Datei ausgeliefert, von der ich weiss, dass sie
+falsch ist, und mich darauf verlassen, dass es jemand liest. Genau das
+Muster, das Regel 12 kritisiert: sich auf Erinnern verlassen, wo ein
+Mechanismus moeglich ist.
+
+**Regel fuer alle kuenftigen Pakete: `pubspec.lock` wird nicht mitgeliefert.**
+Sie ist eine generierte Datei; die einzige richtige Fassung entsteht durch
+`flutter pub get` auf der Entwicklungsmaschine. Solange ich `pubspec.yaml`
+nicht anfasse, waere meine Kopie identisch und damit ueberfluessig — sobald
+ich es anfasse, ist sie falsch. In beiden Faellen bringt das Mitliefern
+nichts.
+
+`consistency_check.py` behandelt eine fehlende Sperrdatei jetzt als Warnung
+mit Handlungsanweisung statt als Fehler, damit ein frisch ausgepacktes Paket
+nicht rot laeuft. Im Repository selbst — wo die Datei vorhanden sein MUSS —
+greift die Constraint-Pruefung unveraendert.
+
+**Regel 15 fuer 7.7:** *Nichts ausliefern, von dem man weiss, dass es falsch
+ist, und den Hinweis darauf in Prosa auslagern.* Entweder es ist richtig,
+oder es gehoert nicht ins Paket.

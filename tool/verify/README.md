@@ -45,7 +45,7 @@ der in `PROJECT_STATE.md` § 7 dokumentiert ist:
 | Beide Datenschutzfassungen im Gleichstand | Block A: müssen zusammen geändert werden |
 | CSP auf allen `web/*.html` | K-3: Seiten im harten Precache ohne Absicherung |
 | Jede Abhängigkeit in der Data-Safety-SDK-Tabelle | ein neues Paket macht die Play-Angabe „keine Datenerhebung" unbemerkt falsch |
-| `pubspec.lock` erfuellt die Constraints | die CI baut sonst gegen andere Versionen als die Entwicklungsmaschine |
+| `pubspec.lock` erfuellt die Constraints | die CI baut sonst gegen andere Versionen als die Entwicklungsmaschine (fehlt die Datei ganz, gibt es nur eine Warnung mit dem Hinweis auf `flutter pub get`) |
 | Workflows: YAML + Shell-Syntax | ein kaputter `run`-Block fällt sonst erst im CI auf |
 
 **Dokumentierte Ausnahmen:** Ein Fund lässt sich mit

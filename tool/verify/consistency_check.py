@@ -522,6 +522,14 @@ def check_lockfile() -> None:
     except ImportError:
         return warn("pubspec.lock", "PyYAML nicht installiert - Prüfung übersprungen")
 
+    # Fehlt die Sperrdatei ganz, ist das kein Fehler, sondern ein noch nicht
+    # ausgeführtes `flutter pub get` - etwa direkt nach dem Auspacken eines
+    # Pakets, das sie bewusst nicht enthält (siehe PROJECT_STATE § 7.23).
+    if not os.path.exists(os.path.join(ROOT, "pubspec.lock")):
+        return warn("pubspec.lock",
+                    "nicht vorhanden - `flutter pub get` ausführen; die dabei "
+                    "erzeugte\n        Sperrdatei gehört in den Commit.")
+
     pub = yaml.safe_load(read("pubspec.yaml"))
     lock = yaml.safe_load(read("pubspec.lock"))
     packages = lock.get("packages") or {}
