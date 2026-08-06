@@ -1,27 +1,32 @@
-Roboto-Schriften für PDF-Export
+Roboto fonts for the PDF export
 ================================
 
-Diese 3 TTF-Dateien werden für den PDF-Export benötigt (Standard-PDF-
-Schriften unterstützen kein Unicode wie m², °, ·, —, Subskripte).
+These three TTF files are required for the PDF export (the standard PDF
+fonts have no Unicode support for m², °, ·, —, subscripts and the like).
 
-DATEIEN, DIE HIER LIEGEN MÜSSEN:
+Since v0.4.3 the same files also serve as the app's font family (see the
+`fonts:` block in pubspec.yaml), so CanvasKit no longer fetches Roboto from
+fonts.gstatic.com at runtime. That is what makes the offline distribution
+render text at all.
+
+FILES THAT MUST BE HERE:
   Roboto-Regular.ttf
   Roboto-Bold.ttf
   Roboto-Italic.ttf
 
-WO HOLST DU SIE HER:
-  Option 1 (einfachste): https://fonts.google.com/specimen/Roboto
-    -> "Get font" oben rechts klicken
-    -> ZIP herunterladen
-    -> daraus brauchen wir nur 3 Dateien:
+WHERE TO GET THEM:
+  Option 1 (simplest): https://fonts.google.com/specimen/Roboto
+    -> click "Get font" in the top right
+    -> download the ZIP
+    -> only three files are needed from it:
        - static/Roboto-Regular.ttf
        - static/Roboto-Bold.ttf
        - static/Roboto-Italic.ttf
-    -> diese 3 Dateien in diesen Ordner kopieren
+    -> copy those three files into this folder
 
   Option 2: GitHub
     https://github.com/googlefonts/roboto/tree/main/src/hinted
 
-LIZENZ:
-  Apache License 2.0 - Roboto darf in jeder Anwendung frei verwendet werden,
-  inklusive kommerzieller. Siehe LICENSE.txt im Roboto-Download.
+LICENCE:
+  Apache License 2.0 - Roboto may be used freely in any application,
+  including commercial ones. See LICENSE.txt in the Roboto download.

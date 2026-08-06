@@ -116,14 +116,14 @@ Future<pw.ThemeData> _loadTheme() async {
 /// Exports the given sections as a PDF and triggers the download (on web),
 /// shows the share sheet (on Android/iOS), or is a no-op (on desktop
 /// without printing support).
-/// Rendert das PDF und gibt die Bytes zurueck - ohne Download.
+/// Renders the PDF and returns the bytes — without downloading.
 ///
-/// Getrennt vom Export, damit das Rendern testbar ist: Die Erzeugung war
-/// bis v0.4.15 mit dem Speichern-Dialog verwoben und damit in einem Unit-
-/// Test nicht erreichbar (Abdeckung 10 %). Das PDF ist aber das einzige
-/// Artefakt, das die App verlaesst - eine Ausnahme beim Aufbau, etwa durch
-/// eine Layout-Ueberschreitung oder eine fehlende Schrift, bedeutet
-/// vollstaendigen Ausfall des Exports und wurde von nichts abgesichert.
+/// Separated from the export so that rendering is testable: until v0.4.15
+/// document creation was entangled with the save dialog and therefore
+/// unreachable from a unit test (coverage 10 %). Yet the PDF is the only
+/// artefact that leaves the app — an exception while building it, say from a
+/// layout overflow or a missing font, means the export fails entirely, and
+/// nothing guarded against that.
 @visibleForTesting
 Future<Uint8List> renderTabPdf({
   required String tabTitle,
@@ -193,7 +193,7 @@ class PdfTabReport {
 }
 
 /// Exports a combined report across multiple tabs as a single PDF.
-/// Gegenstueck zu [renderTabPdf] fuer den Gesamtbericht.
+/// Counterpart to [renderTabPdf] for the combined report.
 @visibleForTesting
 Future<Uint8List> renderCombinedPdf({
   required List<PdfTabReport> tabs,
@@ -263,21 +263,21 @@ pw.Widget _buildTabChapter(PdfTabReport tab) {
 // Helpers
 // ════════════════════════════════════════════════════════════════════════════
 
-/// Gibt [value] nur zurueck, wenn ALLE benoetigten Eingaben vorliegen -
-/// sonst null.
+/// Returns [value] only when ALL required inputs are present — otherwise
+/// null.
 ///
-/// Loest die Spiegelung von Auditbefund 1.1: Dort druckte das PDF eine Zahl,
-/// wo der Bildschirm "—" zeigte. Hier war es umgekehrt.
+/// Resolves the mirror image of audit finding 1.1: there the PDF printed a
+/// number where the screen showed "—". Here it was the other way round.
 ///
-/// Ergebnis-Getter in PatientData geben 0 zurueck, wenn Eingaben fehlen -
-/// PdfRow.numeric zeigt dafuer "—". Bei manchen Rechnungen ist 0 aber ein
-/// gueltiges, klinisch bedeutsames Ergebnis: ein Base Excess von 0 heisst
-/// "0 ml NaBic, keine Korrektur noetig", nicht "nicht berechenbar". Die
-/// ResultCard auf dem Bildschirm zeigt dort korrekt 0.0, weil sie sich nach
-/// missingInputs richtet und nicht nach dem Wert - das PDF zeigte "—".
+/// Result getters in PatientData return 0 when inputs are missing, and
+/// PdfRow.numeric shows "—" for that. For some calculations, however, 0 is a
+/// valid and clinically meaningful result: a base excess of 0 means "0 ml
+/// NaBic, no correction needed", not "not calculable". The ResultCard on
+/// screen correctly shows 0.0 there, because it follows missingInputs rather
+/// than the value — the PDF showed "—".
 ///
-/// Mit resultIf(...) plus `zeroIsValid: true` bilden beide dieselbe
-/// Unterscheidung ab: fehlende Eingabe -> "—", errechnete Null -> "0.0".
+/// With resultIf(...) plus `zeroIsValid: true` both outputs express the same
+/// distinction: missing input -> "—", calculated zero -> "0.0".
 double? resultIf(List<Object?> requiredInputs, double value) =>
     requiredInputs.any((i) => i == null) ? null : value;
 

@@ -1,123 +1,119 @@
-# Prüfwerkzeuge
+# Verification tooling
 
-Was hier liegt, prüft das, was `flutter analyze` und `flutter test` nicht
-sehen können — und was in dieser Codebasis bereits schiefgegangen ist.
+What lives here checks the things `flutter analyze` and `flutter test` cannot
+see — and the things that have already gone wrong in this codebase.
 
-## Vollständiger Lauf (Windows)
+## Full run (Windows)
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tool\verify\verify-all.ps1
 ```
 
-Ruft der Reihe nach `flutter pub get`, `flutter analyze`, `flutter test`, die
-Konsistenzprüfung und den Traversal-Test des Offline-Servers auf. Optionen:
+Runs `flutter pub get`, `flutter analyze`, `flutter test`, the consistency
+check and the offline server's traversal test, in that order. Options:
 `-SkipTests`, `-SkipServe`.
 
-**Python unter Windows:** Das Skript probiert `py -3`, `python3` und `python`
-und prüft jeden Kandidaten durch einen echten Programmlauf. `Get-Command`
-allein genügt nicht — Windows legt unter
-`%LOCALAPPDATA%\Microsoft\WindowsApps` App-Ausführungsaliase für `python.exe`
-und `python3.exe` ab, die oft *vor* einer echten Installation im PATH stehen
-und beim Aufruf nur den Microsoft Store öffnen (Exit 9009). Wenn das bei dir
-passiert: *Einstellungen → Apps → Erweiterte App-Einstellungen →
-App-Ausführungsaliase* → `python.exe` und `python3.exe` abschalten. Oder
-schlicht `py -3` benutzen, der Launcher wird von den Aliassen nicht verdeckt.
+**Python on Windows:** the script tries `py -3`, `python3` and `python` and
+probes each candidate with an actual program run. `Get-Command` alone is not
+enough — Windows places app execution aliases for `python.exe` and
+`python3.exe` under `%LOCALAPPDATA%\Microsoft\WindowsApps`, which often sit
+*before* a real installation in PATH and merely open the Microsoft Store when
+invoked (exit 9009). If that happens to you: *Settings → Apps → Advanced app
+settings → App execution aliases* → turn off `python.exe` and `python3.exe`.
+Or simply use `py -3`; the launcher is not shadowed by the aliases.
 
-## Die einzelnen Werkzeuge
+## The individual tools
 
 ### `tool/verify/consistency_check.py`
 
-Sprachübergreifende Zusicherungen — Dart gegen YAML, Dart gegen JavaScript,
-Code gegen Dokumentation. Vierzehn Prüfungen, jede davon steht für einen Fehler,
-der in `PROJECT_STATE.md` § 7 dokumentiert ist:
+Cross-language guarantees — Dart against YAML, Dart against JavaScript, code
+against documentation. Fifteen checks, each standing for a defect documented
+in `PROJECT_STATE.md` § 7:
 
-| Prüfung | Verhinderter Fehler |
+| Check | Defect it prevents |
 |---|---|
-| Version an drei Stellen gleich | Auseinanderlaufen fällt sonst erst in der PDF-Fußzeile auf |
-| Test-Badge = tatsächliche Anzahl | K-2: eine Zahl in der Doku, die nicht mitwächst |
-| i18n vollständig, keine Waisen | im Code benutzter Schlüssel fehlt → Bug-Marker in der App |
-| SW-Platzhalter ↔ `sed`-Muster der Workflows | 4.1 / N-2: reißt die Kopplung, läuft der Cache nie ab |
-| `node --check web/sw.js` | Syntaxfehler in der Komponente, die offline alles trägt |
-| Jeder PDF-Bauer im Gesamtbericht | B-1: ein Tab fehlt still im ausgelieferten Bericht |
-| Keine Vorbelegung ungefiltert im PDF | C-1: Tab liegt jedem Bericht bei |
-| `addListener` ↔ `removeListener` | Singleton hält zerstörte States am Leben |
-| Keine Basistyp-Casts, kein `print()` | D-1: Laufzeitfehler statt Compilerfehler |
-| Beide Datenschutzfassungen im Gleichstand | Block A: müssen zusammen geändert werden |
-| CSP auf allen `web/*.html` | K-3: Seiten im harten Precache ohne Absicherung |
-| Jede Abhängigkeit in der Data-Safety-SDK-Tabelle | ein neues Paket macht die Play-Angabe „keine Datenerhebung" unbemerkt falsch |
-| `pubspec.lock` erfuellt die Constraints | die CI baut sonst gegen andere Versionen als die Entwicklungsmaschine (fehlt die Datei ganz, gibt es nur eine Warnung mit dem Hinweis auf `flutter pub get`) |
-| Workflows: YAML + Shell-Syntax | ein kaputter `run`-Block fällt sonst erst im CI auf |
+| version identical in three places | a divergence otherwise surfaces only in the PDF footer |
+| test badge = actual count | a number in the docs that does not grow with the code |
+| i18n complete, no orphans | a key used in code but missing shows the bug marker in the app |
+| SW placeholders ↔ workflow `sed` patterns | if the coupling breaks, the cache never expires |
+| `node --check web/sw.js` | a syntax error in the component that carries offline use |
+| every PDF builder in the combined report | a tab silently missing from the delivered report |
+| no default written unfiltered into the PDF | the tab is attached to every report |
+| `addListener` ↔ `removeListener` | the singleton keeps destroyed states alive |
+| no base-type casts, no `print()` | runtime error instead of compile error |
+| both privacy policy versions in step | they have to be changed together |
+| CSP on every `web/*.html` | pages in the hard precache without protection |
+| every dependency in the Data safety SDK table | a new package makes the Play declaration "no data collected" quietly false |
+| `pubspec.lock` satisfies the constraints | CI would otherwise build against different versions than the development machine (a missing file is only a warning, with a pointer to `flutter pub get`) |
+| workflows: YAML + shell syntax | a broken `run` block otherwise surfaces only in CI |
 
-**Dokumentierte Ausnahmen:** Ein Fund lässt sich mit
-`// verify:ok <Begründung>` in den acht Zeilen davor als bewusste Ausnahme
-markieren. Die Prüfung bleibt streng, die Ausnahme steht am Ort und ist
-begründet — statt die Regel aufzuweichen.
+**Documented exceptions:** a finding can be marked as deliberate with
+`// verify:ok <reason>` within the preceding eight lines. The check stays
+strict, the exception sits at the site and is justified — rather than
+weakening the rule.
 
-Läuft auch ohne Node und ohne PyYAML, überspringt dann die betreffenden
-Prüfungen mit einer Warnung.
+Runs without Node and without PyYAML too, skipping the affected checks with a
+warning.
 
 ### `tool/verify/coverage_report.py`
 
 ```bash
 flutter test --coverage
-python3 tool/verify/coverage_report.py            # ungetestete Dateien zuerst
-python3 tool/verify/coverage_report.py --min 60   # Exit 1 unterhalb der Schwelle
-python3 tool/verify/coverage_report.py --all      # auch screens/ und widgets/
+python3 tool/verify/coverage_report.py            # untested files first
+python3 tool/verify/coverage_report.py --min 60   # exit 1 below the threshold
+python3 tool/verify/coverage_report.py --all      # include screens/ and widgets/
 ```
 
-Blendet standardmäßig `lib/screens/`, `lib/widgets/` und `lib/theme/` aus —
-die lassen sich sinnvoll nur mit Widget-Tests abdecken. Übrig bleibt der
-Teil, der rechnet, und dort ist eine Lücke ein Befund.
+Hides `lib/screens/`, `lib/widgets/` and `lib/theme/` by default — those can
+only sensibly be covered with widget tests. What remains is the part that
+calculates, and a gap there is a finding.
 
-Hintergrund: Bis v0.4.11 war `CardioplegiaSettings` die einzige der drei
-persistierten Einstellungen ohne Tests. Gefunden wurde das beim Durchsehen,
-nicht systematisch — eine Lücke, die man nicht sieht, schließt man nicht.
+Background: until v0.4.11 `CardioplegiaSettings` was the only one of the three
+persisted settings without tests. That was found by chance while reading, not
+systematically — a gap you cannot see is a gap you do not close.
 
 ### `tool/offline/test-serve.ps1`
 
-Startet `serve.ps1` in einer Sandbox und feuert siebzehn Anfragen dagegen:
-erlaubte Pfade, neun Traversal-Varianten, zwei rohe TCP-Anfragen an der
-Client-Normalisierung vorbei, zwei Fälle für fehlende Dateien.
+Starts `serve.ps1` in a sandbox and fires seventeen requests at it: allowed
+paths, nine traversal variants, two raw TCP requests bypassing client-side
+normalisation, two cases for missing files.
 
-**Das Prüfkriterium ist inhaltlich, nicht der Statuscode.** Die erste Fassung
-erwartete für jeden Traversal ein 403 und meldete drei Fehlschläge, die
-keine waren: `Invoke-WebRequest` normalisiert `..` in einer URL, *bevor* die
-Anfrage den Server erreicht. Aus `/../geheim.txt` wird `/geheim.txt`, und
-darauf antwortet der Server korrekt mit 404 — er hat nie einen Traversal
-gesehen.
+**The criterion is content, not the status code.** The first version expected
+403 for every traversal and reported three failures that were none:
+`Invoke-WebRequest` normalises `..` in a URL *before* the request reaches the
+server. `/../secret.txt` becomes `/secret.txt`, and the server correctly
+answers 404 — it never saw a traversal.
 
-Genau deshalb sind die prozentkodierten Varianten die interessanten:
-`%2e%2e%2f` überlebt jede Normalisierung und wird erst im Server durch
-`UnescapeDataString` aufgelöst, dort wo `Get-SafePath` greift.
+That is precisely why the percent-encoded variants are the interesting ones:
+`%2e%2e%2f` survives any normalisation and is only resolved inside the server
+by `UnescapeDataString`, where `Get-SafePath` takes effect.
 
-Geprüft wird daher: Der Inhalt der Datei außerhalb des Wurzelordners darf nie
-in einer Antwort auftauchen. 403 (abgelehnt) und 404 (normalisiert
-angekommen) sind beide in Ordnung; 200 mit dem Marker im Rumpf ist der
-Befund. Die Zieldatei wird **absichtlich angelegt** — sonst sähe ein 404 wie
-ein bestandener Test aus, obwohl der Server bereitwillig hinausgereicht
-hätte.
+What is checked, therefore: the contents of the file outside the root folder
+must never appear in a response. 403 (refused) and 404 (arrived normalised)
+are both fine; 200 with the marker in the body is the finding. The traversal's
+target file is created **on purpose** — otherwise a 404 would look like a
+passing test even though the server would happily have handed the file out.
 
-Ersetzt die manuelle Gegenprobe, die vorher als Kommentar im Kopf von
-`serve.ps1` stand.
+Replaces the manual counter-check that used to sit as a comment in the header
+of `serve.ps1`.
 
-## In der CI
+## In CI
 
-`.github/workflows/checks.yml` läuft bei jedem Push und jedem Pull Request
-auf `main`: `flutter analyze`, `flutter test`, dann die Konsistenzprüfung.
-Bewusst getrennt von `deploy.yml`, damit die Prüfungen auch auf Branches und
-in Forks laufen, ohne den Auslieferungspfad anzufassen.
+`.github/workflows/checks.yml` runs on every push and pull request to `main`:
+`flutter analyze`, `flutter test`, then the consistency check. Deliberately
+separate from `deploy.yml` so the checks also run on branches and in forks
+without touching the delivery path.
 
-Der Traversal-Test läuft dort **nicht** — er braucht Windows. Er gehört vor
-jeden Bundle-Release, lokal.
+The traversal test does **not** run there — it needs Windows. It belongs
+before every bundle release, locally.
 
-## Was diese Werkzeuge nicht können
+## What these tools cannot do
 
-- **Klinische Richtigkeit.** Ob eine Formel stimmt, entscheidet die
-  Primärliteratur. Die Unit-Tests sichern die Umsetzung gegen publizierte
-  Referenzwerte, nicht die Wahl der Formel.
-- **Rendering und Bedienung.** Ob eine Karte lesbar ist, ob eine
-  Benachrichtigung feuert, ob der Screenreader den Banner vorliest — dafür
-  braucht es ein Gerät.
-- **Die Windows-Distribution im Einsatz.** Ob `caddy.exe` auf einem
-  Klinik-PC startet oder von einer Richtlinie blockiert wird, zeigt sich
-  erst dort.
+- **Clinical correctness.** Whether a formula is right is decided by the
+  primary literature. The unit tests guard the implementation against
+  published reference values, not the choice of formula.
+- **Rendering and usability.** Whether a card is readable, whether a
+  notification fires, whether the screen reader announces the banner — that
+  needs a device.
+- **The Windows distribution in the field.** Whether `caddy.exe` starts on a
+  hospital PC or is blocked by policy only shows there.

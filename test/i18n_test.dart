@@ -115,4 +115,33 @@ void main() {
       }
     });
   });
+
+  group('Source notes', () {
+    test('Every source note resolves in both languages', () {
+      // SourceRef.noteKey is a string; a typo would surface in the source
+      // dialog as the bug marker instead of an explanation. These notes used
+      // to be German literals inside the `doi` field, so an English user saw
+      // a German sentence there regardless of the selected language.
+      final keys = Strings.all.keys.where((k) => k.startsWith('src_note_'));
+      expect(keys, isNotEmpty);
+      for (final key in keys) {
+        for (final loc in AppLocale.values) {
+          final value = Strings.of(key, loc);
+          expect(value, isNot(startsWith('\u27e8')), reason: '$key / ${loc.code}');
+          expect(value.trim(), isNotEmpty, reason: '$key / ${loc.code}');
+        }
+      }
+    });
+
+    test('EN and DE differ — a note was actually translated, not copied', () {
+      // Guards against a key pair where the German string was pasted into
+      // both slots. Purely numeric or symbolic notes would be legitimate
+      // exceptions, but there are none among these.
+      for (final key in Strings.all.keys.where((k) => k.startsWith('src_note_'))) {
+        expect(Strings.of(key, AppLocale.en),
+            isNot(Strings.of(key, AppLocale.de)),
+            reason: '$key is identical in both languages');
+      }
+    });
+  });
 }

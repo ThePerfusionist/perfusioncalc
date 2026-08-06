@@ -1,36 +1,34 @@
-# Icon-Quellen
+# Icon sources
 
-Hier liegen die Icon-Varianten aus der Neuerzeugung für Version 8 (das `v8`
-im Dateinamen entspricht dem Cache-Buster `?v=8`, mit dem `anatomy.html` und
-`cannulas.html` das Favicon anfordern).
+The icon variants from the version 8 regeneration (the `v8` in the file name
+matches the cache buster `?v=8` with which `anatomy.html` and `cannulas.html`
+request the favicon).
 
-**Nicht in `pubspec.yaml` als Asset eingetragen** und damit nicht Teil eines
-Builds. Der Ordner ist Ablage, kein Auslieferungspfad.
+**Not listed as an asset in `pubspec.yaml`** and therefore not part of any
+build. This folder is storage, not a delivery path.
 
-## Wichtig: das sind Kopien, kein Original
+## Important: these are copies, not originals
 
-Alle drei Dateien sind **byte-identisch** mit Dateien, die bereits
-ausgeliefert werden:
+All three files are **byte-identical** to files that are already shipped:
 
-| Datei hier | identisch mit |
+| File here | identical to |
 |---|---|
 | `pcalc-icon-v8.png` (32×32) | `web/favicon.png` |
 | `pcalc-icon-v8.ico` | `web/favicon.ico` |
 | `pcalc-icon-v8-192.png` | `web/icons/Icon-192.png` |
 
-Sie lagen bis v0.4.15 in `web/` und wurden von dort seit v0.4.6 in den harten
-Precache aufgenommen — jeder Web-Besucher lud sie bei jedem Deploy neu, ohne
-dass irgendetwas sie je angefordert hätte. Deshalb sind sie hier.
+They used to live in `web/`, and from there they went into the hard precache
+from v0.4.6 onwards — every web visitor downloaded them again on every
+deployment although nothing ever requested them. That is why they are here.
 
-Wer sie löschen möchte, verliert nichts: jedes Byte existiert unverändert
-unter den oben genannten Pfaden. Wer eine echte Icon-Quelle in höherer
-Auflösung sucht, findet sie unter `assets/icon.png` bzw.
-`assets/icon_foreground.png` — daraus erzeugt `flutter_launcher_icons` die
-Plattformvarianten.
+Deleting them loses nothing: every byte exists unchanged at the paths above.
+If you are looking for a genuine icon source at higher resolution, that is
+`assets/icon.png` and `assets/icon_foreground.png`, from which
+`flutter_launcher_icons` generates the platform variants.
 
-## Wenn Icons neu erzeugt werden
+## When icons are regenerated
 
-Den Cache-Buster in `web/anatomy.html`, `web/cannulas.html`,
-`web/privacy.html` und `web/index.html` mit anheben (`?v=8` → `?v=9`), sonst
-zeigen Browser das alte Icon weiter. Die Dateinamen hier sollten dann
-denselben Zähler tragen.
+Raise the cache buster in `web/anatomy.html`, `web/cannulas.html`,
+`web/privacy.html` and `web/index.html` along with them (`?v=8` → `?v=9`),
+otherwise browsers keep showing the old icon. The file names here should
+carry the same counter.

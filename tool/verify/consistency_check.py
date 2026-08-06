@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PerfusionCalc — Konsistenzprüfung
-=================================
+PerfusionCalc — repository consistency check
+============================================
 
-Prüft die Zusicherungen, die `flutter analyze` und `flutter test` NICHT
-abdecken können, weil sie über Dateigrenzen und Sprachgrenzen hinweg gelten:
-Dart gegen YAML, Dart gegen JavaScript, Code gegen Dokumentation.
+Checks the guarantees that `flutter analyze` and `flutter test` CANNOT cover,
+because they hold across file and language boundaries: Dart against YAML,
+Dart against JavaScript, code against documentation.
 
-Jede Prüfung hier steht für einen Fehler, der in dieser Codebasis schon
-einmal aufgetreten ist. Die Nummern verweisen auf PROJECT_STATE.md § 7.
+Every check here stands for a defect that has actually occurred in this
+codebase. The references point to PROJECT_STATE.md § 7.
 
-Aufruf:
+Usage:
     python3 tool/verify/consistency_check.py
-    python3 tool/verify/consistency_check.py --quiet     # nur Fehler
+    python3 tool/verify/consistency_check.py --quiet     # failures only
 
-Beendet mit 0, wenn alles passt, sonst 1.
+Exits 0 when everything passes, otherwise 1.
 """
 
 import glob
@@ -55,7 +55,7 @@ def ok(msg: str) -> None:
 
 def fail(check: str, msg: str) -> None:
     failures.append(f"{check}: {msg}")
-    print(f"  {RED}FEHL{OFF}  {check}")
+    print(f"  {RED}FAIL{OFF}  {check}")
     print(f"        {msg}")
 
 
@@ -73,8 +73,8 @@ def section(title: str) -> None:
 # ═══════════════════════════════════════════════════════════════════════════
 # 1. Versionsnummer an allen drei Stellen gleich
 #    Hintergrund: PROJECT_STATE nennt drei Orte, alles andere leitet ab.
-#    Ein Auseinanderlaufen fällt sonst erst im ausgelieferten PDF auf, das
-#    kAppVersion in die Fußzeile schreibt.
+#    A divergence would otherwise surface only in the delivered PDF, which
+#    writes kAppVersion into its footer.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_version() -> None:
     section("Version")
@@ -85,51 +85,51 @@ def check_version() -> None:
 
     app = re.search(r"const kAppVersion = '([^']+)'", read("lib/main.dart"))
     if not app:
-        return fail("Version", "kAppVersion nicht in lib/main.dart gefunden")
+        return fail("Version", "kAppVersion not found in lib/main.dart")
     if app.group(1) != ver:
         return fail("Version", f"pubspec {ver} != kAppVersion {app.group(1)}")
 
     badge = re.search(r"badge/version-([0-9.]+)-orange", read("README.md"))
     if not badge:
-        return fail("Version", "Versions-Badge nicht in README.md gefunden")
+        return fail("Version", "version badge not found in README.md")
     if badge.group(1) != ver:
         return fail("Version", f"pubspec {ver} != README-Badge {badge.group(1)}")
 
-    ok(f"pubspec, kAppVersion und README-Badge stimmen überein ({ver}+{build})")
+    ok(f"pubspec, kAppVersion and README badge agree ({ver}+{build})")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 2. Test-Badge im README entspricht der tatsächlichen Anzahl
-#    K-2: Eine Zahl in der Dokumentation, die nicht mitwächst, ist derselbe
-#    Fall wie ein Kommentar, der eine überholte Annahme trägt.
+# 2. The test badge in the README matches the actual count
+#    K-2: a number in the documentation that does not grow with the code is
+#    the same case as a comment carrying an outdated assumption.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_test_count() -> None:
-    section("Testanzahl")
+    section("Test count")
     actual = 0
     for f in dart_files("test"):
         with open(f, encoding="utf-8") as fh:
             actual += len(re.findall(r"^\s*test\(", fh.read(), re.M))
     badge = re.search(r"badge/tests-(\d+)%20passing", read("README.md"))
     if not badge:
-        return fail("Testanzahl", "Test-Badge nicht in README.md gefunden")
+        return fail("Test count", "test badge not found in README.md")
     if int(badge.group(1)) != actual:
-        return fail("Testanzahl",
-                    f"README nennt {badge.group(1)}, gezählt wurden {actual}")
-    ok(f"README-Badge und Testdateien stimmen überein ({actual})")
+        return fail("Test count",
+                    f"README says {badge.group(1)}, counted {actual}")
+    ok(f"README badge and test files agree ({actual})")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 3. i18n: Vollständigkeit und keine Karteileichen
-#    NEU-11 / 1.7: Der Paritätstest in Dart prüft EN gegen DE. Was er nicht
-#    sehen kann: ob ein im Code benutzter Schlüssel überhaupt existiert
-#    (dann steht in der App der Bug-Marker) und ob Schlüssel verwaisen.
+# 3. i18n: completeness and no orphans
+#    NEU-11 / 1.7: the Dart parity test checks EN against DE. What it cannot
+#    see: whether a key used in the code exists at all (the app then shows
+#    the bug marker) and whether keys have become orphaned.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_i18n() -> None:
     section("i18n")
     table = set(re.findall(r"^\s*'([a-z0-9_]+)':\s*\{AppLocale",
                            read("lib/i18n/app_strings.dart"), re.M))
     if not table:
-        return fail("i18n", "keine Schlüssel in app_strings.dart gefunden")
+        return fail("i18n", "no keys found in app_strings.dart")
 
     used: set[str] = set()
     for f in dart_files("lib"):
@@ -140,32 +140,32 @@ def check_i18n() -> None:
 
     missing = sorted(used - table)
     if missing:
-        fail("i18n", f"im Code benutzt, aber nicht definiert: {missing}")
+        fail("i18n", f"used in code but not defined: {missing}")
     else:
-        ok(f"alle {len(used)} benutzten Schlüssel sind definiert")
+        ok(f"all {len(used)} keys in use are defined")
 
-    # Karteileichen nur als Warnung: ein Schlüssel kann legitim für einen
-    # noch nicht verdrahteten Screen vorbereitet sein.
+    # Orphans are only a warning: a key may legitimately be prepared for a
+    # screen that is not wired up yet.
     referenced_anywhere: set[str] = set()
     for f in dart_files("lib", "test"):
         with open(f, encoding="utf-8") as fh:
             referenced_anywhere |= set(re.findall(r"'([a-z0-9_]+)'", fh.read()))
     orphans = sorted(table - referenced_anywhere)
     if orphans:
-        warn("i18n", f"{len(orphans)} Schlüssel nirgends referenziert: {orphans[:8]}")
+        warn("i18n", f"{len(orphans)} keys referenced nowhere: {orphans[:8]}")
     else:
-        ok(f"keine verwaisten Schlüssel ({len(table)} insgesamt)")
+        ok(f"no orphaned keys ({len(table)} in total)")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 4. Service-Worker-Platzhalter und die sed-Muster der Workflows
-#    4.1 / N-2 / R-1: sw.js wurde in dieser Codebasis mehrfach umgebaut. Die
-#    beiden Platzhalter sind die Nahtstelle zur CI — passt das sed-Muster
-#    nicht mehr, bricht der Job (gut) oder, ohne Verifikation, liefert er
-#    still einen Worker ohne Cache-Invalidierung aus (schlecht).
+# 4. Service worker placeholders and the sed patterns of the workflows
+#    4.1 / N-2 / R-1: sw.js has been reworked repeatedly. The two
+#    placeholders are the seam to CI — if the sed pattern no longer matches,
+#    the job fails (good) or, without verification, silently ships a worker
+#    without cache invalidation (bad).
 # ═══════════════════════════════════════════════════════════════════════════
 def check_sw_placeholders() -> None:
-    section("Service Worker ↔ CI")
+    section("Service worker ↔ CI")
     sw = read("web/sw.js")
     placeholders = {
         "BUILD_ID": "const BUILD_ID = 'DEV';",
@@ -173,13 +173,13 @@ def check_sw_placeholders() -> None:
     }
     for name, literal in placeholders.items():
         if literal not in sw:
-            fail("SW-Platzhalter", f"{literal!r} steht nicht mehr in web/sw.js")
+            fail("SW placeholder", f"{literal!r} is no longer in web/sw.js")
         else:
-            ok(f"{name}-Platzhalter vorhanden")
+            ok(f"{name} placeholder present")
 
     workflows = sorted(glob.glob(os.path.join(ROOT, ".github/workflows/*.yml")))
     if not workflows:
-        return warn("SW ↔ CI", ".github/ fehlt im Paket - Workflows nicht prüfbar")
+        return warn("SW ↔ CI", ".github/ missing from the package - workflows not checkable")
 
     for wf in workflows:
         with open(wf, encoding="utf-8") as fh:
@@ -188,41 +188,41 @@ def check_sw_placeholders() -> None:
             continue
         name = os.path.basename(wf)
         if "const BUILD_ID = 'DEV';" not in content:
-            fail("SW ↔ CI", f"{name}: sed-Muster für BUILD_ID passt nicht mehr zu sw.js")
+            fail("SW ↔ CI", f"{name}: sed pattern for BUILD_ID no longer matches sw.js")
         elif "const BUILD_ASSETS = \\[\\];" not in content and \
              "const BUILD_ASSETS = [];" not in content:
-            fail("SW ↔ CI", f"{name}: Muster für BUILD_ASSETS passt nicht mehr zu sw.js")
+            fail("SW ↔ CI", f"{name}: pattern for BUILD_ASSETS no longer matches sw.js")
         else:
-            ok(f"{name}: beide Muster passen zu web/sw.js")
+            ok(f"{name}: both patterns match web/sw.js")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 5. JavaScript-Syntax von sw.js
-#    Ein Syntaxfehler hier fällt sonst erst im Browser auf - und der
-#    Service Worker ist genau die Komponente, die offline alles trägt.
+# 5. JavaScript syntax of sw.js
+#    A syntax error here would otherwise surface only in the browser — and
+#    the service worker is exactly the component that carries offline use.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_sw_syntax() -> None:
-    section("sw.js Syntax")
+    section("sw.js syntax")
     try:
         r = subprocess.run(["node", "--check", os.path.join(ROOT, "web/sw.js")],
                            capture_output=True, text=True)
     except FileNotFoundError:
-        return warn("sw.js Syntax", "node nicht installiert - Prüfung übersprungen")
+        return warn("sw.js syntax", "node not installed - check skipped")
     if r.returncode != 0:
-        fail("sw.js Syntax", r.stderr.strip().splitlines()[0] if r.stderr else "node --check fehlgeschlagen")
+        fail("sw.js syntax", r.stderr.strip().splitlines()[0] if r.stderr else "node --check failed")
     else:
-        ok("node --check bestanden")
+        ok("node --check passed")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 6. Gesamtbericht deckt alle Rechen-Tabs ab
-#    B-1: Die Kandidatenliste war eine handgepflegte Kopie der Tabreihenfolge.
-#    Der Dart-Test prüft Anzahl und Reihenfolge; hier prüfen wir zusätzlich,
-#    dass jeder Screen mit PDF-Sektionen auch tatsächlich eingebunden ist -
-#    das kann der Dart-Test nicht sehen.
+# 6. The combined report covers every calculating tab
+#    B-1: the candidate list was a hand-maintained copy of the tab order. The
+#    Dart test checks count and order; here we additionally check that every
+#    screen with PDF sections is actually wired in — which the Dart test
+#    cannot see.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_combined_report() -> None:
-    section("Gesamtbericht")
+    section("Combined report")
     builders = set()
     for f in dart_files("lib/screens"):
         with open(f, encoding="utf-8") as fh:
@@ -231,27 +231,27 @@ def check_combined_report() -> None:
     used = set(re.findall(r"(build\w+PdfSections)\(", main))
     forgotten = sorted(builders - used)
     if forgotten:
-        fail("Gesamtbericht",
-             f"Screens mit PDF-Sektionen, die im Gesamtbericht fehlen: {forgotten}")
+        fail("Combined report",
+             f"screens with PDF sections missing from the combined report: {forgotten}")
     else:
-        ok(f"alle {len(builders)} PDF-Bauer sind im Gesamtbericht eingebunden")
+        ok(f"all {len(builders)} PDF builders are wired into the combined report")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 7. Vorbelegte Werte dürfen nicht ungefiltert ins PDF
-#    C-1: Ein Wert aus einer Einstellung ist IMMER gesetzt. Ungefiltert in
-#    eine PDF-Zeile geschrieben, macht er den Tab für den "nur gefüllte
-#    Tabs"-Filter dauerhaft nicht-leer - der Tab liegt dann jedem Bericht bei.
+# 7. Default values must not reach the PDF unfiltered
+#    C-1: a value from a setting is ALWAYS present. Written into a PDF row
+#    unfiltered, it makes the tab permanently non-empty for the "only filled
+#    tabs" filter — the tab is then attached to every report.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_defaults_not_in_pdf() -> None:
-    section("Vorbelegungen im PDF")
+    section("Defaults in the PDF")
     suspicious = []
     for f in dart_files("lib/screens"):
         with open(f, encoding="utf-8") as fh:
             src = fh.read()
         if "PdfSection" not in src:
             continue
-        # Namen lokaler Variablen, die aus einer Einstellung stammen
+        # Names of local variables that originate from a setting
         setting_vars = set(re.findall(r"final\s+(\w+)\s*=\s*\w*Settings\.instance\.\w+", src))
         if not setting_vars:
             continue
@@ -259,33 +259,34 @@ def check_defaults_not_in_pdf() -> None:
             val = m.group(1).strip()
             if val not in setting_vars:
                 continue
-            # Dokumentierte Ausnahme: eine Zeile darf einen Einstellungswert
-            # tragen, wenn sie ohnehin nur bei vorhandener Eingabe entsteht -
-            # etwa innerhalb eines `if (delNido) ...[`. Der Checker kann das
-            # nicht zuverlaessig parsen, deshalb wird die Ausnahme am Ort (in den
-            # acht Zeilen davor) begruendet statt die Pruefung aufzuweichen.
+            # Documented exception: a row may carry a setting value when it
+            # only comes into existence if input is present anyway — for
+            # instance inside an `if (delNido) ...[`. The checker cannot
+            # parse that reliably, so the exception is justified at the site
+            # (within the preceding eight lines) rather than weakening the
+            # check.
             preceding = src[:m.start()].splitlines()[-8:]
             if any("verify:ok" in line for line in preceding):
                 continue
             line_no = src[:m.start()].count("\n") + 1
             suspicious.append(
-                f"{os.path.basename(f)}:{line_no}: value: {val} (aus einer Einstellung, ungefiltert)")
+                f"{os.path.basename(f)}:{line_no}: value: {val} (from a setting, unfiltered)")
     if suspicious:
         for s in suspicious:
-            fail("Vorbelegung im PDF",
-                 s + "\n        → resultIf(...) verwenden, oder die Zeile mit"
-                     "\n          `// verify:ok <Begruendung>` als bewusste Ausnahme markieren")
+            fail("Default in the PDF",
+                 s + "\n        → use resultIf(...), or mark the line with"
+                     "\n          `// verify:ok <reason>` as a deliberate exception")
     else:
-        ok("keine Einstellungswerte ungefiltert in PDF-Zeilen")
+        ok("no setting values written unfiltered into PDF rows")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 8. Listener werden wieder abgemeldet
-#    Jedes addListener in einer State-Klasse braucht ein removeListener in
-#    dispose(), sonst hält der Singleton den zerstörten State am Leben.
+#    Every addListener in a State class needs a removeListener in dispose(),
+#    otherwise the singleton keeps the destroyed state alive.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_listeners() -> None:
-    section("Listener")
+    section("Listeners")
     problems = []
     for f in dart_files("lib"):
         with open(f, encoding="utf-8") as fh:
@@ -296,15 +297,15 @@ def check_listeners() -> None:
             problems.append(f"{os.path.relpath(f, ROOT)}: {add}x addListener, {rem}x removeListener")
     if problems:
         for p in problems:
-            fail("Listener", p)
+            fail("Listeners", p)
     else:
-        ok("addListener und removeListener sind in jeder Datei paarig")
+        ok("addListener and removeListener are paired in every file")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 9. Keine dynamischen Casts, kein print()
-#    D-1: `as List<List<String>>` auf einer Map<String, dynamic> fällt erst
-#    zur Laufzeit auf. print() statt debugPrint landet im Release-Log.
+# 9. No dynamic casts, no print()
+#    D-1: `as List<List<String>>` on a Map<String, dynamic> only surfaces at
+#    runtime. print() instead of debugPrint ends up in the release log.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_code_hygiene() -> None:
     section("Hygiene")
@@ -318,47 +319,48 @@ def check_code_hygiene() -> None:
                 if re.search(r"(?<![\w.])print\(", code):
                     prints.append(f"{os.path.relpath(f, ROOT)}:{n}")
     if casts:
-        warn("Hygiene", f"Casts auf Basistypen: {casts}")
+        warn("Hygiene", f"casts to base types: {casts}")
     else:
-        ok("keine Casts auf Basistypen in lib/")
+        ok("no casts to base types in lib/")
     if prints:
-        fail("Hygiene", f"print() statt debugPrint(): {prints}")
+        fail("Hygiene", f"print() instead of debugPrint(): {prints}")
     else:
-        ok("kein nacktes print() in lib/")
+        ok("no bare print() in lib/")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 10. Datenschutzerklärung: beide Fassungen im Gleichstand
-#     Block A: privacy_policy.md und web/privacy.html müssen zusammen
-#     geändert werden. Geprüft wird das Datum und die Abschnittszahl.
+# 10. Privacy policy: both versions in step
+#     Block A: privacy_policy.md and web/privacy.html have to be changed
+#     together. The date and the section count are checked.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_privacy_pair() -> None:
-    section("Datenschutzerklärung")
+    section("Privacy policy")
     md = read("privacy_policy.md")
     html = read("web/privacy.html")
     d_md = re.search(r"Stand / Last updated:\*\*\s*([0-9.]+)", md)
     d_html = re.search(r"Stand:\s*([0-9.]+)", html)
     if not d_md or not d_html:
-        return warn("Datenschutz", "Datum in einer der beiden Fassungen nicht gefunden")
+        return warn("Privacy policy", "date not found in one of the two versions")
     if d_md.group(1) != d_html.group(1):
-        fail("Datenschutz",
-             f"privacy_policy.md ({d_md.group(1)}) und web/privacy.html "
-             f"({d_html.group(1)}) tragen verschiedene Stände")
+        fail("Privacy policy",
+             f"privacy_policy.md ({d_md.group(1)}) and web/privacy.html "
+             f"({d_html.group(1)}) carry different dates")
     else:
-        ok(f"beide Fassungen tragen denselben Stand ({d_md.group(1)})")
+        ok(f"both versions carry the same date ({d_md.group(1)})")
 
     n_md = len(re.findall(r"^## \d+\.", md, re.M)) // 2   # DE + EN
     n_html = len(re.findall(r"<h2>\d+\.", html)) // 2
     if n_md != n_html:
-        fail("Datenschutz", f"{n_md} Abschnitte in der Markdown-Fassung, {n_html} in der HTML-Fassung")
+        fail("Privacy policy",
+             f"{n_md} sections in the Markdown version, {n_html} in the HTML version")
     else:
-        ok(f"beide Fassungen haben {n_md} Abschnitte je Sprache")
+        ok(f"both versions have {n_md} sections per language")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 11. Standalone-HTML-Seiten tragen eine CSP
-#     K-3: Sie liegen im harten Precache und werden offline auf
-#     Klinikgeräten ausgeliefert.
+# 11. Standalone HTML pages carry a CSP
+#     K-3: they sit in the hard precache and are served offline on clinical
+#     devices.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_html_csp() -> None:
     section("CSP")
@@ -368,28 +370,28 @@ def check_html_csp() -> None:
             if "Content-Security-Policy" not in fh.read():
                 missing.append(os.path.basename(f))
     if missing:
-        fail("CSP", f"HTML-Seiten ohne Content-Security-Policy: {missing}")
+        fail("CSP", f"HTML pages without a Content-Security-Policy: {missing}")
     else:
-        ok("alle Seiten in web/ tragen eine CSP")
+        ok("every page in web/ carries a CSP")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 12. Unreferenzierte Dateien in web/
-#     Alles in web/ wandert in den Build und seit v0.4.6 in den HARTEN
-#     Precache - jeder Besucher lädt es bei jedem Deploy neu. Eine Datei,
-#     die niemand anfordert, ist damit nicht nur totes Gewicht, sondern
-#     Gewicht mit Wiederholung.
+#     Everything in web/ goes into the build and, since v0.4.6, into the
+#     HARD precache — every visitor downloads it again on every deployment.
+#     A file nobody requests is therefore not just dead weight but repeated
+#     dead weight.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_unreferenced_web_files() -> None:
     section("Dateien in web/")
     web = os.path.join(ROOT, "web")
     if not os.path.isdir(web):
-        return warn("web/", "Verzeichnis nicht gefunden")
+        return warn("web/", "directory not found")
 
-    # Immer benötigt, auch ohne Referenz im Quelltext.
+    # Always needed, even without a reference in the source.
     always = {"index.html", "manifest.json", "sw.js", "CNAME", "favicon.ico"}
 
-    # Suchraum: alles, was einen Dateinamen nennen könnte.
+    # Search space: everything that could name a file.
     haystack = ""
     for pattern in ("web/*.html", "web/*.js", "web/*.json", "lib/**/*.dart",
                     ".github/workflows/*.yml"):
@@ -397,12 +399,11 @@ def check_unreferenced_web_files() -> None:
             with open(f, encoding="utf-8", errors="replace") as fh:
                 haystack += fh.read()
 
-    # Inhaltsgleiche Dateien mitmelden. Das war der Fall bei den drei
-    # pcalc-icon-v8-Dateien: keine Quellbilder, sondern byte-identische
-    # Kopien von favicon.png, favicon.ico und icons/Icon-192.png -
-    # Ueberbleibsel einer Icon-Neuerzeugung. Der Hinweis "identisch mit X"
-    # macht aus einer vagen Warnung eine Entscheidungsgrundlage: eine Kopie
-    # kann weg, ein Original muss umziehen.
+    # Report identical files too. That was the case with the three
+    # pcalc-icon-v8 files: not source images but byte-identical copies of
+    # favicon.png, favicon.ico and icons/Icon-192.png — leftovers from an
+    # icon regeneration. The hint "identical to X" turns a vague warning
+    # into a basis for a decision: a copy can go, an original has to move.
     by_hash: dict[str, list[str]] = {}
     for f in glob.glob(os.path.join(web, "**", "*"), recursive=True):
         if os.path.isdir(f):
@@ -417,46 +418,46 @@ def check_unreferenced_web_files() -> None:
     orphans = []
     for f in sorted(glob.glob(os.path.join(web, "*"))):
         if os.path.isdir(f):
-            continue                      # assets/ und icons/ erzeugt Flutter
+            continue                      # assets/ and icons/ come from Flutter
         name = os.path.basename(f)
         if name in always:
             continue
-        # Query-Strings (?v=9) abstreifen, indem nur der Name gesucht wird.
+        # Query strings (?v=9) are stripped by searching for the name only.
         if name in haystack:
             continue
         kb = os.path.getsize(f) / 1024
         with open(os.path.join(web, name), "rb") as fh:
             digest = hashlib.md5(fh.read()).hexdigest()
         twins = [t for t in by_hash.get(digest, []) if t != name]
-        note = f" — inhaltsgleich mit {', '.join(twins)}" if twins else ""
+        note = f" — identical to {', '.join(twins)}" if twins else ""
         orphans.append(f"{name} ({kb:.0f} KB){note}")
 
     if orphans:
-        warn("web/", "von nirgends referenziert, landen aber im Precache:\n        "
+        warn("web/", "referenced nowhere, yet end up in the precache:\n        "
                      + "\n        ".join(orphans))
     else:
-        ok("jede Datei in web/ wird auch referenziert")
+        ok("every file in web/ is referenced somewhere")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 13. Jede Laufzeitabhängigkeit steht in der Data-Safety-SDK-Tabelle
-#     Google rechnet Daten, die ein eingebundenes SDK überträgt, der App zu.
-#     Die Angabe "keine Datenerhebung" im Play-Formular gilt also immer nur
-#     für den Stand der Abhängigkeitsliste. Kommt ein Paket dazu, das etwas
-#     sendet, wird die Angabe falsch — ohne dass jemand etwas Falsches getan
-#     hätte. Diese Prüfung erzwingt eine bewusste Zeile pro Paket, statt auf
-#     ein Erinnern zu bauen.
+# 13. Every runtime dependency appears in the Data safety SDK table
+#     Google attributes data transmitted by an embedded SDK to the app. The
+#     "no data collected" declaration in the Play form therefore only holds
+#     for the current dependency list. If a package that sends something is
+#     added, the declaration becomes false — without anybody having done
+#     anything wrong. This check forces one deliberate line per package
+#     instead of relying on memory.
 # ═══════════════════════════════════════════════════════════════════════════
 def check_sdk_table() -> None:
-    section("Data-Safety-SDK-Tabelle")
+    section("Data safety SDK table")
     doc_rel = "docs/PLAY_DATA_SAFETY.md"
     doc_path = os.path.join(ROOT, doc_rel)
     if not os.path.exists(doc_path):
-        return warn("SDK-Tabelle", f"{doc_rel} nicht gefunden")
+        return warn("SDK table", f"{doc_rel} not found")
     try:
         import yaml
     except ImportError:
-        return warn("SDK-Tabelle", "PyYAML nicht installiert - Prüfung übersprungen")
+        return warn("SDK table", "PyYAML not installed - check skipped")
 
     pub = yaml.safe_load(read("pubspec.yaml"))
     deps = [d for d in (pub.get("dependencies") or {}) if d != "flutter"]
@@ -464,33 +465,33 @@ def check_sdk_table() -> None:
 
     missing = [d for d in deps if f"`{d}`" not in doc]
     if missing:
-        fail("SDK-Tabelle",
-             f"nicht in {doc_rel} aufgeführt: {missing}\n"
-             f"        → In der Paketdokumentation nachsehen, ob es Daten vom\n"
-             f"          Gerät sendet, und eine Zeile in der SDK-Tabelle ergänzen.\n"
-             f"          Bei 'ja' muss auch das Play-Formular geändert werden.")
+        fail("SDK table",
+             f"not listed in {doc_rel}: {missing}\n"
+             f"        → check the package documentation for whether it sends\n"
+             f"          data off the device and add a row to the SDK table.\n"
+             f"          If it does, the Play form has to change as well.")
     else:
-        ok(f"alle {len(deps)} Laufzeitabhängigkeiten sind in {doc_rel} bewertet")
+        ok(f"all {len(deps)} runtime dependencies are assessed in {doc_rel}")
 
-    # Umgekehrt: eine Zeile für ein längst entferntes Paket ist irreführend,
-    # aber kein Fehler.
+    # The reverse: a row for a package that has long been removed is
+    # misleading, but not an error.
     listed = set(re.findall(r"^\| `([a-z0-9_]+)` \|", doc, re.M))
     stale = sorted(listed - set(deps))
     if stale:
-        warn("SDK-Tabelle", f"in {doc_rel} bewertet, aber nicht mehr in "
-                            f"pubspec.yaml: {stale}")
+        warn("SDK table", f"assessed in {doc_rel} but no longer in "
+                          f"pubspec.yaml: {stale}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 14. pubspec.lock passt zu den Constraints in pubspec.yaml
-#     Beim Anheben von file_picker auf ^11.0.3 blieb die Sperrdatei zunächst
-#     auf 8.3.7 stehen — lokal fällt das sofort auf, weil `flutter pub get`
-#     sie neu schreibt, aber ein Paket oder ein Commit kann die alte Fassung
-#     mitschleppen. Dann baut die CI gegen andere Versionen als die
-#     Entwicklungsmaschine, und genau das soll die Sperrdatei verhindern.
+# 14. pubspec.lock satisfies the constraints in pubspec.yaml
+#     When file_picker was raised to ^11.0.3 the lock file initially stayed
+#     at 8.3.7 — locally that surfaces at once because `flutter pub get`
+#     rewrites it, but a package or a commit can carry the old version
+#     along. CI would then build against different versions than the
+#     development machine, which is precisely what a lock file prevents.
 # ═══════════════════════════════════════════════════════════════════════════
 def _satisfies(version: str, constraint: str) -> bool | None:
-    """True/False, oder None wenn die Constraint-Form nicht geprüft wird."""
+    """True/False, or None when the constraint form is not evaluated."""
     def parse(v: str) -> tuple[int, ...]:
         core = v.split("+")[0].split("-")[0]
         return tuple(int(x) for x in core.split(".") if x.isdigit())
@@ -499,7 +500,7 @@ def _satisfies(version: str, constraint: str) -> bool | None:
     if constraint in ("any", ""):
         return True
     if not constraint.startswith("^"):
-        return None                      # Bereiche etc. hier nicht bewertet
+        return None                      # ranges etc. are not evaluated here
     try:
         low = parse(constraint[1:])
         cur = parse(version)
@@ -507,7 +508,7 @@ def _satisfies(version: str, constraint: str) -> bool | None:
         return None
     if cur < low:
         return False
-    # Caret: bis zur nächsten Major (bzw. Minor, wenn Major 0 ist)
+    # Caret: up to the next major (or minor, when the major is 0)
     if low and low[0] > 0:
         return cur[0] == low[0]
     if len(low) > 1:
@@ -520,15 +521,15 @@ def check_lockfile() -> None:
     try:
         import yaml
     except ImportError:
-        return warn("pubspec.lock", "PyYAML nicht installiert - Prüfung übersprungen")
+        return warn("pubspec.lock", "PyYAML not installed - check skipped")
 
-    # Fehlt die Sperrdatei ganz, ist das kein Fehler, sondern ein noch nicht
-    # ausgeführtes `flutter pub get` - etwa direkt nach dem Auspacken eines
-    # Pakets, das sie bewusst nicht enthält (siehe PROJECT_STATE § 7.23).
+    # A missing lock file is not an error but a `flutter pub get` that has
+    # not been run yet — for instance right after unpacking a package that
+    # deliberately omits it (see PROJECT_STATE § 7.23).
     if not os.path.exists(os.path.join(ROOT, "pubspec.lock")):
         return warn("pubspec.lock",
-                    "nicht vorhanden - `flutter pub get` ausführen; die dabei "
-                    "erzeugte\n        Sperrdatei gehört in den Commit.")
+                    "not present - run `flutter pub get`; the lock file it\n"
+                    "        writes belongs in the commit.")
 
     pub = yaml.safe_load(read("pubspec.yaml"))
     lock = yaml.safe_load(read("pubspec.lock"))
@@ -540,44 +541,44 @@ def check_lockfile() -> None:
             continue
         entry = packages.get(name)
         if not entry:
-            problems.append(f"{name}: in pubspec.yaml, aber nicht in pubspec.lock")
+            problems.append(f"{name}: in pubspec.yaml but not in pubspec.lock")
             continue
         version = str(entry.get("version", ""))
         verdict = _satisfies(version, constraint)
         if verdict is None:
             unchecked += 1
         elif not verdict:
-            problems.append(f"{name}: gesperrt auf {version}, verlangt ist {constraint}")
+            problems.append(f"{name}: locked at {version}, required is {constraint}")
 
     if problems:
         fail("pubspec.lock",
              "\n        ".join(problems)
-             + "\n        → `flutter pub get` ausführen und die neu geschriebene"
-               "\n          pubspec.lock mit committen.")
+             + "\n        → run `flutter pub get` and commit the rewritten"
+               "\n          pubspec.lock.")
     else:
-        note = f", {unchecked} nicht bewertbar" if unchecked else ""
-        ok(f"alle gesperrten Versionen erfüllen ihre Constraints{note}")
+        note = f", {unchecked} not evaluated" if unchecked else ""
+        ok(f"all locked versions satisfy their constraints{note}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 15. Workflows: YAML gültig, Shell-Blöcke syntaktisch korrekt
+# 15. Workflows: valid YAML, syntactically correct shell blocks
 # ═══════════════════════════════════════════════════════════════════════════
 def check_workflows() -> None:
     section("Workflows")
     files = sorted(glob.glob(os.path.join(ROOT, ".github/workflows/*.yml")))
     if not files:
-        return warn("Workflows", ".github/ fehlt im Paket")
+        return warn("Workflows", ".github/ missing from the package")
     try:
         import yaml  # noqa
     except ImportError:
-        return warn("Workflows", "PyYAML nicht installiert - Prüfung übersprungen")
+        return warn("Workflows", "PyYAML not installed - check skipped")
     import yaml
     for wf in files:
         name = os.path.basename(wf)
         try:
             doc = yaml.safe_load(open(wf, encoding="utf-8"))
         except Exception as e:
-            fail("Workflows", f"{name}: ungültiges YAML - {e}")
+            fail("Workflows", f"{name}: invalid YAML - {e}")
             continue
         bad = []
         for job in (doc.get("jobs") or {}).values():
@@ -588,13 +589,13 @@ def check_workflows() -> None:
                     if r.returncode != 0:
                         bad.append(step.get("name", "?"))
         if bad:
-            fail("Workflows", f"{name}: Shell-Syntaxfehler in {bad}")
+            fail("Workflows", f"{name}: shell syntax errors in {bad}")
         else:
-            ok(f"{name}: YAML gültig, alle run-Blöcke syntaktisch korrekt")
+            ok(f"{name}: valid YAML, all run blocks syntactically correct")
 
 
 def main() -> int:
-    print(f"\n{DIM}PerfusionCalc — Konsistenzprüfung{OFF}")
+    print(f"\n{DIM}PerfusionCalc — repository consistency check{OFF}")
     print(f"{DIM}Repository: {ROOT}{OFF}")
     for check in (check_version, check_test_count, check_i18n,
                   check_sw_placeholders, check_sw_syntax, check_combined_report,
@@ -604,16 +605,16 @@ def main() -> int:
                   check_lockfile, check_workflows):
         try:
             check()
-        except Exception as e:  # eine kaputte Prüfung darf den Lauf nicht abbrechen
-            fail(check.__name__, f"Prüfung selbst fehlgeschlagen: {e}")
+        except Exception as e:  # a broken check must not abort the run
+            fail(check.__name__, f"check itself failed: {e}")
 
     print()
     if failures:
-        print(f"{RED}{len(failures)} Fehler{OFF}"
-              + (f", {len(warnings)} Warnungen" if warnings else ""))
+        print(f"{RED}{len(failures)} failure(s){OFF}"
+              + (f", {len(warnings)} warning(s)" if warnings else ""))
         return 1
-    print(f"{GREEN}Alle Prüfungen bestanden{OFF}"
-          + (f", {len(warnings)} Warnungen" if warnings else ""))
+    print(f"{GREEN}All checks passed{OFF}"
+          + (f", {len(warnings)} warning(s)" if warnings else ""))
     return 0
 
 

@@ -1,26 +1,27 @@
-# PerfusionCalc – Automatischer Android-Release
+# PerfusionCalc – automated Android release
 #
-# TRIGGER: Ein annotierter Git-Tag mit dem Muster "v*" auf main.
+# TRIGGER: an annotated git tag matching "v*" on main.
 #   git tag -a v0.2.1 -m "Release v0.2.1"
 #   git push origin v0.2.1
 #
-# ERGEBNIS: GitHub-Release mit APK (Direktinstall) UND AAB (Play Store) als Assets.
-#   APK-Dateiname:  PerfusionCalc-v0.2.1.apk
-#   AAB-Dateiname:  PerfusionCalc-v0.2.1.aab
-#   Release-Notes:  automatisch aus Commits seit dem letzten Tag.
+# RESULT: a GitHub release with the APK (direct install) AND the AAB (Play
+# Store) as assets.
+#   APK file name:  PerfusionCalc-v0.2.1.apk
+#   AAB file name:  PerfusionCalc-v0.2.1.aab
+#   Release notes:  generated from the commits since the previous tag.
 #
-# SIGNIERUNG:
-#   Dieser Workflow verlangt ZWINGEND release-signing. Fehlt KEYSTORE_BASE64,
-#   bricht der Job sofort ab, statt still debug-signierte Artefakte unter dem
-#   Release-Namen zu veroeffentlichen (Play lehnt die ab, ein sideloadbares
-#   APK sieht dagegen echt aus). Der Gradle-Fallback auf den Debug-Key greift
-#   dadurch nur noch bei lokalen Builds ohne key.properties.
-#   Secrets im Repo unter Settings → Secrets and variables → Actions anlegen:
-#     KEYSTORE_BASE64   – base64-kodierter JKS-Keystore
+# SIGNING:
+#   This workflow REQUIRES release signing. If KEYSTORE_BASE64 is missing the
+#   job aborts immediately rather than quietly publishing debug-signed
+#   artefacts under a release name (Play rejects those, but a sideloadable
+#   APK looks genuine). The Gradle fallback to the debug key therefore only
+#   applies to local builds without key.properties.
+#   Create the secrets under Settings → Secrets and variables → Actions:
+#     KEYSTORE_BASE64   – base64-encoded JKS keystore
 #                         (openssl base64 -in release.keystore | tr -d '\n')
-#     KEY_ALIAS         – Alias des Schlüssels im Keystore
-#     KEY_PASSWORD      – Passwort des privaten Schlüssels
-#     STORE_PASSWORD    – Passwort des Keystores
+#     KEY_ALIAS         – alias of the key inside the keystore
+#     KEY_PASSWORD      – password of the private key
+#     STORE_PASSWORD    – password of the keystore
 
 name: Android Release
 
@@ -34,12 +35,12 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # Siehe deploy.yml - Toolchain gepinnt, damit derselbe Tag zweimal gebaut
-  # dasselbe Ergebnis liefert. Bei einer klinischen App muss die Frage
-  # "welche Toolchain hat dieses APK gebaut" beantwortbar sein.
+  # See deploy.yml — the toolchain is pinned so that building the same tag
+  # twice yields the same result. For a clinical app the question "which
+  # toolchain built this APK" has to be answerable.
   FLUTTER_VERSION: '3.44.8'
-  # Von android/app/build.gradle.kts ausgewertet: kein stiller Rueckfall auf
-  # den Debug-Key im Release-Build.
+  # Evaluated by android/app/build.gradle.kts: no silent fallback to the
+  # debug key in a release build.
   PERFUSIONCALC_REQUIRE_RELEASE_SIGNING: 'true'
 
 jobs:
@@ -84,10 +85,10 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      # ── 5. Signing-Keystore vorbereiten (optional) ────────────────────
-      # KEYSTORE_BASE64 ist Pflicht: ein Release-Tag darf keine debug-
-      # signierten Artefakte erzeugen. Fehlt das Secret, bricht der Job hier
-      # ab, bevor irgendetwas gebaut wird.
+      # ── 5. Prepare the signing keystore ───────────────────────────────
+      # KEYSTORE_BASE64 is mandatory: a release tag must not produce
+      # debug-signed artefacts. If the secret is missing the job aborts here,
+      # before anything is built.
       - name: Decode keystore & write key.properties
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -122,47 +123,46 @@ jobs:
       - name: Build release AAB
         run: flutter build appbundle --release
 
-      # ── 8. Offline-Webapp für Windows-PCs ohne Internet ───────────────
-      # Bewusst im selben Job wie APK/AAB: ein zweiter Workflow, der
-      # parallel dasselbe Release anlegen will, ist ein Wettlauf – dabei
-      # ging das Paket verloren. Ein Job, ein Release, alle Dateien.
+      # ── 8. Offline web app for Windows PCs without internet ───────────
+      # Deliberately in the same job as APK/AAB: a second workflow trying to
+      # create the same release in parallel is a race — and the package got
+      # lost that way. One job, one release, all files.
       #
-      # --no-web-resources-cdn ist für den Offline-Betrieb zwingend, sonst
-      # lädt die App CanvasKit von einem CDN und bleibt ohne Internet leer.
+      # --no-web-resources-cdn is mandatory for offline operation, otherwise
+      # the app loads CanvasKit from a CDN and stays blank without internet.
       - name: Build offline web app
         run: |
-          # --pwa-strategy=none ist ZWINGEND und nicht optional:
-          # 'offline-first' laesst Flutter ein eigenes flutter_service_worker.js
-          # erzeugen, das flutter_bootstrap.js beim Start registriert - im
-          # selben Scope '/' wie unser web/sw.js. Zwei Registrierungen fuer
-          # einen Scope koennen nicht koexistieren, die spaetere ersetzt die
-          # fruehere. Online faellt das nicht auf, weil beide aus dem Netz
-          # liefern; OFFLINE bricht die App ab (ERR_INTERNET_DISCONNECTED,
-          # main.dart.js und canvaskit bleiben 'pending', weil unser gerade
-          # verdraengter Worker seine respondWith-Promises nie aufloest).
-          # Unser sw.js uebernimmt das Caching vollstaendig - Flutter braucht
-          # dafuer keinen zweiten Worker.
+          # --pwa-strategy=none is MANDATORY, not optional:
+          # 'offline-first' makes Flutter generate its own
+          # flutter_service_worker.js, which flutter_bootstrap.js registers at
+          # start-up — in the same scope '/' as our web/sw.js. Two
+          # registrations for one scope cannot coexist; the later one replaces
+          # the earlier. Online this goes unnoticed because both serve from the
+          # network; OFFLINE the app breaks (ERR_INTERNET_DISCONNECTED,
+          # main.dart.js and canvaskit stay 'pending' because our just-evicted
+          # worker never resolves its respondWith promises). Our sw.js handles
+          # the caching entirely — Flutter needs no second worker for it.
           flutter build web --release \
             --no-web-resources-cdn \
             --base-href / \
             --pwa-strategy=none
 
-      # Zwei Ersetzungen im ausgelieferten sw.js:
+      # Two substitutions in the shipped sw.js:
       #
-      #   BUILD_ID      koppelt den Cache-Namen an den Commit (Audit 4.1).
-      #                 Ohne ihn aendert sich der Cache-Name nie und Nutzer
-      #                 laufen unbegrenzt auf einem alten klinischen Build.
-      #   BUILD_ASSETS  die vollstaendige Precache-Liste aus build/web.
-      #                 Noetig, WEIL der Cache-Name am Commit haengt: jeder
-      #                 Deploy legt einen leeren Cache an, der alte wird in
-      #                 activate() geloescht. Was nicht im Precache steht und
-      #                 vom bereits geladenen Tab nicht erneut angefragt
-      #                 wird, fehlt danach - genau so ist main.dart.js
-      #                 offline verloren gegangen.
+      #   BUILD_ID      ties the cache name to the commit (audit 4.1).
+      #                 Without it the cache name never changes and users run
+      #                 indefinitely on an old clinical build.
+      #   BUILD_ASSETS  the complete precache list from build/web. Needed
+      #                 BECAUSE the cache name depends on the commit: every
+      #                 deployment creates an empty cache and the old one is
+      #                 deleted in activate(). Anything not in the precache
+      #                 that the already-loaded tab does not request again is
+      #                 missing afterwards — that is exactly how main.dart.js
+      #                 got lost offline.
       #
-      # Beide Ersetzungen werden geprueft und brechen den Job ab, wenn sie
-      # nicht greifen. Ein stilles Fehlschlagen waere unsichtbar und wuerde
-      # den Fehler wieder einfuehren, den dieser Schritt behebt.
+      # Both substitutions are verified and fail the job if they do not take
+      # effect. A silent failure would be invisible and would reintroduce the
+      # very defect this step fixes.
       - name: Stamp service worker build id and precache list
         run: |
           set -euo pipefail
@@ -181,31 +181,32 @@ jobs:
           sw_path = sys.argv[1]
           root = 'build/web'
 
-          # Bereits in CORE_SHELL, dort mit ?v=9 - so fragt die App sie auch
-          # an. Ohne diesen Ausschluss laegen sie doppelt im Cache.
+          # Already in CORE_SHELL, there with ?v=9 — which is how the app
+          # requests them. Without this exclusion they would sit in the cache
+          # twice.
           skip_exact = {
               'sw.js', 'CNAME', 'index.html', 'manifest.json',
               'favicon.ico', 'favicon.png', 'apple-touch-icon.png',
           }
 
-          # Dateien, die der Browser NIE anfragt. Ohne diese Ausschluesse lag
-          # der Precache bei 45,5 MB, waehrend der Offline-Betrieb tatsaechlich
-          # 10,7 MB brauchte - jeder Besucher haette bei jedem Deploy das
-          # Vierfache geladen. Auf einem Klinik-Tablet ueber Mobilfunk zaehlt
-          # das.
+          # Files the browser NEVER requests. Without these exclusions the
+          # precache sat at 45.5 MB while offline operation actually needed
+          # 10.7 MB — every visitor would have downloaded four times the
+          # amount on every deployment. On a clinical tablet over cellular
+          # that matters.
           #
-          #   .map / .symbols  Debug-Artefakte zum Entschluesseln von
-          #                    Stacktraces. Flutter legt neben jede
-          #                    CanvasKit-Variante eine .symbols-Datei; zur
-          #                    Laufzeit wird keine davon geladen.
+          #   .map / .symbols  debug artefacts for symbolising stack traces.
+          #                    Flutter puts a .symbols file next to every
+          #                    CanvasKit variant; none of them is loaded at
+          #                    runtime.
           #   experimental_webparagraph/
-          #                    experimentelle Renderer-Variante, wird nur mit
-          #                    gesetztem Flag geladen.
+          #                    experimental renderer variant, loaded only
+          #                    with a flag set.
           #
-          # Die uebrigen Renderer-Varianten (canvaskit/, canvaskit/chromium/,
-          # skwasm, skwasm_heavy, wimp) bleiben BEWUSST drin: welche greift,
-          # entscheidet erst der Browser zur Laufzeit. Offline-Robustheit ueber
-          # verschiedene Browser hinweg ist hier mehr wert als ein paar MB.
+          # The remaining renderer variants (canvaskit/, canvaskit/chromium/,
+          # skwasm, skwasm_heavy, wimp) stay in DELIBERATELY: which one
+          # applies is decided by the browser at runtime. Offline robustness
+          # across browsers is worth more here than a few MB.
           skip_suffix = ('.map', '.symbols')
           skip_prefix = ('icons/', 'canvaskit/experimental_webparagraph/')
 
@@ -226,8 +227,9 @@ jobs:
                   total += size
           assets.sort()
 
-          # Sicherung gegen einen leeren oder halben Build: ohne ein
-          # Haupt-Bundle waere der Precache wertlos und offline erneut kaputt.
+          # Safeguard against an empty or half-finished build: without a
+          # main bundle the precache would be worthless and offline broken
+          # again.
           entry_points = [a for a in assets
                           if a.startswith('./main.dart.') or a == './flutter_bootstrap.js']
           if not entry_points:
@@ -247,9 +249,9 @@ jobs:
           print('Precache: %d Dateien, %.1f MB' % (len(assets), total / 1024 / 1024))
           for e in entry_points:
               print('  Entry point: ' + e)
-          # Die groessten Brocken mit ausgeben: so ist beim naechsten Lauf ohne
-          # Nachmessen sichtbar, wohin das Gewicht geht, falls Flutter neue
-          # Varianten mitliefert.
+          # Print the largest entries too: that makes it visible on the next
+          # run, without measuring, where the weight goes should Flutter ship
+          # new variants.
           print('  Groesste Eintraege:')
           for a in sorted(assets, key=lambda x: sizes[x], reverse=True)[:5]:
               print('    %7.1f MB  %s' % (sizes[a] / 1024 / 1024, a))
@@ -267,15 +269,15 @@ jobs:
           mkdir -p bundle/web
           cp -r build/web/. bundle/web/
 
-          # Portablen Webserver beilegen (Apache-2.0). Version UND Hash sind
-          # gepinnt: dieses caddy.exe wird unter unserem Release-Namen an
-          # Klinik-Arbeitsplaetze verteilt. Ohne Pin ist der Build nicht
-          # reproduzierbar (zwei Builds desselben Tags koennen verschiedene
-          # Binaries enthalten) und ein ausgeliefertes Bundle nachtraeglich
-          # nicht verifizierbar.
-          # Der SHA-512 stammt aus caddy_${CADDY_VERSION}_checksums.txt des
-          # offiziellen Releases und ist dort gegenpruefbar.
-          # Beim Anheben: Version + Hash gemeinsam aendern, Hash aus
+          # Ship a portable web server (Apache-2.0). Version AND hash are
+          # pinned: this caddy.exe is distributed to clinical workstations
+          # under our release name. Without a pin the build is not
+          # reproducible (two builds of the same tag can contain different
+          # binaries) and a delivered bundle cannot be verified afterwards.
+          # The SHA-512 comes from caddy_${CADDY_VERSION}_checksums.txt of
+          # the official release and can be checked against it there.
+          # When raising the version: change version and hash together, hash
+          # from
           # https://github.com/caddyserver/caddy/releases/download/v<V>/caddy_<V>_checksums.txt
           CADDY_VERSION="2.11.4"
           CADDY_SHA512="cd5ccfd86a4b40732cf715890d0dca5bf3f63adefec5a7914de85adf240c60ce7e5d2791631b88ef9758e46b23bb1730e020b9c5d696889740b284ffd4788e35"
@@ -337,12 +339,11 @@ jobs:
             > It is not validated for clinical use and must not be used for medical diagnosis, treatment decisions, or patient management.
             > No guarantee of accuracy. Always verify results with primary sources and qualified professionals.
 
-      # ── 11. Signaturmaterial aus dem Runner-Workspace entfernen ───────
-      # Aktuell wird nichts davon als Artefakt hochgeladen, das Risiko ist
-      # also latent. Der Schritt ist billige Absicherung gegen eine spätere
-      # Workflow-Änderung, die versehentlich das Workspace-Verzeichnis
-      # einsammelt. 'if: always()' - gerade der Fehlerfall ist der, in dem
-      # aufgeräumt werden muss.
+      # ── 11. Remove signing material from the runner workspace ─────────
+      # Nothing of it is currently uploaded as an artefact, so the risk is
+      # latent. The step is cheap insurance against a later workflow change
+      # that accidentally collects the workspace directory. 'if: always()' —
+      # the failure case is precisely the one where cleaning up matters.
       - name: Clean up signing material
         if: always()
         run: |

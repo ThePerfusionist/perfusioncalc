@@ -149,15 +149,15 @@ void main() {
     });
   });
 
-  group('Errechnete Null gegen fehlende Eingabe (Spiegelung von 1.1)', () {
-    // Die ResultCard auf dem Bildschirm richtet sich nach missingInputs,
-    // nicht nach dem Wert: bei vollstaendigen Eingaben zeigt sie 0.0. Das
-    // PDF zeigte dafuer "—". Genau umgekehrt zu Befund 1.1, und im selben
-    // Sinne falsch: die beiden Ausgaben widersprachen sich.
+  group('Calculated zero versus missing input (mirror of 1.1)', () {
+    // The ResultCard on screen follows missingInputs, not the value: with
+    // complete inputs it shows 0.0. The PDF showed "—" for that. Exactly the
+    // reverse of finding 1.1, and wrong in the same sense: the two outputs
+    // contradicted each other.
 
-    test('Base Excess 0 → NaBic und TRIS drucken 0.0, nicht "—"', () {
-      // BE 0 ist ein normaler Befund. Die richtige Antwort lautet
-      // "0 ml, keine Korrektur noetig".
+    test('Base excess 0 → NaBic and TRIS print 0.0, not "—"', () {
+      // A BE of 0 is a normal finding. The correct answer is "0 ml, no
+      // correction needed".
       final pd = PatientData()
         ..bodyWeightElec = 80
         ..baseExcess = 0;
@@ -166,16 +166,16 @@ void main() {
       expect(valueContaining(sections, 'TRIS'), '0.0');
     });
 
-    test('Ohne Gewicht bleibt es bei "—"', () {
-      // Die Unterscheidung ist nur etwas wert, wenn der Fall "nicht
-      // berechenbar" erhalten bleibt.
+    test('Without a weight it stays "—"', () {
+      // The distinction is only worth anything if the "not calculable" case
+      // survives.
       final pd = PatientData()..baseExcess = 0;
       final sections = buildElectrolytesPdfSections(pd);
       expect(valueContaining(sections, 'NaBic'), '—');
       expect(valueContaining(sections, 'TRIS'), '—');
     });
 
-    test('Ist gleich Soll → Bedarf ist 0, nicht "—"', () {
+    test('Current equals target → requirement is 0, not "—"', () {
       final pd = PatientData()
         ..bodyWeightElec = 80
         ..kaliumIst = 4.0
@@ -187,7 +187,7 @@ void main() {
       expect(double.parse(k!), closeTo(0, 1e-9));
     });
 
-    test('Ein von Null verschiedener Bedarf bleibt unveraendert', () {
+    test('A non-zero requirement is unaffected', () {
       final pd = PatientData()
         ..bodyWeightElec = 80
         ..kaliumIst = 3.0
@@ -198,9 +198,10 @@ void main() {
           closeTo(16, 0.05));
     });
 
-    test('Ultrafiltration: Ziel erreicht → Endvolumen ist das aktuelle', () {
-      // Regression: der Getter lieferte 0, sobald nichts entzogen wurde -
-      // die Karte las sich als "am Ende ist kein Blut mehr im Kreislauf".
+    test('Ultrafiltration: target reached → final volume is the current one',
+        () {
+      // Regression: the getter returned 0 as soon as nothing was removed —
+      // the card read as "no blood is left in the circuit at the end".
       final pd = PatientData()
         ..ufCurrentVolume = 4000
         ..ufCurrentHct = 24
@@ -210,7 +211,7 @@ void main() {
       expect(valueOf(sections, 'Resulting circulating volume'), '4000');
     });
 
-    test('Ultrafiltration ohne Wertepaar bleibt vollstaendig "—"', () {
+    test('Ultrafiltration without a value pair stays entirely "—"', () {
       final pd = PatientData()..ufCurrentVolume = 4000..ufCurrentHct = 20;
       final sections = buildUltrafiltrationPdfSections(pd);
       expect(valueOf(sections, 'Volume to remove (UF)'), '—');
@@ -219,29 +220,27 @@ void main() {
   });
 
   // ══════════════════════════════════════════════════════════════════════
-  // Das PDF wird tatsaechlich gebaut (Abdeckungsluecke, v0.4.15)
+  // The PDF is actually built (coverage gap, v0.4.15)
   // ══════════════════════════════════════════════════════════════════════
   //
-  // Bis hierher war nur die Datenaufbereitung getestet (PdfRow, resultIf) -
-  // das Rendern selbst lag bei 10 % Abdeckung, weil es mit dem
-  // Speichern-Dialog verwoben war. Das PDF ist aber das einzige Artefakt,
-  // das die App verlaesst: eine Ausnahme beim Aufbau bedeutet, dass der
-  // Export ersatzlos fehlschlaegt.
+  // Until now only the data preparation was tested (PdfRow, resultIf) —
+  // rendering itself sat at 10 % coverage because it was entangled with the
+  // save dialog. Yet the PDF is the only artefact that leaves the app: an
+  // exception while building it means the export fails with no fallback.
   //
-  // Diese Tests bauen echte PDF-Bytes. Sie pruefen nicht das Aussehen -
-  // dafuer braucht es Augen - sondern dass der Aufbau durchlaeuft und ein
-  // gueltiges Dokument entsteht.
-  group('PDF-Erzeugung', () {
-    /// %PDF-1.x am Anfang, %%EOF am Ende - das Minimum, an dem sich ein
-    /// PDF erkennen laesst.
+  // These tests build real PDF bytes. They do not check appearance — that
+  // needs eyes — but that the build completes and produces a valid document.
+  group('PDF generation', () {
+    /// %PDF-1.x at the start, %%EOF at the end — the minimum by which a PDF
+    /// can be recognised.
     ///
-    /// [minBytes] ist bewusst ein Parameter und keine feste Zahl. Die erste
-    /// Fassung verlangte pauschal 1000 Bytes und meldete beim leeren
-    /// Gesamtbericht einen Fehlschlag bei 427 - kein Defekt, sondern eine
-    /// falsche Erwartung: Ein Dokument, in dem kein Text gezeichnet wird,
-    /// bettet auch keine Schrift ein, und die Roboto-Dateien machen den
-    /// Loewenanteil eines normalen PDFs aus. Die Groesse sagt hier also
-    /// etwas ueber den Inhalt, nicht ueber die Gueltigkeit.
+    /// [minBytes] is deliberately a parameter rather than a fixed number.
+    /// The first version demanded 1000 bytes across the board and reported a
+    /// failure at 427 for the empty combined report — not a defect but a
+    /// wrong expectation: a document in which no text is drawn embeds no
+    /// font either, and the Roboto files make up the bulk of a normal PDF.
+    /// The size therefore says something about the content here, not about
+    /// validity.
     void expectValidPdf(List<int> bytes,
         {required String reason, int minBytes = 1000}) {
       expect(latin1.decode(bytes.take(8).toList()), startsWith('%PDF-'),
@@ -251,7 +250,7 @@ void main() {
       expect(bytes.length, greaterThan(minBytes), reason: reason);
     }
 
-    test('Einzelner Tab mit vollstaendigen Daten', () async {
+    test('Single tab with complete data', () async {
       final pd = PatientData()
         ..artHb = 12
         ..saO2 = 99
@@ -268,8 +267,8 @@ void main() {
       expectValidPdf(bytes, reason: 'gefuellter O2-Tab');
     });
 
-    test('Leerer Tab - lauter Gedankenstriche darf nicht scheitern', () async {
-      // Der Fall, den ein Nutzer versehentlich ausloest.
+    test('Empty tab — nothing but em dashes must not fail', () async {
+      // The case a user triggers by accident.
       final bytes = await renderTabPdf(
         tabTitle: 'BSA',
         sections: buildBsaPdfSections(PatientData()),
@@ -277,10 +276,10 @@ void main() {
       expectValidPdf(bytes, reason: 'leerer BSA-Tab');
     });
 
-    test('Zeilen mit Fussnote werden gerendert', () async {
-      // PdfRow.note wurde bis Block E (4.2) still verworfen. Seit die Note
-      // gerendert wird, ist sie ein eigener Layoutzweig - und wird von der
-      // Calafiore-Perfusorrate benutzt, wenn keine Zufuhr noetig ist.
+    test('Rows with a footnote are rendered', () async {
+      // PdfRow.note was silently dropped until block E (4.2). Now that the
+      // note is rendered it is its own layout branch — and it is used by the
+      // Calafiore perfusor rate when no supplementation is needed.
       final sections = [
         PdfSection(title: 'Mit Fussnote', rows: [
           PdfRow.numeric(label: 'Wert', value: 0, unit: 'ml/h',
@@ -292,7 +291,7 @@ void main() {
       expectValidPdf(bytes, reason: 'Zeile mit Note');
     });
 
-    test('Gesamtbericht ueber mehrere Tabs', () async {
+    test('Combined report across several tabs', () async {
       final pd = PatientData()
         ..height = 175
         ..weight = 80
@@ -306,24 +305,24 @@ void main() {
       expectValidPdf(bytes, reason: 'Gesamtbericht');
     });
 
-    test('Gesamtbericht ohne Tabs erzeugt trotzdem ein gueltiges Dokument',
+    test('A combined report without tabs still yields a valid document',
         () async {
-      // Aus der Oberflaeche heraus nicht erreichbar: _exportCombinedReport()
-      // faengt den leeren Fall ab und zeigt stattdessen einen Hinweis. Der
-      // Test sichert daher nur zu, dass renderCombinedPdf() nicht wirft -
-      // eine Ausnahme hier wuerde bei jeder kuenftigen Aenderung an der
-      // Filterlogik zum Totalausfall des Exports fuehren.
+      // Not reachable from the UI: _exportCombinedReport() catches the empty
+      // case and shows a hint instead. The test therefore only guarantees
+      // that renderCombinedPdf() does not throw — an exception here would
+      // turn any future change to the filter logic into a total failure of
+      // the export.
       //
-      // 300 statt 1000 Bytes: ohne gezeichneten Text wird keine Schrift
-      // eingebettet, und genau die macht ein normales PDF gross. Gemessen
-      // sind es rund 427 Bytes fuer ein leeres Dokument.
+      // 300 instead of 1000 bytes: without drawn text no font is embedded,
+      // and that is exactly what makes a normal PDF large. Measured, an
+      // empty document is around 427 bytes.
       final bytes = await renderCombinedPdf(tabs: []);
       expectValidPdf(bytes, reason: 'leerer Gesamtbericht', minBytes: 300);
     });
 
-    test('Sehr viele Zeilen erzwingen einen Seitenumbruch', () async {
-      // MultiPage bricht um; ein Layoutfehler im Header oder Footer faellt
-      // erst ab der zweiten Seite auf.
+    test('Very many rows force a page break', () async {
+      // MultiPage paginates; a layout error in the header or footer only
+      // shows up from the second page onwards.
       final rows = [
         for (var i = 0; i < 120; i++)
           PdfRow.numeric(label: 'Zeile $i', value: i.toDouble(), unit: 'ml'),

@@ -1,29 +1,28 @@
 @echo off
 REM ============================================================
-REM  PerfusionCalc - Offline-Start fuer Windows
+REM  PerfusionCalc - offline start for Windows
 REM
-REM  Eine Flutter-Webapp laesst sich nicht per Doppelklick auf
-REM  index.html oeffnen: der Browser blockiert das Nachladen der
-REM  Module ueber file://. Es wird daher ein kleiner lokaler
-REM  Webserver gestartet - ausschliesslich auf diesem Rechner,
-REM  ohne Internetverbindung.
+REM  A Flutter web app cannot be opened by double-clicking index.html:
+REM  the browser blocks module loading over file://. A small local web
+REM  server is therefore started - on this machine only, with no
+REM  internet connection.
 REM
-REM  Reihenfolge bewusst so gewaehlt:
-REM   1. caddy.exe - schnell und zuverlaessig
-REM   2. PowerShell - falls fremde .exe-Dateien gesperrt sind
-REM      (auf Klinik-PCs haeufig der Fall)
-REM   3. Python - falls ohnehin installiert
+REM  The order is deliberate:
+REM   1. caddy.exe - fast and reliable
+REM   2. PowerShell - in case foreign .exe files are blocked
+REM      (frequently the case on hospital PCs)
+REM   3. Python - if it happens to be installed
 REM
-REM  WICHTIG: Jede Variante wird VOR dem Start geprueft, nicht nur
-REM  auf Vorhandensein. caddy.exe liegt immer im Paket - ist sie
-REM  durch AppLocker oder SmartScreen gesperrt, muss die Ausfuehrung
-REM  zur naechsten Variante durchfallen. Sonst greift der Fallback
-REM  ausgerechnet in dem Fall nicht, fuer den er gebaut wurde.
+REM  IMPORTANT: every option is probed BEFORE starting, not merely
+REM  checked for existence. caddy.exe is always in the package - if it
+REM  is blocked by AppLocker or SmartScreen, execution has to fall
+REM  through to the next option. Otherwise the fallback fails in
+REM  precisely the case it was built for.
 REM ============================================================
 
 setlocal EnableExtensions
 
-REM Selbstaufruf zum verzoegerten Oeffnen des Browsers (siehe unten).
+REM Self-invocation for the delayed browser launch (see below).
 if /i "%~1"=="--open" (
     timeout /t 2 /nobreak >nul 2>&1
     start "" "http://localhost:%~2"
@@ -38,7 +37,7 @@ echo   PerfusionCalc - lokaler Start
 echo   ------------------------------
 echo.
 
-REM Freien Port suchen, falls 8080 belegt ist
+REM Find a free port in case 8080 is taken
 for %%P in (8080 8081 8082 8090) do (
     netstat -ano | findstr /r /c:":%%P .*LISTENING" >nul 2>&1
     if errorlevel 1 (
@@ -53,9 +52,9 @@ echo.
 
 REM ---------- 1. caddy.exe ----------
 if exist "caddy.exe" (
-    REM Startprobe: 'caddy version' kehrt sofort zurueck. Ein Test NACH
-    REM dem Serverstart ginge nicht - 'caddy file-server' laeuft bis zum
-    REM Schliessen des Fensters im Vordergrund.
+    REM Start probe: 'caddy version' returns immediately. A test AFTER
+    REM starting the server would not work - 'caddy file-server' runs in
+    REM the foreground until the window is closed.
     caddy.exe version >nul 2>&1
     if not errorlevel 1 (
         echo   Server: caddy.exe
@@ -85,9 +84,9 @@ if exist "serve.ps1" (
 )
 
 REM ---------- 3. Python ----------
-REM 'where python' genuegt nicht: Windows liefert einen Store-Platzhalter
-REM mit, der bei Aufruf nur den Microsoft Store oeffnet. Ein echter
-REM Programmlauf ist der verlaessliche Test.
+REM 'where python' is not enough: Windows ships a Store placeholder that
+REM merely opens the Microsoft Store when invoked. An actual program run
+REM is the reliable test.
 python -c "pass" >nul 2>&1
 if not errorlevel 1 (
     echo   Server: Python
@@ -120,16 +119,17 @@ pause
 goto :eof
 
 REM ------------------------------------------------------------
-REM  Browser erst nach der Server-Auswahl oeffnen, und verzoegert.
+REM  Open the browser only after the server has been chosen, and with
+REM  a delay.
 REM
-REM  Frueher stand 'start' ganz oben - der Tab war offen, bevor der
-REM  Server gebunden hatte, und zeigte "Verbindung abgelehnt". Wenn
-REM  gar kein Server startete, stand der tote Tab sogar da, bevor die
-REM  Fehlermeldung im Fenster erschien.
+REM  'start' used to sit right at the top - the tab was open before the
+REM  server had bound and showed "connection refused". When no server
+REM  started at all, the dead tab was even there before the error
+REM  message appeared in the window.
 REM
-REM  Der Selbstaufruf mit --open loest das ohne Verschachtelung von
-REM  Anfuehrungszeichen: eine zweite, minimierte Instanz wartet zwei
-REM  Sekunden und oeffnet dann die Adresse.
+REM  The self-invocation with --open solves this without nesting
+REM  quotation marks: a second, minimised instance waits two seconds
+REM  and then opens the address.
 REM ------------------------------------------------------------
 :openbrowser
 start "" /min "%~f0" --open %PORT%

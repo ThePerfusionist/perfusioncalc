@@ -26,7 +26,7 @@ import 'utils/pdf_export.dart';
 import 'widgets/common.dart' show kGold, kCardColor, kText, kTextSecondary,
     kTextTertiary, kTextMuted, kTextFaint, kTextGhost, kDivider, kSurfaceWash, kLetterbox;
 
-const kAppVersion = '0.4.23';
+const kAppVersion = '0.4.32';
 
 void main() async {
   // Load language + theme from SharedPreferences before the UI is rendered,
@@ -64,21 +64,20 @@ class PerfusionCalcApp extends StatelessWidget {
   }
 }
 
-/// Alle Tabs, die etwas in den Gesamtbericht beitragen koennen - in der
-/// Reihenfolge der Tableiste.
+/// Every tab that can contribute to the combined report — in the order of
+/// the tab bar.
 ///
-/// Ausgelagert und @visibleForTesting (Eigenbefund v0.4.12): Die Liste war
-/// eine handgepflegte Kopie der Tabreihenfolge mitten in einer privaten
-/// Methode. Ein neuer Rechen-Tab haette hier ergaenzt werden muessen, und
-/// nichts haette daran erinnert - dieselbe Fehlerklasse wie das frueher fest
-/// verdrahtete `TabController(length: 12)`, nur leiser: statt einer
-/// Ausnahme beim Start haette schlicht ein Abschnitt im ausgelieferten
-/// Bericht gefehlt.
+/// Extracted and @visibleForTesting (self-audit v0.4.12): the list was a
+/// hand-maintained copy of the tab order in the middle of a private method.
+/// A new calculating tab would have had to be added here, and nothing would
+/// have been a reminder — the same class of defect as the previously
+/// hard-wired `TabController(length: 12)`, only quieter: instead of an
+/// exception at start-up, a chapter would simply have been missing from the
+/// delivered report.
 ///
-/// [MainScreen.kTabs] enthaelt zwei weitere Tabs, die bewusst NICHT
-/// auftauchen: `tab_reference` und `tab_anatomy` zeigen ausschliesslich
-/// statische Nachschlagewerte und haben keine PDF-Sektionen. Ein Test
-/// prueft genau diese Differenz.
+/// [MainScreen.kTabs] holds two further tabs that deliberately do NOT appear
+/// here: `tab_reference` and `tab_anatomy` show static reference material
+/// only and have no PDF sections. A test asserts exactly that difference.
 @visibleForTesting
 List<PdfTabReport> buildCombinedReportCandidates(PatientData pd, BgaModel bga) => [
   PdfTabReport(tabTitle: t('tab_bsa'),             sections: buildBsaPdfSections(pd)),
@@ -93,7 +92,7 @@ List<PdfTabReport> buildCombinedReportCandidates(PatientData pd, BgaModel bga) =
   PdfTabReport(tabTitle: t('tab_zoll'),            sections: buildZollPdfSections(pd)),
 ];
 
-/// Tabs ohne Rechenergebnisse - reine Nachschlagewerke.
+/// Tabs without calculated results — pure reference material.
 @visibleForTesting
 const kNonComputingTabKeys = {'tab_reference', 'tab_anatomy'};
 

@@ -16,11 +16,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CardioplegiaSettings extends ChangeNotifier {
   static const _kDelNidoCrystalloidPercent = 'cpl_delnido_cryst_percent';
 
-  /// 80 % entspricht dem klassischen 4:1-Verhaeltnis (del Nido-Standard).
+  /// 80 % corresponds to the classic 4:1 ratio (the del Nido standard).
   static const double kDefaultCrystalloidPercent = 80;
 
-  /// Ausserhalb dieses Bandes ist die Mischung keine Blutkardioplegie mehr,
-  /// und bei 100 % waere der Blutanteil null und das Verhaeltnis undefiniert.
+  /// Outside this band the mixture stops being a blood cardioplegia in any
+  /// recognisable sense, and at 100 % the blood share would be zero and the
+  /// ratio undefined.
   static const double kMinPercent = 50;
   static const double kMaxPercent = 95;
 
@@ -47,13 +48,13 @@ class CardioplegiaSettings extends ChangeNotifier {
     try {
       final p = await SharedPreferences.getInstance();
       final stored = p.getDouble(_kDelNidoCrystalloidPercent);
-      // GEKLEMMT, nicht roh uebernommen: der Setter begrenzt zwar, aber der
-      // Speicher ist damit nicht garantiert im Band - eine aeltere Fassung,
-      // ein anderes Geraet oder ein manipulierter Eintrag koennen 100
-      // liefern. Dann waere delNidoBloodPercent null und das Verhaeltnis
-      // undefiniert. TransfusionSettings.load() klemmt aus demselben Grund;
-      // dass es hier fehlte, war eine Asymmetrie zwischen zwei Klassen
-      // desselben Musters.
+      // CLAMPED, not taken raw: the setter does bound the value, but that
+      // does not guarantee the stored one is inside the band — an older
+      // version, a different device or a tampered entry can deliver 100.
+      // delNidoBloodPercent would then be zero and the ratio undefined.
+      // TransfusionSettings.load() clamps for the same reason; that it was
+      // missing here was an asymmetry between two classes of the same
+      // pattern.
       if (stored != null) _delNidoCrystalloidPercent = _clamp(stored);
     } catch (_) {
       // SharedPreferences unavailable (e.g. in tests) -> keep the default.
@@ -63,7 +64,7 @@ class CardioplegiaSettings extends ChangeNotifier {
   static double _clamp(double v) =>
       v < kMinPercent ? kMinPercent : (v > kMaxPercent ? kMaxPercent : v);
 
-  /// Auf [kMinPercent]..[kMaxPercent] geklemmt - Begruendung dort.
+  /// Clamped to [kMinPercent]..[kMaxPercent] — rationale documented there.
   Future<void> setDelNidoCrystalloidPercent(double v) async {
     final clamped = _clamp(v);
     if (_delNidoCrystalloidPercent == clamped) return;

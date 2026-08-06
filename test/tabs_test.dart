@@ -43,23 +43,23 @@ void main() {
     });
   });
 
-  group('Gesamtbericht deckt alle Rechen-Tabs ab', () {
-    // Die Kandidatenliste war eine handgepflegte Kopie der Tabreihenfolge.
-    // Ein neuer Rechen-Tab haette dort ergaenzt werden muessen, und nichts
-    // haette daran erinnert - im Unterschied zum frueher fest verdrahteten
-    // TabController haette das keine Ausnahme geworfen, sondern still einen
-    // Abschnitt im ausgelieferten Bericht weggelassen.
+  group('Combined report covers every calculating tab', () {
+    // The candidate list was a hand-maintained copy of the tab order. A new
+    // calculating tab would have had to be added there, and nothing would
+    // have been a reminder — unlike the previously hard-wired TabController
+    // this would not have thrown an exception but silently left a chapter
+    // out of the delivered report.
     final candidates =
         buildCombinedReportCandidates(PatientData(), BgaModel());
 
-    test('Anzahl entspricht kTabs ohne die reinen Nachschlage-Tabs', () {
+    test('Count matches kTabs minus the pure reference tabs', () {
       final computing = MainScreen.kTabs
           .where((t) => !kNonComputingTabKeys.contains(t.key))
           .toList();
       expect(candidates.length, computing.length);
     });
 
-    test('Titel und Reihenfolge stimmen mit der Tableiste ueberein', () {
+    test('Titles and order match the tab bar', () {
       final expected = MainScreen.kTabs
           .where((t) => !kNonComputingTabKeys.contains(t.key))
           .map((t) => Strings.of(t.key, AppLocale.en))
@@ -67,18 +67,18 @@ void main() {
       expect(candidates.map((c) => c.tabTitle).toList(), expected);
     });
 
-    test('Die ausgenommenen Tabs existieren wirklich', () {
-      // Sonst wuerde ein Tippfehler in kNonComputingTabKeys die Pruefung
-      // oben stillschweigend aushebeln.
+    test('The excluded tabs actually exist', () {
+      // Otherwise a typo in kNonComputingTabKeys would silently defeat the
+      // check above.
       final keys = MainScreen.kTabs.map((t) => t.key).toSet();
       for (final k in kNonComputingTabKeys) {
         expect(keys, contains(k));
       }
     });
 
-    test('Ohne Eingaben besteht jeder Kandidat nur aus Gedankenstrichen', () {
-      // Das ist die Voraussetzung dafuer, dass der "nur gefuellte Tabs"-
-      // Filter im Gesamtbericht ueberhaupt funktioniert.
+    test('Without input every candidate consists solely of em dashes', () {
+      // This is the precondition for the "only filled tabs" filter in the
+      // combined report to work at all.
       for (final tab in candidates) {
         final values =
             tab.sections.expand((s) => s.rows).map((r) => r.value).toSet();

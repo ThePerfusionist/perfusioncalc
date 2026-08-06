@@ -2,25 +2,25 @@ import 'package:flutter/material.dart';
 import '../widgets/common.dart';
 import '../i18n/app_strings.dart';
 
-/// Eine Zeile der Referenztabelle: Bezeichnung, typischer Wert, Normbereich.
+/// One row of the reference table: label, typical value, normal range.
 typedef RefRow = ({String label, String typical, String range});
 
-/// Ein Abschnitt der Referenztabelle.
+/// One section of the reference table.
 typedef RefSection = ({String title, List<RefRow> rows});
 
 class ReferencePressureScreen extends StatelessWidget {
   const ReferencePressureScreen({super.key});
 
-  // Records statt Map<String, dynamic> (Eigenbefund v0.4.12): die frueheren
-  // Zugriffe brauchten `s['rows'] as List<List<String>>` und `s['title'] as
-  // String`, und die Spalten wurden ueber r[0]/r[1]/r[2] adressiert. Ein
-  // Tippfehler im Schluessel oder eine Zeile mit zu wenigen Spalten waere
-  // erst zur Laufzeit aufgefallen - in einer Tabelle mit klinischen
-  // Referenzwerten, die niemand nachrechnet, weil sie ja nur angezeigt wird.
-  // Dieselbe Umstellung wie bei MainScreen.kTabs.
+  // Records instead of Map<String, dynamic> (self-audit v0.4.12): the
+  // previous accesses needed `s['rows'] as List<List<String>>` and
+  // `s['title'] as String`, and the columns were addressed via
+  // r[0]/r[1]/r[2]. A typo in a key, or a row with too few columns, would
+  // only have surfaced at runtime — in a table of clinical reference values
+  // that nobody recalculates, because it is only ever displayed. Same
+  // conversion as for MainScreen.kTabs.
   //
-  // Weiterhin eine Methode statt einer Konstanten: die Beschriftungen kommen
-  // ueber t() und muessen bei jedem Sprachwechsel neu aufgeloest werden.
+  // Still a method rather than a constant: the labels come from t() and have
+  // to be resolved again on every language switch.
   List<RefSection> _sections() => [
     (
       title: t('ref_section_arterial'),

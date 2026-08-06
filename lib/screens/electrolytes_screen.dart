@@ -113,11 +113,11 @@ List<PdfSection> buildElectrolytesPdfSections(PatientData pd) => [
     // BE 0 is a normal, entered finding - not a missing input.
     PdfRow.numeric(label: t('elec_base_excess'),      value: pd.baseExcess,     unit: 'mmol/L', zeroIsValid: true),
   ]),
-  // resultIf + zeroIsValid: Hier ist 0 ein Ergebnis, keine fehlende Eingabe.
-  // Ist der Base Excess 0 - also normal - lautet die richtige Antwort
-  // "0 ml NaBic, keine Korrektur noetig"; das PDF druckte dafuer "—",
-  // waehrend die ResultCard daneben 0.0 zeigte. Dasselbe gilt, wenn Ist- und
-  // Sollwert eines Elektrolyts uebereinstimmen.
+  // resultIf + zeroIsValid: here a 0 is a result, not a missing input. If
+  // the base excess is 0 — i.e. normal — the correct answer is "0 ml NaBic,
+  // no correction needed"; the PDF printed "—" for that while the ResultCard
+  // next to it showed 0.0. The same applies when an electrolyte's current
+  // and target values are equal.
   PdfSection(title: t('pdf_results'), rows: [
     PdfRow.numeric(label: t('elec_sodium_need'),
         value: resultIf([pd.bodyWeightElec, pd.natriumIst, pd.natriumSoll], pd.natriumBedarf),

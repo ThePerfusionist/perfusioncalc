@@ -1,198 +1,189 @@
-# Play Console — Data safety, Abgleich mit der Datenschutzerklärung
+# Play Console — Data safety, cross-checked against the privacy policy
 
-**Stand:** v0.4.18+40 · geprüft gegen `privacy_policy.md`, `web/privacy.html`,
-`pubspec.yaml` und das Release-Manifest.
+**State:** v0.4.31+53 · checked against `privacy_policy.md`, `web/privacy.html`,
+`pubspec.yaml` and the release manifest.
 
-Ausfüllhilfe für *Play Console → App-Inhalte → Datensicherheit*. Für jede
-Antwort steht dabei, worauf sie sich stützt — Abweichungen zwischen Formular
-und Datenschutzerklärung sind in dieser Kategorie der häufigste
-Ablehnungsgrund.
+A filling aid for *Play Console → App content → Data safety*. Each answer
+records what it rests on — divergence between the form and the privacy policy
+is the most common reason for rejection in this category.
 
-> Ich bin kein Anwalt und die Play-Console-Oberfläche ändert sich. Die
-> Antworten unten folgen der aktuellen Google-Definition von „erheben"; die
-> Feldbezeichnungen können in Details abweichen.
+> I am not a lawyer and the Play Console UI changes. The answers below follow
+> Google's current definition of "collect"; field labels may differ in detail.
 
 ---
 
-## 1. Die entscheidende Definition
+## 1. The decisive definition
 
-Google definiert **„erheben" (collect) als: Daten verlassen das Gerät.**
-Nicht: Daten werden verarbeitet. Nicht: Daten werden gespeichert.
+Google defines **"collect" as: data leaves the device.** Not: data is
+processed. Not: data is stored.
 
-Daraus folgt für PerfusionCalc alles Weitere:
+Everything else for PerfusionCalc follows from that:
 
-| Was die App tut | Verlässt das Gerät? | Im Formular anzugeben? |
+| What the app does | Leaves the device? | Declare in the form? |
 |---|---|---|
-| Patientenwerte im Arbeitsspeicher berechnen | nein | **nein** |
-| Spracheinstellung, Design, Alarmparameter, del-Nido-Verhältnis, EK-Hkt in `SharedPreferences` | nein | **nein** |
-| PDF über den System-Speichern-Dialog ablegen | nein — der Nutzer wählt das Ziel, die App liest die Datei nie wieder | **nein** |
-| Lokale Benachrichtigung planen | nein | **nein** |
+| Calculate patient values in memory | no | **no** |
+| Store language, theme, alarm parameters, del Nido ratio, RBC haematocrit in `SharedPreferences` | no | **no** |
+| Save a PDF through the system save dialog | no — the user picks the destination and the app never reads the file again | **no** |
+| Schedule a local notification | no | **no** |
 
-Der stärkste Beleg steht im Manifest: **der Release-Build deklariert keine
-`INTERNET`-Berechtigung.** Die deklarierten Berechtigungen sind
-`POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `VIBRATE`, `WAKE_LOCK`,
-`RECEIVE_BOOT_COMPLETED` — keine davon erlaubt Netzwerkzugriff. Eine App ohne
-`INTERNET` kann technisch nichts übertragen.
+The strongest evidence sits in the manifest: **the release build declares no
+`INTERNET` permission.** The declared permissions are `POST_NOTIFICATIONS`,
+`SCHEDULE_EXACT_ALARM`, `VIBRATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED` — none
+of which grants network access. An app without `INTERNET` is technically
+incapable of transmitting anything.
 
 ---
 
-## 2. Antworten Feld für Feld
+## 2. Answers, field by field
 
-### Datenerhebung und -sicherheit
+### Data collection and security
 
-| Frage | Antwort | Begründung |
+| Question | Answer | Reason |
 |---|---|---|
-| Erhebt oder teilt deine App die erforderlichen Nutzerdatentypen? | **Nein** | siehe oben; keine `INTERNET`-Berechtigung im Release-Build |
+| Does your app collect or share any of the required user data types? | **No** | see above; no `INTERNET` permission in the release build |
 
-Mit „Nein" entfallen die Folgefragen zu Datentypen, Zwecken, Verschlüsselung
-bei der Übertragung und Löschmechanismus. Sie erscheinen nur, wenn eine
-Erhebung bejaht wurde. Das Formular ist **trotzdem Pflicht** — es gibt kein
-Überspringen für Apps ohne Datenerhebung.
+With "No" the follow-up questions on data types, purposes, encryption in
+transit and deletion mechanism disappear. The form is **still mandatory** —
+there is no way to skip it for apps that collect nothing.
 
-### Falls das Formular die Fragen dennoch anzeigt
+### Should the form show those questions anyway
 
-| Frage | Antwort |
+| Question | Answer |
 |---|---|
-| Werden alle erhobenen Daten bei der Übertragung verschlüsselt? | **nicht zutreffend** (es wird nichts übertragen) |
-| Können Nutzer die Löschung ihrer Daten beantragen? | **nicht zutreffend** — Deinstallation entfernt alles; ein Löschmechanismus setzt serverseitige Daten voraus, die es nicht gibt |
-| Ist die Datenerhebung unabhängig gegen einen Sicherheitsstandard geprüft? | **Nein** (optionale Angabe) |
+| Is all collected data encrypted in transit? | **not applicable** (nothing is transmitted) |
+| Can users request that their data be deleted? | **not applicable** — uninstalling removes everything; a deletion mechanism presupposes server-side data, of which there is none |
+| Is the data collection independently validated against a security standard? | **No** (optional declaration) |
 
-### Angrenzende Abschnitte unter „App-Inhalte"
+### Adjacent sections under "App content"
 
-| Abschnitt | Antwort | Begründung |
+| Section | Answer | Reason |
 |---|---|---|
-| Datenschutzerklärung (URL) | `https://perfusioncalc.de/privacy.html` | seit v0.4.1 erreichbar, zweisprachig |
-| Werbe-ID | **Nein** | keine Werbe-SDKs, keine `AD_ID`-Berechtigung |
-| Werbung | **Die App enthält keine Werbung** | |
-| App-Zugriff | **Alle Funktionen ohne besonderen Zugang verfügbar** | kein Login, kein Konto |
-| Zielgruppe | **ausschließlich 18+** | Fachanwendung für Kardiotechnik; nicht als kinderorientiert einstufen |
-| Nachrichten-App | **Nein** | |
-| Regierungs-App, Finanzfunktionen | **Nein** | |
-| Gesundheits-App-Deklaration | **prüfen** — siehe unten |
+| Privacy policy (URL) | `https://perfusioncalc.de/privacy.html` | reachable since v0.4.1, bilingual |
+| Advertising ID | **No** | no ad SDKs, no `AD_ID` permission |
+| Ads | **The app contains no ads** | |
+| App access | **All functionality available without special access** | no login, no account |
+| Target audience | **18+ only** | professional tool for clinical perfusion; do not classify as child-directed |
+| News app | **No** | |
+| Government app, financial features | **No** | |
+| Health apps declaration | **check** — see below |
 
 ---
 
-## 3. Drei Punkte, die eine bewusste Entscheidung brauchen
+## 3. Three points that need a deliberate decision
 
-### 3.1 Store-Kategorie: Bildung — entschieden
+### 3.1 Store category: Education — decided
 
-**Kategorie: *Bildung*, nicht *Medizin*.**
+**Category: *Education*, not *Medical*.**
 
-Die Kategorie *Medizin* zieht in mehreren Regionen Nachfragen zum
-Medizinprodukte-Status nach sich, und PerfusionCalc schließt diesen Status
-ausdrücklich aus (Abschnitt 12 der Datenschutzerklärung: **kein
-Medizinprodukt im Sinne der Verordnung (EU) 2017/745**, nicht für die
-klinische Anwendung validiert). Eine Kategorie zu wählen, die genau die
-Prüfung auslöst, deren Ergebnis man vorab verneint, schafft Aufwand ohne
-Gegenwert.
+The *Medical* category triggers follow-up questions about medical device
+status in several regions, and PerfusionCalc explicitly rules that status out
+(section 12 of the privacy policy: **not a medical device** within the meaning
+of Regulation (EU) 2017/745, not validated for clinical use). Choosing a
+category that triggers precisely the review whose outcome you deny in advance
+creates work without any benefit.
 
-*Bildung* deckt den erklärten Zweck — Ausbildung und persönliche Nutzung in
-der Kardiotechnik — und ist damit keine Ausweichbewegung, sondern die
-zutreffendere Einordnung.
+*Education* covers the stated purpose — training and personal use in clinical
+perfusion — and is therefore the more accurate classification, not an evasion.
 
-**Damit die Wahl trägt, muss der Store-Text zu ihr passen.** Das ist der
-eigentliche Punkt: Die Kategorie ist eine Zeile im Formular, gelesen wird die
-Beschreibung.
+**For the choice to hold, the store text has to match it.** That is the real
+point: the category is one line in a form, but what gets read is the
+description.
 
-| gehört hinein | gehört nicht hinein |
+| belongs in | does not belong in |
 |---|---|
-| „für Ausbildung und Fortbildung in der Kardiotechnik" | „für den klinischen Einsatz" |
-| „Nachschlagewerk und Rechenhilfe" | „zur Therapieentscheidung" |
-| „Ergebnisse sind gegen die Primärliteratur und die Vorgaben der eigenen Einrichtung zu prüfen" | „validiert", „zertifiziert", „geprüft" |
-| der MDR-Ausschluss wörtlich | Aussagen über Patientensicherheit oder Behandlungsqualität |
+| "for training and continuing education in clinical perfusion" | "for clinical use" |
+| "reference and calculation aid" | "for treatment decisions" |
+| "results must be verified against the primary literature and your institution's protocols" | "validated", "certified", "approved" |
+| the MDR exclusion verbatim | claims about patient safety or quality of care |
 
-Der MDR-Ausschluss gehört **wörtlich in die Store-Beschreibung**, nicht nur
-in die Datenschutzerklärung. Eine Kardiotechnik-Rechen-App ohne diesen
-Hinweis im Listing lädt genau die Nachfrage ein, die sie vermeiden will.
+The MDR exclusion belongs **verbatim in the store description**, not only in
+the privacy policy. A cardiac perfusion calculator without that note in the
+listing invites exactly the question it is trying to avoid.
 
-**Die Gesundheits-Deklaration hängt an der Funktion, nicht an der
-Kategorie.** Falls Play sie abfragt, ist sie wahrheitsgemäß auszufüllen —
-*Bildung* befreit nicht davon. Was die Kategorie ändert, ist die
-Wahrscheinlichkeit, dass die Prüfung überhaupt in die Medizinprodukt-Schiene
-läuft.
+**The health apps declaration depends on functionality, not on the category.**
+If Play asks for it, answer truthfully — *Education* does not exempt you. What
+the category changes is the likelihood of the review taking the medical device
+route at all.
 
-### 3.2 Die Web-App gehört **nicht** ins Formular
+### 3.2 The web app does **not** belong in the form
 
-`perfusioncalc.de` läuft über GitHub Pages, und GitHub verarbeitet dabei
-IP-Adresse, Zeitpunkt und User-Agent in Server-Logfiles — Abschnitt 6 der
-Datenschutzerklärung sagt das ausdrücklich.
+`perfusioncalc.de` runs on GitHub Pages, and GitHub processes IP address,
+timestamp and user agent in server log files while doing so — section 6 of the
+privacy policy says so explicitly.
 
-Das ist **kein Widerspruch** zum „Nein" im Formular: Die Datensicherheits-
-Erklärung gilt für die über Play ausgelieferte Android-App, nicht für eine
-Website. Wer beides vermischt, deklariert eine Erhebung, die die App gar
-nicht vornehmen kann.
+That is **no contradiction** to the "No" in the form: the data safety
+declaration covers the Android app delivered through Play, not a website.
+Conflating the two would declare a collection the app is incapable of.
 
-Falls die Play-Prüfung darauf zurückkommt, ist die Antwort genau diese
-Trennung — und die Datenschutzerklärung belegt sie, weil sie beide Fälle
-getrennt behandelt.
+Should the Play review come back to this, that separation is the answer — and
+the privacy policy supports it, because it treats both cases separately.
 
-### 3.3 SDK-Prüfung: erledigt, aber nachvollziehbar halten
+### 3.3 SDK review: done, but keep it verifiable
 
-Google rechnet Daten, die ein eingebundenes SDK überträgt, der App zu.
-Vollständige Liste der Laufzeitabhängigkeiten:
+Google attributes data transmitted by an embedded SDK to the app. Complete
+list of runtime dependencies:
 
-| Paket | Überträgt Daten? |
+| Package | Transmits data? |
 |---|---|
-| `shared_preferences` | nein — Gerätespeicher |
-| `flutter_local_notifications` | nein — lokale Planung, kein Push-Dienst |
-| `timezone` | nein — mitgelieferte Zonendatenbank |
-| `pdf` | nein — erzeugt Bytes im Speicher |
-| `file_picker` | nein — System-Dialog, Ziel wählt der Nutzer |
-| `web` | nein — Interop-Bindings, nur im Web-Build aktiv |
+| `shared_preferences` | no — device storage |
+| `flutter_local_notifications` | no — local scheduling, no push service |
+| `timezone` | no — bundled zone database |
+| `pdf` | no — produces bytes in memory |
+| `file_picker` | no — system dialog, the user picks the destination |
+| `web` | no — interop bindings, active only in the web build |
 
-Kein Analytics, kein Crashlytics, kein Firebase, keine Werbe-SDKs.
+No analytics, no Crashlytics, no Firebase, no ad SDKs.
 
-Absturzberichte, die Google Play selbst über Android Vitals sammelt, sind
-Googles eigene Erhebung und nicht die der App.
+Crash reports that Google Play itself gathers through Android Vitals are
+Google's own collection, not the app's.
 
-**Hier ist nichts zu entscheiden — es ist eine Pflicht mit Verfallsdatum.**
-Das „Nein" im Formular gilt für den Stand dieser Liste. Kommt später eine
-Abhängigkeit dazu, die Daten überträgt, wird die Angabe falsch, ohne dass
-irgendjemand etwas Falsches getan hätte.
+**There is nothing to decide here — it is an obligation with an expiry date.**
+The "No" in the form holds for the state of this list. If a dependency that
+transmits data is added later, the declaration becomes false without anybody
+having done anything wrong.
 
-Deshalb prüft `tool/verify/consistency_check.py` diese Tabelle jetzt
-mechanisch gegen `pubspec.yaml`: Jede Laufzeitabhängigkeit muss hier
-aufgeführt sein, sonst schlägt die Prüfung fehl — lokal und in der CI. Ein
-neues Paket zwingt damit zu einer bewussten Zeile in dieser Tabelle, statt
-auf ein Erinnern zu bauen.
+`tool/verify/consistency_check.py` therefore checks this table mechanically
+against `pubspec.yaml`: every runtime dependency has to be listed here, or the
+check fails — locally and in CI. A new package thus forces a deliberate line
+in this table instead of relying on someone remembering.
 
-Was dann zu tun ist: In der Dokumentation des Pakets nachsehen, ob es Daten
-vom Gerät sendet, die Zeile mit „nein" oder „ja — was genau" ergänzen, und
-bei „ja" das Formular anpassen.
+What to do then: look up in the package documentation whether it sends data
+off the device, add the row with "no" or "yes — what exactly", and for "yes"
+adjust the form.
 
 ---
 
-## 4. Konsistenzprüfung: Formular gegen Datenschutzerklärung
+## 4. Consistency: form against privacy policy
 
-Jede Zeile ist eine Aussage, die in beiden Dokumenten übereinstimmen muss.
+Each line is a statement that has to agree in both documents.
 
-| Aussage im Formular | Deckung in der Datenschutzerklärung |
+| Statement in the form | Covered in the privacy policy |
 |---|---|
-| Keine Datenerhebung | Abschnitt 2: „erhebt keine personenbezogenen Daten"; Abschnitt 3: Werte nur im Arbeitsspeicher |
-| Keine Weitergabe an Dritte | Abschnitt 8 |
-| Keine Werbe-IDs | Abschnitt 2 |
-| Kein Konto, kein Login | Abschnitt 2 („keine Registrierung, kein Nutzerkonto") |
-| Kein Löschmechanismus nötig | Abschnitt 9 (keine Speicherdauer) und 10 (Auskunftsersuchen mangels Daten negativ) |
-| Lokale Einstellungen ohne Personenbezug | Abschnitt 4 mit vollständiger Tabelle |
-| Kein Cloud-Backup, keine Geräteübertragung | Abschnitt 4, belegt durch `allowBackup="false"` und `data_extraction_rules.xml` |
-| Nicht für Kinder | Abschnitt 11 |
+| No data collection | section 2: "collects no personal data"; section 3: values held in memory only |
+| No sharing with third parties | section 8 |
+| No advertising IDs | section 2 |
+| No account, no login | section 2 ("no sign-up, no user account") |
+| No deletion mechanism needed | sections 9 (no retention) and 10 (access requests answered in the negative for want of data) |
+| Local settings without personal reference | section 4, with the full table |
+| No cloud backup, no device transfer | section 4, evidenced by `allowBackup="false"` and `data_extraction_rules.xml` |
+| Not directed at children | section 11 |
 
-**Wenn sich eine dieser Aussagen ändert, müssen drei Dinge gemeinsam
-wandern:** `privacy_policy.md`, `web/privacy.html` und das Formular. Die
-ersten beiden prüft `tool/verify/consistency_check.py` gegeneinander; das
-Formular kann kein Skript erreichen.
+**If one of these statements changes, three things have to move together:**
+`privacy_policy.md`, `web/privacy.html` and the form. The first two are
+checked against each other by `tool/verify/consistency_check.py`; no script
+can reach the form.
 
 ---
 
-## 5. Reihenfolge
+## 5. Order of operations
 
-1. `web/privacy.html` deployen und im Browser öffnen — die URL muss
-   erreichbar sein, **bevor** sie im Formular eingetragen wird.
-2. Datenschutz-URL unter *App-Inhalte* eintragen.
-3. Datensicherheits-Formular ausfüllen: Hauptfrage **Nein**, absenden.
-4. Werbe-ID, Werbung, App-Zugriff, Zielgruppe beantworten.
-5. Kategorie **Bildung** wählen und die Store-Beschreibung an der Tabelle in
-   Abschnitt 3.1 ausrichten — inklusive MDR-Hinweis im Fließtext.
-6. Vorschau der Datensicherheits-Karte ansehen — dort steht dann sinngemäß
-   „Keine Daten werden erfasst" und „Keine Daten werden geteilt". Genau das
-   soll auf der Store-Seite stehen.
+1. Deploy `web/privacy.html` and open it in a browser — the URL has to be
+   reachable **before** it is entered into the form.
+2. Enter the privacy policy URL under *App content*.
+3. Fill in the data safety form: main question **No**, submit.
+4. Answer advertising ID, ads, app access, target audience.
+5. Choose the category **Education** and align the store description with the
+   table in section 3.1, including the MDR note in the body text.
+6. Review the data safety card preview — it should then read along the lines
+   of "No data collected" and "No data shared". That is exactly what should
+   appear on the store page.

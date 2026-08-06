@@ -6,12 +6,11 @@ class PatientData {
   // This prevents extreme inputs (e.g. pow overflow) from crashing the UI.
   static double _safe(double v) {
     if (v.isNaN || v.isInfinite) return 0;
-    // Negative Null einfangen. IEEE-754 kennt -0.0, und Dart formatiert das
-    // als "-0.0": ein Base Excess von 0 ergab in nabic/tris rechnerisch
-    // -0.0 und stand als "-0.0 ml" auf der Karte. Fachlich ist das
-    // dieselbe Null, angezeigt sieht es nach einem Vorzeichenfehler aus.
-    // `v + 0.0` normalisiert -0.0 auf +0.0 und laesst alles andere
-    // unveraendert.
+    // Catch negative zero. IEEE-754 has -0.0, and Dart formats it as
+    // "-0.0": a base excess of 0 arithmetically produced -0.0 in nabic/tris
+    // and the card read "-0.0 ml". Numerically that is the same zero, but on
+    // screen it looks like a sign error. `v + 0.0` normalises -0.0 to +0.0
+    // and leaves everything else untouched.
     return v + 0.0;
   }
 
@@ -273,8 +272,8 @@ class PatientData {
     return ((calziumSoll! - calziumIst!) * bodyWeightElec! * 0.2) / 0.225;
   }
 
-  // _safe(): fangen die negative Null ab, die bei einem Base Excess von 0
-  // aus der Division durch -10 entsteht - siehe Kommentar bei _safe.
+  // _safe(): catches the negative zero that a base excess of 0 produces via
+  // the division by -10 — see the comment on _safe.
   double get nabic {
     if (baseExcess == null || bodyWeightElec == null) return 0;
     return _safe((baseExcess! * bodyWeightElec! * 3) / (-10));
@@ -374,15 +373,14 @@ class PatientData {
   /// Resulting circulating volume after the calculated amount has been
   /// filtered off. Only meaningful once ufVolumeToRemove is valid (>0).
   double get ufFinalVolume {
-    // Frueher: `if (removed <= 0) return 0;` - das vermengte zwei Faelle.
-    // Wenn nichts entzogen wird, weil das Ziel bereits erreicht oder durch
-    // Filtration nicht erreichbar ist, ist das Endvolumen das AKTUELLE
-    // Volumen, nicht null. Auf dem Bildschirm stand dort "0 ml", also die
-    // Aussage "am Ende ist kein Blut mehr im Kreislauf".
+    // Previously: `if (removed <= 0) return 0;` — that conflated two cases.
+    // When nothing is removed, because the target is already reached or is
+    // not reachable by filtration, the final volume is the CURRENT volume,
+    // not zero. On screen that read "0 ml", i.e. the statement "no blood is
+    // left in the circuit at the end".
     //
-    // Dieselben Vorbedingungen wie ufVolumeToRemove, damit "Eingaben
-    // unvollstaendig" weiterhin 0 liefert und beide Karten gemeinsam auf
-    // "—" fallen.
+    // Same preconditions as ufVolumeToRemove, so that "inputs incomplete"
+    // still yields 0 and both cards fall back to "—" together.
     if (ufCurrentVolume == null || ufCurrentVolume! <= 0) return 0;
     final pair = _ufMetricPair;
     if (pair == null || pair.m1 <= 0 || pair.m2 <= 0) return 0;

@@ -1,22 +1,21 @@
 <#
-    Minimaler statischer Webserver fuer PerfusionCalc.
+    Minimal static web server for PerfusionCalc.
 
-    Zweck: Fallback fuer Rechner, auf denen das Ausfuehren fremder
-    .exe-Dateien durch Richtlinien gesperrt ist - PowerShell ist auf
-    jedem Windows-System vorhanden.
+    Purpose: a fallback for machines where running foreign .exe files is
+    blocked by policy — PowerShell is present on every Windows system.
 
-    Bindet bewusst nur an localhost. Damit ist keine Administrator-
-    Berechtigung noetig (fuer 'http://+:port/' waere sie es) und der
-    Server ist von aussen nicht erreichbar.
+    Binds to localhost only, on purpose. That needs no administrator rights
+    (which 'http://+:port/' would) and keeps the server unreachable from
+    outside.
 
-    SICHERHEITSHINWEIS FUER DIE PRUEFUNG DURCH DIE KLINIK-IT
-    -------------------------------------------------------
-    Dieses Skript liefert ausschliesslich Dateien aus dem beim Start
-    uebergebenen Ordner aus. Die Pfadpruefung in Get-SafePath loest '..'
-    VOR dem Vergleich auf (siehe Kommentar dort) - eine Anfrage wie
-    /%2e%2e%2f%2e%2e%2fWindows/win.ini wird mit 403 beantwortet.
+    SECURITY NOTE FOR REVIEW BY HOSPITAL IT
+    ---------------------------------------
+    This script serves files exclusively from the folder passed in at start.
+    The path check in Get-SafePath resolves '..' BEFORE comparing (see the
+    comment there) — a request such as /%2e%2e%2f%2e%2e%2fWindows/win.ini is
+    answered with 403.
 
-    Manuelle Gegenprobe nach jeder Aenderung an Get-SafePath:
+    Manual counter-check after every change to Get-SafePath:
       http://localhost:8080/%2e%2e%2f%2e%2e%2fWindows/win.ini   -> 403
       http://localhost:8080/../../Windows/win.ini               -> 403
       http://localhost:8080/index.html                          -> 200
@@ -38,8 +37,8 @@ if (-not (Test-Path -LiteralPath $Root -PathType Container)) {
 }
 $rootPath = (Resolve-Path -LiteralPath $Root).Path
 
-# Mit abschliessendem Trenner: sonst wuerde ein Nachbarordner 'webbackup'
-# den Praefixvergleich bestehen, weil der String mit '...\web' beginnt.
+# With a trailing separator: otherwise a sibling folder 'webbackup' would
+# pass the prefix comparison, because the string starts with '...\web'.
 $rootPrefix = $rootPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar) +
               [System.IO.Path]::DirectorySeparatorChar
 
@@ -56,37 +55,37 @@ $mime = @{
 }
 
 <#
-    Loest einen angefragten Pfad auf und gibt ihn NUR zurueck, wenn er
-    innerhalb von $rootPath liegt. Sonst $null.
+    Resolves a requested path and returns it ONLY if it lies inside
+    $rootPath. Otherwise $null.
 
-    Warum nicht einfach Join-Path + StartsWith: Join-Path normalisiert
-    NICHT. Fuer rel = '..\..\Windows\win.ini' entsteht der String
-    'C:\PerfusionCalc\web\..\..\Windows\win.ini' - der beginnt mit dem
-    Wurzelpfad, besteht den Vergleich also, und ReadAllBytes loest die
-    '..' anschliessend auf. GetFullPath loest sie VORHER auf.
+    Why not simply Join-Path + StartsWith: Join-Path does NOT normalise. For
+    rel = '..\..\Windows\win.ini' the resulting string is
+    'C:\PerfusionCalc\web\..\..\Windows\win.ini' — which starts with the
+    root path, so it passes the comparison, and ReadAllBytes resolves the
+    '..' afterwards. GetFullPath resolves them BEFOREHAND.
 
-    UnescapeDataString ist ebenfalls kritisch: HttpListener liefert den
-    Pfad teilweise noch prozentkodiert, %2e%2e%2f wird hier also erst zu
-    '../'. Deshalb muss die Pruefung NACH dem Dekodieren stattfinden -
-    genau das tut diese Funktion.
+    UnescapeDataString is equally critical: HttpListener delivers the path
+    still partially percent-encoded, so %2e%2e%2f only becomes '../' here.
+    The check therefore has to happen AFTER decoding — which is exactly what
+    this function does.
 #>
 function Get-SafePath {
     param([string]$Relative)
 
     if ([string]::IsNullOrWhiteSpace($Relative)) { $Relative = "index.html" }
 
-    # Fuehrende Trenner entfernen, sonst behandelt Join-Path den Pfad als
-    # absolut und ignoriert die Wurzel vollstaendig.
+    # Strip leading separators, otherwise Join-Path treats the path as
+    # absolute and ignores the root entirely.
     $Relative = $Relative -replace '^[\\/]+', ''
     if ([string]::IsNullOrWhiteSpace($Relative)) { $Relative = "index.html" }
 
     try {
         $candidate = [System.IO.Path]::GetFullPath((Join-Path $rootPath $Relative))
     } catch {
-        return $null   # ungueltige Zeichen im Pfad
+        return $null   # invalid characters in the path
     }
 
-    # OrdinalIgnoreCase: Windows-Pfade sind nicht case-sensitiv.
+    # OrdinalIgnoreCase: Windows paths are not case sensitive.
     if (-not $candidate.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
         return $null
     }
@@ -124,10 +123,10 @@ try {
             }
 
             if (-not (Test-Path -LiteralPath $full -PathType Leaf)) {
-                # Single-Page-App: Pfade OHNE Dateiendung auf index.html
-                # leiten. Pfade MIT Endung bekommen 404 - fuer eine fehlende
-                # .js-Datei HTML zurueckzugeben erzeugt sonst einen
-                # Folgefehler, der wie ein Syntaxfehler aussieht.
+                # Single-page app: route paths WITHOUT a file extension to
+                # index.html. Paths WITH an extension get 404 — returning
+                # HTML for a missing .js file otherwise causes a follow-up
+                # error that looks like a syntax error.
                 if ([System.IO.Path]::GetExtension($full)) {
                     $ctx.Response.StatusCode = 404
                     $ctx.Response.Close()
@@ -141,10 +140,10 @@ try {
             $ctx.Response.ContentType =
                 if ($mime.ContainsKey($ext)) { $mime[$ext] } else { "application/octet-stream" }
 
-            # Hier wirken echte HTTP-Header - anders als bei GitHub Pages,
-            # wo dieselben Angaben als <meta> wirkungslos waeren (siehe
-            # Kommentar in web/index.html). Der Offline-Bundle ist der
-            # einzige Auslieferungsweg, auf dem sie gesetzt werden koennen.
+            # Real HTTP headers take effect here — unlike on GitHub Pages,
+            # where the same declarations would be ineffective as <meta>
+            # (see the comment in web/index.html). The offline bundle is the
+            # only delivery path on which they can be set.
             $ctx.Response.Headers.Add("X-Content-Type-Options", "nosniff")
             $ctx.Response.Headers.Add("Referrer-Policy", "no-referrer")
             $ctx.Response.Headers.Add("X-Frame-Options", "DENY")

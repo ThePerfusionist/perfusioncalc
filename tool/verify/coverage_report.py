@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PerfusionCalc — Testabdeckung auswerten
+PerfusionCalc — coverage report
 
-Liest `coverage/lcov.info` (erzeugt von `flutter test --coverage`) und listet
-die Dateien nach Abdeckung, ungetestete zuerst.
+Reads `coverage/lcov.info` (produced by `flutter test --coverage`) and lists
+the files by coverage, untested ones first.
 
-Warum das gebraucht wird: Bis v0.4.11 war `CardioplegiaSettings` die einzige
-der drei persistierten Einstellungen ohne Tests — gefunden wurde das durch
-Zufall beim Durchsehen, nicht systematisch. Eine Lücke, die man nicht sieht,
-schließt man nicht.
+Why this is needed: until v0.4.11 `CardioplegiaSettings` was the only one of
+the three persisted settings without tests — that was found by chance while
+reading, not systematically. A gap you cannot see is a gap you do not close.
 
-Aufruf:
+Usage:
     flutter test --coverage
     python3 tool/verify/coverage_report.py
 
-Optionen:
-    --min N     beendet mit 1, wenn eine Datei unter N % liegt (Standard: aus)
-    --ignore    Komma-Liste von Pfadfragmenten, die übersprungen werden
+Options:
+    --min N     exits 1 when a file is below N % (default: off)
+    --ignore    comma-separated path fragments to skip
 """
 
 import os
@@ -26,9 +25,9 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 LCOV = os.path.join(ROOT, "coverage", "lcov.info")
 
-# Reine UI-Dateien lassen sich sinnvoll nur mit Widget-Tests abdecken; sie
-# hier auszublenden macht die Liste lesbar. Modelle und utils sind der Teil,
-# der Unit-Tests haben MUSS - dort rechnet die App.
+# Pure UI files can only sensibly be covered with widget tests; hiding them
+# here keeps the list readable. Models and utils are the part that MUST have
+# unit tests — that is where the app calculates.
 DEFAULT_IGNORE = ("lib/screens/", "lib/widgets/", "lib/theme/")
 
 
@@ -43,8 +42,8 @@ def main() -> int:
     show_all = "--all" in args
 
     if not os.path.exists(LCOV):
-        print(f"coverage/lcov.info nicht gefunden.\n"
-              f"Zuerst ausführen:  flutter test --coverage")
+        print("coverage/lcov.info not found.\n"
+              "Run this first:  flutter test --coverage")
         return 1
 
     files: dict[str, tuple[int, int]] = {}
@@ -68,7 +67,7 @@ def main() -> int:
                 current = None
 
     if not files:
-        print("lcov.info enthält keine Datensätze.")
+        print("lcov.info contains no records.")
         return 1
 
     rows = []
@@ -83,7 +82,7 @@ def main() -> int:
     total_found = sum(f for _, (h, f) in files.items())
 
     print()
-    print(f"  {'Abdeckung':>10}  {'Zeilen':>12}  Datei")
+    print(f"  {'Coverage':>10}  {'Lines':>12}  File")
     print(f"  {'-' * 10}  {'-' * 12}  {'-' * 46}")
     below = []
     for pct, path, hit, found in rows:
@@ -98,13 +97,13 @@ def main() -> int:
 
     print()
     overall = (total_hit / total_found * 100) if total_found else 0
-    print(f"  Gesamt (alle Dateien): {overall:.1f}%  ({total_hit}/{total_found} Zeilen)")
+    print(f"  Total (all files): {overall:.1f}%  ({total_hit}/{total_found} lines)")
     if not show_all:
-        print(f"  Ausgeblendet: {', '.join(ignore)}  —  mit --all vollständig anzeigen")
+        print(f"  Hidden: {', '.join(ignore)}  —  use --all to show everything")
 
     if below:
         print()
-        print(f"  {len(below)} Datei(en) unter der Schwelle bzw. ohne jede Abdeckung:")
+        print(f"  {len(below)} file(s) below the threshold or without any coverage:")
         for p in below:
             print(f"    {p}")
         if min_pct is not None:

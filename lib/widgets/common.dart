@@ -231,9 +231,9 @@ class _InputCardState extends State<InputCard> {
                 // Input validation: max 10 chars, only digits/decimals/minus
                 maxLength: 10,
                 inputFormatters: const [
-                  // NICHT FilteringTextInputFormatter.allow mit einer auf ^…$
-                  // verankerten Regex - das leert bei einem Fehltipp das
-                  // ganze Feld. Begruendung und Testfaelle in
+                  // NOT FilteringTextInputFormatter.allow with a regex
+                  // anchored by ^…$ — that clears the whole field on a
+                  // mistyped character. Rationale and test cases in
                   // utils/decimal_input_formatter.dart.
                   DecimalTextInputFormatter(),
                 ],
@@ -851,6 +851,9 @@ class SourceButton extends StatelessWidget {
                 style:  TextStyle(color: kTextMuted, fontSize: 11)),
             if (r.doi.isNotEmpty)
               Text(r.doi, style: TextStyle(color: kLink, fontSize: 11)),
+            if (r.noteKey != null)
+              Text(t(r.noteKey!),
+                  style: TextStyle(color: kTextMuted, fontSize: 11)),
           ]),
         ),
       ]),
@@ -863,7 +866,18 @@ class SourceRef {
   final String authors;
   final String title;
   final String journal;
+
+  /// Identifier only — DOI, PMID or URL. No prose.
   final String doi;
+
+  /// i18n key of a one-line explanatory note ("what this source contributes").
+  ///
+  /// A key, not a finished string: these notes used to be German literals
+  /// inside the `doi` field, so an English user saw a German sentence in the
+  /// source dialog regardless of the selected language. The identifier and
+  /// the explanation are now separate fields — the first is language
+  /// independent, the second is not.
+  final String? noteKey;
 
   const SourceRef({
     required this.num,
@@ -871,6 +885,7 @@ class SourceRef {
     required this.title,
     required this.journal,
     this.doi = '',
+    this.noteKey,
   });
 }
 
@@ -889,7 +904,8 @@ class AppSources {
     authors: 'Kunst G, Gerber V, Milojevic M, et al; ESAIC Guidelines Task Force; EACTS, EACTAIC, EBCP Guidelines Committees.',
     title: '2024 EACTS/EACTAIC/EBCP Guidelines on cardiopulmonary bypass in adult cardiac surgery.',
     journal: 'British Journal of Anaesthesia. 2025;134(4):917–1008.',
-    doi: 'doi: 10.1016/j.bja.2024.10.018  ·  Standardwert Cardiac Index 2,4 l/min/m² (adulte CPB).',
+    doi: 'doi: 10.1016/j.bja.2024.10.018',
+    noteKey: 'src_note_eacts_kunst_2024',
   );
 
   static const silbernagl = SourceRef(
@@ -897,7 +913,7 @@ class AppSources {
     authors: 'Silbernagl S, Despopoulos A.',
     title: 'Taschenatlas Physiologie. 9. Auflage.',
     journal: 'Stuttgart: Thieme; 2019. ISBN: 978-3-13-576909-8',
-    doi: 'Vereinfachte Blutvolumen-Näherungsformel aus der klinischen Perfusionspraxis.',
+    noteKey: 'src_note_silbernagl',
   );
 
   static const nadler = SourceRef(
@@ -945,7 +961,8 @@ class AppSources {
     authors: 'Ranucci M, Johnson I, Willcox T, et al.',
     title: 'Goal-directed perfusion to reduce acute kidney injury: a randomized trial.',
     journal: 'Journal of Thoracic and Cardiovascular Surgery. 2018;156(5):1918–1927.',
-    doi: 'doi: 10.1016/j.jtcvs.2018.04.045  ·  RCT zur GDP-Strategie.',
+    doi: 'doi: 10.1016/j.jtcvs.2018.04.045',
+    noteKey: 'src_note_ranucci_2018',
   );
 
   static const gao2023 = SourceRef(
@@ -953,7 +970,8 @@ class AppSources {
     authors: 'Gao P, Liu J, Zhang P, Bai L, Jin Y, Li Y.',
     title: 'Goal-directed perfusion for reducing acute kidney injury in cardiac surgery: a systematic review and meta-analysis.',
     journal: 'Perfusion. 2023;38(3):591–599.',
-    doi: 'doi: 10.1177/02676591211073783  ·  Metaanalyse, n = 777 aus 3 RCTs.',
+    doi: 'doi: 10.1177/02676591211073783',
+    noteKey: 'src_note_gao_2023',
   );
 
   static const huefner = SourceRef(
@@ -961,7 +979,7 @@ class AppSources {
     authors: 'Hüfner G.',
     title: 'Neue Versuche zur Bestimmung der Sauerstoffcapacität des Blutfarbstoffs (Hüfner-Konstante 1.34 ml O₂/g Hb).',
     journal: 'Arch Anat Physiol (Physiol Abt). 1894:130–176.',
-    doi: 'Historische Originalquelle der Hämoglobin-O₂-Bindungskapazität.',
+    noteKey: 'src_note_huefner',
   );
 
   static const dijkhuizen1977 = SourceRef(
@@ -969,7 +987,8 @@ class AppSources {
     authors: 'Dijkhuizen P, Buursma A, Fongers TM, Gerding AM, Oeseburg B, Zijlstra WG.',
     title: 'The oxygen binding capacity of human haemoglobin.',
     journal: 'Pflügers Archiv. 1977;369(3):223–231.',
-    doi: 'doi: 10.1007/BF00582188  ·  Moderne Validierung der Hüfner-Konstante (β = 1,368 ml/g, n = 36).',
+    doi: 'doi: 10.1007/BF00582188',
+    noteKey: 'src_note_dijkhuizen_1977',
   );
 
   static const barrettBoyes = SourceRef(
@@ -977,7 +996,8 @@ class AppSources {
     authors: 'Barratt-Boyes BG, Wood EH.',
     title: 'Cardiac output and related measurements and pressure values in the right heart and associated vessels, together with an analysis of the hemodynamic response to the inhalation of high oxygen mixtures in healthy subjects.',
     journal: 'Journal of Laboratory and Clinical Medicine. 1958;51(1):72–90.',
-    doi: 'PMID: 13502983  ·  Faktor 80 für SVR/PVR-Umrechnung in dyn·s·cm⁻⁵',
+    doi: 'PMID: 13502983  ·  Faktor 80 für SVR/PVR-Umrechnung in dyn  ·  s',
+    noteKey: 'src_note_barrett_boyes',
   );
 
   static const skimming = SourceRef(
@@ -993,7 +1013,8 @@ class AppSources {
     authors: 'Mellemgaard K, Astrup P.',
     title: 'The quantitative determination of surplus amounts of acid or base in the human body.',
     journal: 'Scandinavian Journal of Clinical and Laboratory Investigation. 1960;12(2):187–199.',
-    doi: 'doi: 10.3109/00365516009062420  ·  Base Excess (BE) Konzept und NaBic-Berechnungsformel.',
+    doi: 'doi: 10.3109/00365516009062420',
+    noteKey: 'src_note_mellemgaard_astrup_1960',
   );
 
   static const nahas1959 = SourceRef(
@@ -1018,7 +1039,8 @@ class AppSources {
     authors: 'Severinghaus JW.',
     title: 'Simple, accurate equations for human blood O₂ dissociation computations.',
     journal: 'Journal of Applied Physiology. 1979;46(3):599–602.',
-    doi: 'Eq. 1: O₂-Dissoziationskurve  ·  Eq. 2: PO₂ aus SaO₂  ·  Eq. 3: Temperaturkoeffizient f_T = ΔlnPO₂/ΔT',
+    doi: 'Eq. 1: O₂-Dissoziationskurve  ·  Eq. 2: PO₂ aus SaO₂',
+    noteKey: 'src_note_severinghaus_1979',
   );
 
   static const bradleySeveringhaus1956 = SourceRef(
@@ -1026,7 +1048,8 @@ class AppSources {
     authors: 'Bradley AF, Severinghaus JW, Stupfel M.',
     title: 'Effect of temperature on PCO₂ and PO₂ of blood in vitro.',
     journal: 'Journal of Applied Physiology. 1956;9(2):201–204.',
-    doi: 'doi: 10.1152/jappl.1956.9.2.201  ·  PMID: 13376428  ·  PCO₂- und PO₂-Korrekturfaktoren (f_CO₂ = 0.0185, f_O₂ = 0.0247)',
+    doi: 'doi: 10.1152/jappl.1956.9.2.201  ·  PMID: 13376428',
+    noteKey: 'src_note_bradley_severinghaus_1956',
   );
 
   static const severinghaus1966 = SourceRef(
@@ -1034,7 +1057,8 @@ class AppSources {
     authors: 'Severinghaus JW.',
     title: 'Blood gas calculator.',
     journal: 'Journal of Applied Physiology. 1966;21(3):1108–1116.',
-    doi: 'Henderson-Hasselbalch-Gleichung für Blut  ·  HCO₃⁻ = 0.0307 × PCO₂ × 10^(pH − 6.105)',
+    doi: 'Henderson-Hasselbalch-Gleichung für Blut',
+    noteKey: 'src_note_severinghaus_1966',
   );
 
   static const ashwood1983 = SourceRef(
@@ -1042,7 +1066,8 @@ class AppSources {
     authors: 'Ashwood ER, Kost G, Kenny M.',
     title: 'Temperature correction of blood-gas and pH measurements.',
     journal: 'Clinical Chemistry. 1983;29(11):1877–1885.',
-    doi: 'PMID: 6354511  ·  Kritische Überprüfung aller Temperaturkorrektformeln für pH, PCO₂ und PO₂',
+    doi: 'PMID: 6354511',
+    noteKey: 'src_note_ashwood_1983',
   );
 
   static const gocol2021 = SourceRef(
@@ -1058,7 +1083,8 @@ class AppSources {
     authors: 'Linderkamp O, Versmold HT, Riegel KP, Betke K.',
     title: 'Estimation and prediction of blood volume in infants and children.',
     journal: 'European Journal of Pediatrics. 1977;125(4):227–234.',
-    doi: 'doi: 10.1007/BF00493567  ·  PMID: 891567  ·  Pädiatrische Blutvolumen-Regressionsgleichungen.',
+    doi: 'doi: 10.1007/BF00493567  ·  PMID: 891567',
+    noteKey: 'src_note_linderkamp_1977',
   );
 
   static const howie = SourceRef(
@@ -1082,7 +1108,8 @@ class AppSources {
     authors: 'Ramakrishnan KV, Zurakowski D, Pearson GD, Pourmoghadam KK, Jonas RA, Sinha P.',
     title: 'Cardiopulmonary bypass in neonates and infants: advantages of high flow high hematocrit bypass strategy — clinical practice review.',
     journal: 'Translational Pediatrics. 2023;12(7):1483–1495.',
-    doi: 'doi: 10.21037/tp-23-141  ·  Pädiatrische Perfusionsraten (high-flow/high-hematocrit).',
+    doi: 'doi: 10.21037/tp-23-141',
+    noteKey: 'src_note_ramakrishnan_2023',
   );
 
   static const oldeen2020 = SourceRef(
@@ -1090,7 +1117,8 @@ class AppSources {
     authors: 'Oldeen ME, Angona RE, Hodge A, Klein T.',
     title: 'American Society of ExtraCorporeal Technology: Development of Standards and Guidelines for Pediatric and Congenital Perfusion Practice (2019).',
     journal: 'Journal of ExtraCorporeal Technology. 2020;52(4):319–326.',
-    doi: 'doi: 10.1051/ject/202052319  ·  AmSECT-Leitlinie für pädiatrische und kongenitale Perfusion.',
+    doi: 'doi: 10.1051/ject/202052319',
+    noteKey: 'src_note_oldeen_2020',
   );
 
   static const finck = SourceRef(
@@ -1098,7 +1126,8 @@ class AppSources {
     authors: 'Finck C, et al.',
     title: 'Extracorporeal Life Support.',
     journal: 'Pediatric Surgery NaT, American Pediatric Surgical Association, 2025. Pediatric Surgery Library.',
-    doi: 'www.pedsurglibrary.com/apsa/view/Pediatric-Surgery-NaT/829025/all/Extracorporeal_Life_Support  ·  VA/VV-Kanülengrößen für pädiatrische ECMO.',
+    doi: 'www.pedsurglibrary.com/apsa/view/Pediatric-Surgery-NaT/829025/all/Extracorporeal_Life_Support',
+    noteKey: 'src_note_finck',
   );
 
   static const blausenMedical = SourceRef(
@@ -1106,7 +1135,8 @@ class AppSources {
     authors: 'Blausen.com staff.',
     title: 'Medical gallery of Blausen Medical 2014.',
     journal: 'WikiJournal of Medicine. 2014;1(2):10. Licensed under CC BY 3.0.',
-    doi: 'doi: 10.15347/wjm/2014.010  ·  Coronary Vessels (Anterior & Posterior) und Herzanatomie-Abbildungen.',
+    doi: 'doi: 10.15347/wjm/2014.010',
+    noteKey: 'src_note_blausen_medical',
   );
 
   static const klineberg1984 = SourceRef(
@@ -1114,7 +1144,8 @@ class AppSources {
     authors: 'Klineberg PL, Kam CA, Johnson DC, Cartmill TB, Brown JJ.',
     title: 'Hematocrit and blood volume control during cardiopulmonary bypass with the use of hemofiltration.',
     journal: 'Anesthesiology. 1984;60(5):478\u2013480.',
-    doi: 'doi: 10.1097/00000542-198405000-00015  \u00b7  Massenerhaltungsprinzip (Hct \u00d7 Volumen = konstant) für Ultrafiltration/Hämokonzentration.',
+    doi: 'doi: 10.1097/00000542-198405000-00015',
+    noteKey: 'src_note_klineberg_1984',
   );
 
   static const hensley2024 = SourceRef(
@@ -1146,7 +1177,8 @@ class AppSources {
     authors: 'Calafiore AM, Teodori G, Mezzetti A, Bosco G, Verna AM, Di Giammarco G, Lapenna D.',
     title: 'Intermittent antegrade warm blood cardioplegia.',
     journal: 'Ann Thorac Surg. 1995;59(2):398\u2013402.',
-    doi: 'doi: 10.1016/0003-4975(94)00843-V  \u00b7  Ursprungsarbeit der warmen intermittierenden Blutkardioplegie.',
+    doi: 'doi: 10.1016/0003-4975(94)00843-V',
+    noteKey: 'src_note_calafiore_1995',
   );
 
   static const calafiore2020 = SourceRef(
@@ -1162,7 +1194,8 @@ class AppSources {
     authors: 'Bretschneider HJ.',
     title: 'Myocardial protection.',
     journal: 'Thorac Cardiovasc Surg. 1980;28(5):295\u2013302.',
-    doi: 'doi: 10.1055/s-2007-1022099  \u00b7  Grundlagen der intrazellulären HTK-Kardioplegie.',
+    doi: 'doi: 10.1055/s-2007-1022099',
+    noteKey: 'src_note_bretschneider_1980',
   );
 
   static const bretschneider1975 = SourceRef(
@@ -1170,7 +1203,8 @@ class AppSources {
     authors: 'Bretschneider HJ, Hübner G, Knoll D, Lohr B, Nordbeck H, Spieckermann PG.',
     title: 'Myocardial resistance and tolerance to ischemia: physiological and biochemical basis.',
     journal: 'J Cardiovasc Surg (Torino). 1975;16(3):241\u2013260.',
-    doi: 'PMID: 239002  \u00b7  Physiologische/biochemische Basis der Ischämietoleranz.',
+    doi: 'PMID: 239002',
+    noteKey: 'src_note_bretschneider_1975',
   );
 
   static const gebhard1984 = SourceRef(

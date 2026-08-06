@@ -57,13 +57,13 @@ android {
 
     buildTypes {
         release {
-            // Ohne key.properties fiel der Release-Build bisher still auf den
-            // Debug-Key zurueck. Ein debug-signiertes APK unter dem Release-
-            // Namen sieht echt aus, laesst sich sideloaden und ist nie wieder
-            // durch ein korrekt signiertes Update ersetzbar. release.yml setzt
-            // deshalb PERFUSIONCALC_REQUIRE_RELEASE_SIGNING=true; dann bricht
-            // der Build ab statt zu degradieren. Lokale Builds ohne die
-            // Variable verhalten sich unveraendert.
+            // Without key.properties the release build used to fall back
+            // silently to the debug key. A debug-signed APK under the
+            // release name looks genuine, can be sideloaded, and can never
+            // be replaced by a correctly signed update. release.yml
+            // therefore sets PERFUSIONCALC_REQUIRE_RELEASE_SIGNING=true;
+            // the build then aborts instead of degrading. Local builds
+            // without the variable behave unchanged.
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {

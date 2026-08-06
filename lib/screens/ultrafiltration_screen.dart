@@ -193,8 +193,8 @@ class _UltrafiltrationScreenState extends State<UltrafiltrationScreen> {
   }
 }
 
-/// Non-null, sobald ein vollstaendiges Wertepaar vorliegt - Hkt ODER Hb.
-/// Der Rueckgabewert selbst ist bedeutungslos, nur null / nicht-null zaehlt.
+/// Non-null as soon as one complete pair of values is present — Hct OR Hb.
+/// The returned value itself is meaningless; only null vs. non-null counts.
 Object? _ufPairPresent(PatientData pd) {
   final hctPair = pd.ufCurrentHct != null && pd.ufTargetHct != null;
   final hbPair = pd.ufCurrentHb != null && pd.ufTargetHb != null;
@@ -210,10 +210,10 @@ List<PdfSection> buildUltrafiltrationPdfSections(PatientData pd) => [
     PdfRow.numeric(label: t('uf_current_hb'),     value: pd.ufCurrentHb,     unit: 'g/dl'),
     PdfRow.numeric(label: t('uf_target_hb'),      value: pd.ufTargetHb,      unit: 'g/dl'),
   ]),
-  // 0 ml ist hier ein Ergebnis: "das Ziel ist durch Filtration nicht
-  // erreichbar bzw. schon erreicht". Der Bildschirm zeigte 0, das PDF "—".
-  // Welches Wertepaar zaehlt, haengt am gewaehlten Modus (Hkt oder Hb) -
-  // deshalb wird geprueft, ob EINES der beiden Paare vollstaendig ist.
+  // 0 ml is a result here: "the target is not reachable by filtration, or
+  // has already been reached". The screen showed 0, the PDF showed "—".
+  // Which pair of values counts depends on the selected mode (Hct or Hb) —
+  // hence the check whether EITHER pair is complete.
   PdfSection(title: t('pdf_results'), rows: [
     PdfRow.numeric(label: t('uf_volume_remove'),
         value: resultIf([pd.ufCurrentVolume, _ufPairPresent(pd)], pd.ufVolumeToRemove),

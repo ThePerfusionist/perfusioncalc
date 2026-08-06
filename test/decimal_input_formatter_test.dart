@@ -1,21 +1,23 @@
-// Tests für DecimalTextInputFormatter (Audit N-1)
-// ================================================
-// Der Vorgänger war FilteringTextInputFormatter.allow mit einer auf ^…$
-// verankerten Regex. Das sieht aus wie eine Prüfung des Gesamtstrings, ist
-// aber keine: `allow` filtert segmentweise, und wenn die verankerte Regex
-// nirgends passt, bleibt ein LEERES Feld übrig.
+// Tests for DecimalTextInputFormatter (audit N-1)
+// ===============================================
+// The predecessor was FilteringTextInputFormatter.allow with a regex
+// anchored by ^…$. That looks like a check of the whole string but is none:
+// `allow` filters segment by segment, and when the anchored regex matches
+// nowhere, what remains is an EMPTY field.
 //
-// Praktisch: 82,5 kg stehen im Gewichtsfeld, ein Fehltipp daneben - und der
-// Wert ist weg. Diese Tests halten fest, dass genau das nicht mehr passiert.
+// In practice: 82.5 kg are in the weight field, one mistyped character next
+// to it — and the value is gone. These tests record that this no longer
+// happens.
 //
-// Nach PROJECT_STATE § 7.7 Regel 2 gehört dieser Test neben den Kommentar,
-// der die Annahme über das Verhalten der API trägt.
+// Per PROJECT_STATE § 7.7 rule 2, this test belongs next to the comment that
+// carries the assumption about the API's behaviour.
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:perfusion_calc/utils/decimal_input_formatter.dart';
 
-/// TextEditingValue mit Cursor am Ende - so kommt Tastatureingabe an.
+/// TextEditingValue with the cursor at the end — that is how keyboard input
+/// arrives.
 TextEditingValue v(String text) => TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
@@ -27,56 +29,56 @@ void main() {
   String apply(String before, String after) =>
       formatter.formatEditUpdate(v(before), v(after)).text;
 
-  group('Gültige Eingaben werden übernommen', () {
-    test('Ganze Zahl', () => expect(apply('8', '82'), '82'));
-    test('Dezimalpunkt', () => expect(apply('82', '82.'), '82.'));
-    test('Dezimalstelle', () => expect(apply('82.', '82.5'), '82.5'));
-    test('Komma als Trennzeichen', () => expect(apply('82', '82,'), '82,'));
-    test('Negatives Vorzeichen', () => expect(apply('', '-'), '-'));
-    test('Negative Dezimalzahl', () => expect(apply('-2', '-2.5'), '-2.5'));
-    test('Leeres Feld', () => expect(apply('5', ''), ''));
+  group('Valid input is accepted', () {
+    test('Whole number', () => expect(apply('8', '82'), '82'));
+    test('Decimal point', () => expect(apply('82', '82.'), '82.'));
+    test('Decimal place', () => expect(apply('82.', '82.5'), '82.5'));
+    test('Comma as separator', () => expect(apply('82', '82,'), '82,'));
+    test('Negative sign', () => expect(apply('', '-'), '-'));
+    test('Negative decimal', () => expect(apply('-2', '-2.5'), '-2.5'));
+    test('Empty field', () => expect(apply('5', ''), ''));
   });
 
-  group('Ungültige Eingaben lassen den alten Wert stehen', () {
-    test('Zweites Trennzeichen löscht das Feld NICHT', () {
-      // Der eigentliche Regressionstest. Vorher: ''.
+  group('Invalid input leaves the old value in place', () {
+    test('A second separator does NOT clear the field', () {
+      // The actual regression test. Before: ''.
       expect(apply('82.5', '82.5.'), '82.5');
     });
 
-    test('Buchstabe mitten im Wert', () {
+    test('Letter inside the value', () {
       expect(apply('82.5', '82.5a'), '82.5');
     });
 
-    test('Doppeltes Minus', () {
+    test('Double minus', () {
       expect(apply('-5', '--5'), '-5');
     });
 
-    test('Minus in der Mitte', () {
+    test('Minus in the middle', () {
       expect(apply('82', '8-2'), '82');
     });
 
-    test('Gemischte Trennzeichen', () {
+    test('Mixed separators', () {
       expect(apply('1.2', '1.2,3'), '1.2');
     });
 
-    test('Ein voller Wert geht durch einen Fehltipp nicht verloren', () {
-      // Die klinisch relevante Formulierung: das Gewicht bleibt stehen.
+    test('A complete value survives any mistyped character', () {
+      // The clinically relevant phrasing: the weight stays put.
       const weight = '82.5';
       for (final stray in ['.', ',', '-', 'x', ' ']) {
         expect(apply(weight, '$weight$stray'), weight,
-            reason: 'Fehltipp "$stray" darf das Feld nicht leeren');
+            reason: 'mistyped "$stray" must not clear the field');
       }
     });
   });
 
-  group('Teileingaben bleiben tippbar', () {
-    test('Der Weg zu -1.5 ist an jeder Stelle gültig', () {
-      // Wäre einer dieser Zwischenzustände verboten, ließe sich der Wert
-      // nicht eintippen.
+  group('Partial input stays typeable', () {
+    test('Every step on the way to -1.5 is valid', () {
+      // If one of these intermediate states were rejected, the value could
+      // not be typed at all.
       var text = '';
       for (final ch in ['-', '1', '.', '5']) {
         final next = text + ch;
-        expect(apply(text, next), next, reason: 'Zwischenzustand "$next"');
+        expect(apply(text, next), next, reason: 'intermediate state "$next"');
         text = next;
       }
     });

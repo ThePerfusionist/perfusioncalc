@@ -1,27 +1,27 @@
 <#
-    PerfusionCalc — vollständige lokale Prüfung
-    ===========================================
+    PerfusionCalc — full local verification
+    =======================================
 
-    Ruft alles auf, was vor einem Release grün sein muss, in der Reihenfolge
-    „was hart fehlschlägt zuerst":
+    Runs everything that has to be green before a release, in the order
+    "what fails hard comes first":
 
       1. flutter pub get
       2. flutter analyze
       3. flutter test
-      4. tool/verify/consistency_check.py   (sprachübergreifende Invarianten)
-      5. tool/offline/test-serve.ps1        (Pfad-Traversal des Offline-Servers)
+      4. tool/verify/consistency_check.py   (cross-language invariants)
+      5. tool/offline/test-serve.ps1        (path traversal of the offline server)
 
-    Schritt 5 läuft nur unter Windows und braucht keinen Flutter-Build - er
-    baut sich seinen eigenen Testordner.
+    Step 5 runs on Windows only and needs no Flutter build — it creates its
+    own test directory.
 
-    AUFRUF (im Projektwurzelverzeichnis):
+    USAGE (from the project root):
         powershell -NoProfile -ExecutionPolicy Bypass -File .\tool\verify\verify-all.ps1
 
-    Optionen:
-        -SkipTests      überspringt flutter test (schneller Durchlauf)
-        -SkipServe      überspringt die Serverprüfung
+    Options:
+        -SkipTests      skips flutter test (quick pass)
+        -SkipServe      skips the server check
 
-    Beendet mit 0, wenn alles passt, sonst 1.
+    Exits 0 when everything passes, otherwise 1.
 #>
 param(
     [switch]$SkipTests,
@@ -44,7 +44,7 @@ function Step {
     if ($null -eq $code) { $code = 0 }
     $script:results += [pscustomobject]@{ Name = $Name; Code = $code }
     if ($code -ne 0) {
-        Write-Host "   -> fehlgeschlagen (Exit $code)" -ForegroundColor Red
+        Write-Host "   -> failed (exit $code)" -ForegroundColor Red
     }
 }
 
@@ -54,24 +54,23 @@ Step "flutter analyze" { flutter analyze }
 if (-not $SkipTests) {
     Step "flutter test" { flutter test }
 } else {
-    Write-Host "`n══ flutter test  (übersprungen)" -ForegroundColor Yellow
+    Write-Host "`n══ flutter test  (skipped)" -ForegroundColor Yellow
 }
 
 <#
-    Findet einen Python-Interpreter, der wirklich LÄUFT.
+    Finds a Python interpreter that actually RUNS.
 
-    Get-Command allein genügt nicht: Windows legt unter
-    %LOCALAPPDATA%\Microsoft\WindowsApps App-Ausführungsaliase für
-    python.exe und python3.exe ab. Die stehen im PATH, oft VOR einer echten
-    Installation, und öffnen beim Aufruf nur den Microsoft Store -
-    Exit-Code 9009. Get-Command meldet sie trotzdem als gefunden.
+    Get-Command alone is not enough: Windows places app execution aliases for
+    python.exe and python3.exe under %LOCALAPPDATA%\Microsoft\WindowsApps.
+    They sit in PATH, often BEFORE a real installation, and merely open the
+    Microsoft Store when invoked — exit code 9009. Get-Command still reports
+    them as found.
 
-    Dieselbe Falle, gegen die start.bat seit O-2 mit `python -c "pass"`
-    prüft. Ein Ausführungsversuch ist der einzige verlässliche Test.
+    The same trap that start.bat has guarded against with `python -c "pass"`
+    since O-2. An execution attempt is the only reliable test.
 
-    Reihenfolge: `py -3` zuerst - der Python-Launcher kommt mit den
-    Installern von python.org, liegt in %WINDIR% und wird von den Aliassen
-    nicht verdeckt.
+    Order: `py -3` first — the Python launcher ships with the python.org
+    installers, lives in %WINDIR% and is not shadowed by the aliases.
 #>
 function Find-Python {
     $candidates = @(
@@ -90,15 +89,15 @@ function Find-Python {
     return $null
 }
 
-Step "Konsistenzprüfung" {
+Step "Consistency check" {
     $py = Find-Python
     if (-not $py) {
-        Write-Host "   Kein lauffähiger Python-Interpreter gefunden." -ForegroundColor Yellow
-        Write-Host "   Falls Python installiert ist, verdeckt vermutlich der" -ForegroundColor Yellow
-        Write-Host "   App-Ausführungsalias die echte Installation:" -ForegroundColor Yellow
-        Write-Host "     Einstellungen > Apps > Erweiterte App-Einstellungen >" -ForegroundColor Yellow
-        Write-Host "     App-Ausführungsaliase -> python.exe und python3.exe abschalten." -ForegroundColor Yellow
-        Write-Host "   Alternativ direkt:  py -3 tool\verify\consistency_check.py" -ForegroundColor Yellow
+        Write-Host "   No runnable Python interpreter found." -ForegroundColor Yellow
+        Write-Host "   If Python is installed, the app execution alias is probably" -ForegroundColor Yellow
+        Write-Host "   shadowing the real installation:" -ForegroundColor Yellow
+        Write-Host "     Settings > Apps > Advanced app settings >" -ForegroundColor Yellow
+        Write-Host "     App execution aliases -> turn off python.exe and python3.exe." -ForegroundColor Yellow
+        Write-Host "   Or run it directly:  py -3 tool\verify\consistency_check.py" -ForegroundColor Yellow
         $global:LASTEXITCODE = 1
         return
     }
@@ -107,29 +106,29 @@ Step "Konsistenzprüfung" {
 }
 
 if (-not $SkipServe) {
-    Step "Offline-Server (Pfad-Traversal)" {
+    Step "Offline server (path traversal)" {
         powershell -NoProfile -ExecutionPolicy Bypass -File "tool\offline\test-serve.ps1"
     }
 } else {
-    Write-Host "`n══ Offline-Server  (übersprungen)" -ForegroundColor Yellow
+    Write-Host "`n══ Offline server  (skipped)" -ForegroundColor Yellow
 }
 
 Write-Host ""
-Write-Host "══ Zusammenfassung ══════════════════════════════════════════"
+Write-Host "══ Summary ═════════════════════════════════════════════════"
 $failed = 0
 foreach ($r in $results) {
     if ($r.Code -eq 0) {
         Write-Host ("  ok     " + $r.Name) -ForegroundColor Green
     } else {
-        Write-Host ("  FEHL   " + $r.Name) -ForegroundColor Red
+        Write-Host ("  FAIL   " + $r.Name) -ForegroundColor Red
         $failed++
     }
 }
 Write-Host ""
 
 if ($failed -eq 0) {
-    Write-Host "  Alles grün." -ForegroundColor Green
+    Write-Host "  All green." -ForegroundColor Green
     exit 0
 }
-Write-Host "  $failed Schritt(e) fehlgeschlagen." -ForegroundColor Red
+Write-Host "  $failed step(s) failed." -ForegroundColor Red
 exit 1

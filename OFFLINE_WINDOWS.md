@@ -1,107 +1,121 @@
-# PerfusionCalc offline auf einem Windows-PC ohne Internet
+# PerfusionCalc offline on a Windows PC without internet
 
-Kurzanleitung, um die Webapp von einem PC **mit** Internet auf einen PC
-**ohne** Internet zu übertragen — z. B. auf Arbeitsplätze im Klinik-Netz.
-
----
-
-## Der einfachste Weg: fertiges Paket herunterladen
-
-Es muss **nichts gebaut werden**. GitHub Actions erzeugt ein fertiges Paket:
-
-1. Im Repo auf **Releases** gehen
-2. Beim gewünschten Release unter **Assets** die Datei
-   `PerfusionCalc-Offline-Windows-vX.Y.Z.zip` herunterladen
-
-Sie liegt dort direkt neben der Android-APK.
-
-> Für einen Zwischenstand ohne Release: **Actions → „Offline Windows Bundle
-> (manual)" → Run workflow**, danach das Paket unter *Artifacts* laden.
-
-Danach: ZIP entpacken, Ordner auf den Zielrechner kopieren, **`start.bat`**
-doppelklicken. Der Browser öffnet sich, ein Webserver ist bereits enthalten.
-
-> Die Schritte weiter unten werden nur gebraucht, wenn das Paket selbst gebaut
-> werden soll — etwa mit einem noch nicht veröffentlichten Stand.
+Short guide for moving the web app from a machine **with** internet to one
+**without** — for example onto workstations inside a hospital network.
 
 ---
 
-## Wichtig vorab: ein Doppelklick auf `index.html` funktioniert nicht
+## The simplest route: download the ready-made package
 
-Flutter-Webapps laden ihre Module über HTTP. Beim direkten Öffnen einer Datei
-(`file://`) blockiert der Browser das, die Seite bleibt weiß. Es wird also ein
-**kleiner lokaler Webserver** benötigt — der läuft aber komplett offline auf
-dem Zielrechner, es besteht zu keinem Zeitpunkt eine Internetverbindung.
+**Nothing has to be built.** GitHub Actions produces a finished package:
 
-> **Einfachere Alternative:** Für reine Offline-Nutzung ist die **Android-App**
-> (APK) unkomplizierter — installieren und fertig, kein Server nötig.
-> Die folgende Anleitung lohnt sich, wenn es ein Windows-PC sein muss.
+1. Go to **Releases** in the repository
+2. Under **Assets** of the release you want, download
+   `PerfusionCalc-Offline-Windows-vX.Y.Z.zip`
+
+It sits right next to the Android APK.
+
+> For an intermediate state without a release: **Actions → "Offline Windows
+> Bundle (manual)" → Run workflow**, then download the package under
+> *Artifacts*.
+
+After that: unpack the ZIP, copy the folder onto the target machine,
+double-click **`start.bat`**. The browser opens and a web server is already
+included.
+
+> The steps below are only needed if you want to build the package yourself —
+> for instance from an unreleased state.
 
 ---
 
-## Schritt 1 — Auf dem PC mit Internet: Webapp bauen
+## First things first: double-clicking `index.html` does not work
+
+Flutter web apps load their modules over HTTP. Opening a file directly
+(`file://`) is blocked by the browser and the page stays blank. A **small
+local web server** is therefore required — but it runs entirely offline on the
+target machine; at no point is there an internet connection.
+
+> **Simpler alternative:** for pure offline use the **Android app** (APK) is
+> less trouble — install and done, no server needed. The guide below is worth
+> it when it has to be a Windows PC.
+
+---
+
+## Step 1 — On the machine with internet: build the web app
 
 ```powershell
-flutter build web --release --no-web-resources-cdn --base-href / --pwa-strategy offline-first
+flutter build web --release --no-web-resources-cdn --base-href / --pwa-strategy=none
 ```
 
-⚠️ **`--no-web-resources-cdn` ist für den Offline-Betrieb entscheidend.** Ohne
-diesen Schalter lädt die App die CanvasKit-Grafikbibliothek von einem CDN nach
-und bleibt ohne Internet leer.
+⚠️ **`--no-web-resources-cdn` is essential for offline operation.** Without it
+the app fetches the CanvasKit graphics library from a CDN and stays blank when
+there is no internet.
 
-Ergebnis liegt in: `build\web\`
+⚠️ **`--pwa-strategy=none` is equally essential.** With `offline-first` Flutter
+generates its own service worker, which `flutter_bootstrap.js` registers in the
+same scope `/` as the project's `web/sw.js`. Two registrations for one scope
+cannot coexist; the later one replaces the earlier. Online this goes
+unnoticed — offline the app breaks.
 
-## Schritt 2 — Webserver besorgen
+The result is in `build\web\`.
 
-Eine einzelne portable EXE genügt, z. B. **Caddy**
-(<https://caddyserver.com/download> → Windows / amd64 → `caddy_windows_amd64.exe`).
+## Step 2 — Obtain a web server
 
-Alternativ ist **Python** oft schon auf dem Zielrechner vorhanden — dann wird
-keine zusätzliche Datei gebraucht (siehe Schritt 4, Variante B).
+A single portable EXE is enough, for instance **Caddy**
+(<https://caddyserver.com/download> → Windows / amd64 →
+`caddy_windows_amd64.exe`).
 
-### Prüfsummen des mitgelieferten Caddy
+Alternatively **Python** is often already present on the target machine, in
+which case no additional file is needed (see step 4, variant B).
 
-Die von GitHub Actions gebauten Bundles (`PerfusionCalc-Offline-Windows-*.zip`)
-enthalten eine fest gepinnte Caddy-Version. Version und Hash stehen in
-`.github/workflows/release.yml` und `offline-bundle.yml`; ohne Pin wären zwei
-Builds desselben Tags nicht bitgleich und ein ausgeliefertes Bundle
-nachträglich nicht überprüfbar.
+### Checksums of the bundled Caddy
+
+The bundles built by GitHub Actions (`PerfusionCalc-Offline-Windows-*.zip`)
+contain a firmly pinned Caddy version. Version and hash live in
+`.github/workflows/release.yml` and `offline-bundle.yml`; without the pin two
+builds of the same tag would not be bit-identical and a delivered bundle could
+not be verified afterwards.
 
 | | |
 |---|---|
 | Version | **2.11.4** |
-| Datei | `caddy_2.11.4_windows_amd64.zip` |
+| File | `caddy_2.11.4_windows_amd64.zip` |
 | SHA-256 | `1708333f79e274c7697285afe6d592ab39314e0b131e9ec6bea08ad27df62ebf` |
 | SHA-512 | `cd5ccfd86a4b40732cf715890d0dca5bf3f63adefec5a7914de85adf240c60ce7e5d2791631b88ef9758e46b23bb1730e020b9c5d696889740b284ffd4788e35` |
 
-Der SHA-512 ist gegen die offizielle Liste des Herstellers prüfbar:
+The SHA-512 can be checked against the vendor's official list:
 `https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_checksums.txt`
 
-Prüfung unter Windows (PowerShell):
+Verifying on Windows (PowerShell):
 
 ```powershell
 (Get-FileHash caddy_2.11.4_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
 ```
 
-In Klinikumgebungen ist genau diese Nachweiskette oft Voraussetzung dafür,
-dass die IT-Abteilung eine unbekannte `.exe` freigibt. Wer die EXE gar nicht
-ausführen darf, nimmt Variante B (PowerShell-/Python-Server) — dann wird
-`caddy.exe` nicht gebraucht.
+In hospital environments this chain of evidence is often the precondition for
+the IT department to approve an unknown `.exe` at all. Anyone not permitted to
+run the EXE takes variant B (the PowerShell or Python server) — then
+`caddy.exe` is not needed.
 
-## Schritt 3 — USB-Stick packen
+## Step 3 — Pack the USB stick
 
 ```
 PerfusionCalc\
-├── web\              ← kompletter Inhalt von build\web\
-├── caddy.exe         ← nur bei Variante A
+├── web\              ← the complete contents of build\web\
+├── caddy.exe         ← variant A only
 └── start.bat
 ```
 
-Die Dateien `start.bat`, `serve.ps1` und `LIESMICH.txt` liegen im Repo unter
-`tool/offline/` — einfach mitkopieren. Wer sie selbst schreiben will, findet
-hier eine Minimalfassung.
+`start.bat`, `serve.ps1` and `LIESMICH.txt` live in the repository under
+`tool/offline/` — just copy them along. `LIESMICH.txt` is deliberately in
+German: it is read by staff at the clinical workstation, not by developers.
 
-Inhalt von `start.bat`:
+Anyone wanting to write the launcher themselves will find a minimal version
+here. Note that the shipped `start.bat` does considerably more: it probes each
+server option before starting it, so a `caddy.exe` blocked by AppLocker or
+SmartScreen falls through to PowerShell and then to Python.
+
+Contents of a minimal `start.bat`:
 
 ```bat
 @echo off
@@ -110,7 +124,7 @@ start "" http://localhost:8080
 caddy.exe file-server --root web --listen :8080
 ```
 
-Für **Variante B (Python statt Caddy)**:
+For **variant B (Python instead of Caddy)**:
 
 ```bat
 @echo off
@@ -119,43 +133,46 @@ start "" http://localhost:8080
 python -m http.server 8080
 ```
 
-> **Zu Variante B:** `python -m http.server` bestimmt den Content-Type über das
-> `mimetypes`-Modul. Ob `.wasm` dort auf `application/wasm` abgebildet ist,
-> hängt an der Python-Version — in älteren Versionen fehlt der Eintrag, und
-> dann wird `application/octet-stream` geliefert. Die App läuft trotzdem: der
-> CanvasKit-Loader hat für `WebAssembly.instantiateStreaming` einen
-> `arrayBuffer()`-Rückfallweg. Der **Start dauert dann aber spürbar länger**,
-> weil das Modul nicht mehr während des Downloads kompiliert wird. Ein
-> langsamer erster Start unter Variante B ist also erwartbar und kein Defekt.
-> Die von `start.bat` bevorzugten Varianten (Caddy, `serve.ps1`) setzen den
-> Typ korrekt.
+> **On variant B:** `python -m http.server` determines the content type via
+> the `mimetypes` module. Whether `.wasm` maps to `application/wasm` there
+> depends on the Python version — older versions lack the entry and deliver
+> `application/octet-stream` instead. The app still runs: the CanvasKit loader
+> has an `arrayBuffer()` fallback for `WebAssembly.instantiateStreaming`. The
+> **start does take noticeably longer**, though, because the module is no
+> longer compiled while it downloads. A slow first start under variant B is
+> therefore expected and not a defect. The variants `start.bat` prefers
+> (Caddy, `serve.ps1`) set the type correctly.
 
-## Schritt 4 — Auf dem Zielrechner starten
+## Step 4 — Start on the target machine
 
-Ordner vom Stick auf die Festplatte kopieren (z. B. nach `C:\PerfusionCalc`),
-dann `start.bat` doppelklicken. Der Browser öffnet sich auf
-`http://localhost:8080`.
+Copy the folder from the stick to the hard disk (e.g. to `C:\PerfusionCalc`),
+then double-click `start.bat`. The browser opens at `http://localhost:8080`.
 
-Zum Beenden das schwarze Konsolenfenster schließen.
+To stop, close the black console window.
 
 ---
 
-## Hinweise
+## Notes
 
-**Windows-Firewall:** Beim ersten Start kann eine Abfrage erscheinen.
-„Abbrechen" genügt — für `localhost` wird keine Freigabe benötigt.
+**Windows firewall:** a prompt may appear on first start. "Cancel" is enough —
+no exception is needed for `localhost`.
 
-**Als App installieren:** Im Browser über das Installations-Symbol in der
-Adresszeile (Chrome/Edge) lässt sich PerfusionCalc als eigenständiges Fenster
-ohne Adressleiste einrichten. Der Server muss dennoch laufen.
+**Install as an app:** using the install icon in the address bar (Chrome/Edge),
+PerfusionCalc can be set up as a standalone window without an address bar. The
+server still has to be running.
 
-**Benachrichtigungen (Kardioplegie-Timer):** Funktionieren auf `localhost`,
-weil Browser das als sicheren Kontext behandeln. Der **Tab muss geöffnet
-bleiben** — im Gegensatz zur Android-App, die auch im Hintergrund meldet.
+**Notifications (cardioplegia timer):** these work on `localhost`, because
+browsers treat it as a secure context. The **tab has to stay open** — unlike
+the Android app, which also notifies in the background.
 
-**Aktualisieren:** Neu bauen, den Ordner `web\` ersetzen, fertig. Falls die
-alte Version im Browser hängen bleibt: Strg+Shift+R, oder Verlauf →
-Browserdaten löschen → zwischengespeicherte Dateien.
+**Updating:** rebuild, replace the `web\` folder, done. If the old version
+sticks in the browser: Ctrl+Shift+R, or History → Clear browsing data → cached
+files.
 
-**Port belegt?** In `start.bat` und in der URL `8080` durch z. B. `8081`
-ersetzen.
+**Port taken?** Replace `8080` with e.g. `8081` in `start.bat` and in the URL.
+The shipped `start.bat` already searches for a free port among 8080, 8081,
+8082 and 8090 by itself.
+
+**Security review:** `serve.ps1` carries a note for hospital IT in its header,
+including the manual counter-check for path traversal. The automated version
+of that check is `tool/offline/test-serve.ps1`.

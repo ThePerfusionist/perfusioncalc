@@ -219,16 +219,15 @@ List<PdfSection> buildPediatricPdfSections(PatientData pd) {
     PdfSection(title: t('pdf_inputs'), rows: [
       PdfRow.numeric(label: t('bsa_body_weight'), value: pd.pediatricWeight,   unit: 'kg'),
       PdfRow.numeric(label: t('ped_desired_hb'),  value: pd.desiredHbIncrease, unit: 'g/dl', decimals: 1),
-      // resultIf, NICHT der nackte Wert (Eigenbefund v0.4.12): Der
-      // EK-Haematokrit kommt aus einer Einstellung und ist IMMER gesetzt -
-      // hier ungefiltert eingetragen, enthielt der Pädiatrie-Tab damit
-      // selbst dann eine Zahl, wenn niemand ihn angefasst hatte. Der
-      // Gesamtbericht filtert ueber "enthaelt mindestens einen Wert, der
-      // nicht — ist" und haette den Tab folglich JEDEM Bericht beigelegt.
+      // resultIf, NOT the bare value (self-audit v0.4.12): the RBC unit's
+      // hematocrit comes from a setting and is ALWAYS present — entered here
+      // unfiltered, the pediatric tab therefore contained a number even when
+      // nobody had touched it. The combined report filters on "contains at
+      // least one value that is not —" and would consequently have attached
+      // the tab to EVERY report.
       //
-      // Dieselbe Falle, die natriumSollTouched und bsaCardiacIndexTouched
-      // an anderer Stelle bereits entschaerfen: ein Vorbelegungswert ist
-      // keine Eingabe.
+      // The same trap that natriumSollTouched and bsaCardiacIndexTouched
+      // already defuse elsewhere: a default value is not an entry.
       PdfRow.numeric(label: t('ped_hct_in_ek'),
           value: resultIf([pd.pediatricWeight, pd.desiredHbIncrease], hctPercent),
           unit: '%', decimals: 0),

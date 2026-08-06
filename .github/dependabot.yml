@@ -1,10 +1,10 @@
 version: 2
 
-# Die Workflows sind auf vollstaendige Commit-SHAs gepinnt (siehe Audit 2.1:
-# ein verschiebbarer Tag wie @v2 laeuft im selben Job wie KEYSTORE_BASE64).
-# Gepinnte SHAs veralten aber - Dependabot haelt sie aktuell und schreibt den
-# Versionskommentar hinter dem SHA mit fort. Ohne diese Datei ist der Pin
-# Sicherheitsgewinn plus Wartungsschuld; mit ihr nur der Sicherheitsgewinn.
+# The workflows are pinned to full commit SHAs (see audit 2.1: a movable tag
+# such as @v2 runs in the same job as KEYSTORE_BASE64). Pinned SHAs do go
+# stale, though — Dependabot keeps them current and carries the version
+# comment behind the SHA along. Without this file the pin is a security gain
+# plus maintenance debt; with it, only the security gain.
 
 updates:
   # ── GitHub Actions ────────────────────────────────────────────────────────
@@ -19,42 +19,41 @@ updates:
       - "dependencies"
       - "github-actions"
 
-    # Ein PR pro Woche statt fuenf: Patch- und Minor-Updates von Actions sind
-    # fast immer unkritisch und lassen sich gesammelt lesen. Major-Spruenge
-    # sind unten ausgenommen, also enthaelt die Gruppe nur Harmloses.
+    # One PR per week instead of five: patch and minor updates to actions
+    # are almost always uncritical and can be read together. Major jumps are
+    # excluded below, so the group contains only harmless changes.
     groups:
       actions-minor-patch:
         update-types:
           - "minor"
           - "patch"
 
-    # KEINE automatischen Major-Spruenge.
+    # NO automatic major jumps.
     #
-    # In Block B wurde bewusst INNERHALB der bestehenden Major-Version
-    # gepinnt - Pinnen und Major-Wechsel gehoeren nicht in denselben Commit.
-    # Ohne diese Regel hat Dependabot sofort das Gegenteil vorgeschlagen:
-    # checkout 6->7, setup-java 4->5, gh-release 2->3 und upload-artifact
-    # 4->7 (drei Majors auf einmal).
+    # Block B deliberately pinned WITHIN the existing major version — pinning
+    # and a major change do not belong in the same commit. Without this rule
+    # Dependabot immediately proposed the opposite: checkout 6->7, setup-java
+    # 4->5, gh-release 2->3 and upload-artifact 4->7 (three majors at once).
     #
-    # Diese Actions laufen im selben Job wie KEYSTORE_BASE64 bzw. bauen das
-    # Artefakt, das im Play Store landet. Ein Major-Wechsel aendert dort
-    # Verhalten, nicht nur Versionsnummern - upload-artifact v5 etwa bei
-    # gleichnamigen Artefakten, checkout v7 bei der Runner-Node-Version.
-    # Solche Wechsel gehoeren einzeln gemacht, mit einem Testlauf dahinter,
-    # sinnvollerweise gemeinsam mit dem naechsten Anheben von FLUTTER_VERSION.
+    # These actions run in the same job as KEYSTORE_BASE64, or build the
+    # artefact that ends up in the Play Store. A major change alters
+    # behaviour there, not just version numbers — upload-artifact v5 for
+    # identically named artefacts, for instance, or checkout v7 for the
+    # runner's Node version. Such changes belong done one at a time, with a
+    # test run behind them, sensibly together with the next bump of
+    # FLUTTER_VERSION.
     #
-    # Der Sicherheitszweck bleibt vollstaendig erhalten: innerhalb der Major
-    # werden die SHAs weiter automatisch nachgezogen, und
-    # Sicherheits-Updates meldet Dependabot Alerts unabhaengig von dieser
-    # Regel.
+    # The security purpose is fully preserved: within the major the SHAs are
+    # still tracked automatically, and Dependabot alerts report security
+    # updates independently of this rule.
     #
-    # Die Regel hat sich bewaehrt: Der erste checks.yml-Lauf meldete
-    # "Node.js 20 is deprecated", woraufhin setup-node einzeln auf v5
-    # angehoben wurde. In v0.4.20 folgten checkout v7, setup-java v5,
-    # upload-artifact v7 und action-gh-release v3 - gebuendelt, nachdem fuer
-    # jede Action geprueft war, dass alle benutzten Inputs unveraendert
-    # existieren. Genau so soll es laufen: bewusst, gemeinsam, mit
-    # anschliessendem Testlauf.
+    # The rule has proven itself: the first checks.yml run reported "Node.js
+    # 20 is deprecated", after which setup-node was raised to v5 on its own.
+    # In v0.4.20 checkout v7, setup-java v5, upload-artifact v7 and
+    # action-gh-release v3 followed — bundled, after each action had been
+    # checked to confirm that every input in use still exists unchanged.
+    # That is exactly how it should go: deliberately, together, with a test
+    # run afterwards.
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
@@ -70,15 +69,15 @@ updates:
     labels:
       - "dependencies"
 
-    # Hier bewusst NICHT pauschal alle Majors gesperrt: bei einer App mit
-    # wenigen, gut ueberschaubaren Abhaengigkeiten ist ein Major-PR eine
-    # nuetzliche Erinnerung. Ausgenommen sind nur die zwei Pakete, deren
-    # Major-Wechsel erfahrungsgemaess ein eigenes Release kostet.
+    # Here majors are deliberately NOT blocked across the board: for an app
+    # with few, well-surveyable dependencies a major PR is a useful reminder.
+    # Only the two packages whose major changes have historically cost a
+    # release of their own are excluded.
     ignore:
-      # Die Migration 18 -> 22 war ein eigener Release inklusive
-      # Icon-Naming-, R8- und Desktop-Registrierungs-Folgefehlern.
+      # The 18 -> 22 migration was a release of its own, including knock-on
+      # defects in icon naming, R8 and desktop plugin registration.
       - dependency-name: "flutter_local_notifications"
         update-types: ["version-update:semver-major"]
-      # Traegt den kompletten PDF-Export; ein Major bricht dort die API.
+      # Carries the entire PDF export; a major breaks the API there.
       - dependency-name: "pdf"
         update-types: ["version-update:semver-major"]

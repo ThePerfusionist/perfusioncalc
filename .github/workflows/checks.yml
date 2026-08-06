@@ -1,17 +1,17 @@
 name: Checks
 
-# Läuft bei jedem Push und jedem Pull Request auf main.
+# Runs on every push and every pull request to main.
 #
-# Warum getrennt von deploy.yml: Diese Prüfungen sollen auch dann laufen,
-# wenn nicht deployt wird — auf einem Branch, in einem PR, in einem Fork.
-# deploy.yml bleibt der Auslieferungspfad und wird hier nicht angefasst.
+# Why separate from deploy.yml: these checks should also run when nothing is
+# deployed — on a branch, in a PR, in a fork. deploy.yml remains the delivery
+# path and is not touched here.
 #
-# Zwei Ebenen:
-#   1. flutter analyze + flutter test   — was Dart selbst prüfen kann
-#   2. consistency_check.py             — was über Sprachgrenzen hinweg gilt:
-#      Dart gegen YAML, Dart gegen JavaScript, Code gegen Dokumentation.
-#      Jede Prüfung dort steht für einen Fehler, der in dieser Codebasis
-#      schon einmal aufgetreten ist (siehe PROJECT_STATE.md § 7).
+# Two levels:
+#   1. flutter analyze + flutter test   — what Dart itself can check
+#   2. consistency_check.py             — what holds across language borders:
+#      Dart against YAML, Dart against JavaScript, code against
+#      documentation. Every check there stands for a defect that has already
+#      occurred in this codebase (see PROJECT_STATE.md § 7).
 
 on:
   push:
@@ -24,8 +24,8 @@ permissions:
   contents: read
 
 env:
-  # Muss mit deploy.yml, release.yml, offline-bundle.yml und den
-  # Entwicklungsmaschinen übereinstimmen.
+  # Must match deploy.yml, release.yml, offline-bundle.yml and the
+  # development machines.
   FLUTTER_VERSION: '3.44.8'
 
 jobs:
@@ -52,20 +52,20 @@ jobs:
       - name: Unit tests
         run: flutter test
 
-      # Node wird nur für `node --check web/sw.js` gebraucht. Ohne Node
-      # überspringt der Checker diese eine Prüfung mit einer Warnung - hier
-      # soll sie aber laufen, denn der Service Worker trägt den Offlinebetrieb.
-      # v5, nicht v4: der erste Lauf dieses Workflows meldete
-      # "Node.js 20 is deprecated ... actions/setup-node@... are being forced
-      # to run on Node.js 24". setup-node v4 laeuft selbst auf Node 20; v5
-      # zielt auf Node 24. Dependabot faengt das nicht auf, weil Majors fuer
-      # Actions bewusst ignoriert werden (siehe dependabot.yml) - solche
-      # Spruenge gehoeren einzeln und mit Testlauf gemacht, und genau das
-      # ist dies hier.
+      # Node is needed only for `node --check web/sw.js`. Without Node the
+      # checker skips that single check with a warning — here it should run,
+      # because the service worker carries the offline operation.
       #
-      # node-version 22: aktuelle LTS. Gebraucht wird Node ausschliesslich
-      # fuer `node --check web/sw.js`; die Version ist dafuer unkritisch,
-      # sollte aber nicht selbst veraltet sein.
+      # v5, not v4: the first run of this workflow reported "Node.js 20 is
+      # deprecated ... actions/setup-node@... are being forced to run on
+      # Node.js 24". setup-node v4 itself runs on Node 20; v5 targets
+      # Node 24. Dependabot does not catch this, because majors for actions
+      # are deliberately ignored (see dependabot.yml) — such jumps belong
+      # done individually and with a test run, which is exactly what this is.
+      #
+      # node-version 22: the current LTS. Node is used solely for
+      # `node --check web/sw.js`; the version is uncritical for that, but it
+      # should not itself be outdated.
       - name: Setup Node (für die sw.js-Syntaxprüfung)
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
@@ -77,11 +77,10 @@ jobs:
       - name: Repository consistency
         run: python3 tool/verify/consistency_check.py
 
-      # Informativ, bricht den Lauf NICHT ab. Eine Schwelle waere hier
-      # verfrueht: die Screens haben bewusst keine Widget-Tests, und eine
-      # Zahl, die man erreichen muss, verleitet zu Tests, die nur Zeilen
-      # abhaken. Der Bericht macht Luecken sichtbar - entscheiden muss ein
-      # Mensch.
+      # Informational, does NOT fail the run. A threshold would be
+      # premature here: the screens deliberately have no widget tests, and a
+      # number one has to reach invites tests that merely tick off lines.
+      # The report makes gaps visible — a human has to decide.
       - name: Coverage (informativ)
         run: |
           flutter test --coverage

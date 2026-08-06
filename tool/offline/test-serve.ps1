@@ -1,28 +1,28 @@
 <#
-    Gegenprobe fuer serve.ps1 — Pfad-Traversal und Grundverhalten
-    =============================================================
+    Counter-check for serve.ps1 — path traversal and basic behaviour
+    ================================================================
 
-    Startet serve.ps1 auf einem freien Port, feuert eine Reihe von Anfragen
-    dagegen und vergleicht die Statuscodes. Ersetzt die manuelle Pruefung,
-    die bisher als Kommentar im Kopf von serve.ps1 stand.
+    Starts serve.ps1 on a free port, fires a series of requests at it and
+    compares the results. Replaces the manual check that used to live as a
+    comment in the header of serve.ps1.
 
-    Hintergrund: Bis v0.4.9 pruefte serve.ps1 mit Join-Path + StartsWith, ob
-    eine Anfrage den Wurzelordner verlaesst. Join-Path normalisiert '..'
-    NICHT — der zusammengesetzte String beginnt mit dem Wurzelpfad, besteht
-    die Pruefung also, und ReadAllBytes loest die '..' anschliessend auf.
-    Beliebiger Dateilesezugriff mit den Rechten des angemeldeten Benutzers.
+    Background: until v0.4.9 serve.ps1 used Join-Path + StartsWith to decide
+    whether a request left the root folder. Join-Path does NOT normalise
+    '..' — the concatenated string starts with the root path, so it passes
+    the check, and ReadAllBytes resolves the '..' afterwards. Arbitrary file
+    read access with the rights of the logged-in user.
 
-    Die prozentkodierten Varianten sind die wichtigeren: ein Browser
-    kollabiert '..' in einer URL, bevor er sendet; '%2e%2e%2f' ueberlebt und
-    wird erst von UnescapeDataString im Server aufgeloest.
+    The percent-encoded variants are the more important ones: a browser
+    collapses '..' in a URL before sending; '%2e%2e%2f' survives and is only
+    resolved by UnescapeDataString inside the server.
 
-    AUFRUF (im Ordner tool/offline):
+    USAGE (from the tool/offline folder):
         powershell -NoProfile -ExecutionPolicy Bypass -File .\test-serve.ps1
 
-    Beendet mit Exit-Code 0, wenn alles passt, sonst 1.
+    Exits 0 when everything passes, otherwise 1.
 #>
 param(
-    [int]$Port = 8137   # bewusst abseits der ueblichen 8080er
+    [int]$Port = 8137   # deliberately away from the usual 8080 range
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,9 +31,9 @@ Set-Location -LiteralPath $PSScriptRoot
 $failures = 0
 $checks = 0
 
-# Der Marker steht in der Datei ausserhalb des Wurzelordners. Er ist das
-# eigentliche Pruefkriterium - siehe Assert-NoLeak.
-$script:SecretMarker = "DIESE-DATEI-DARF-NIE-AUSGELIEFERT-WERDEN"
+# The marker lives in the file outside the root folder. It is the actual
+# pass/fail criterion — see Assert-NoLeak.
+$script:SecretMarker = "THIS-FILE-MUST-NEVER-BE-SERVED"
 
 function Invoke-Probe {
     param([string]$Path)
@@ -63,31 +63,30 @@ function Assert-Status {
     if ($Expected -contains $r.Status) {
         Write-Host ("  [ok]   {0,-52} -> {1}" -f $Path, $r.Status)
     } else {
-        Write-Host ("  [FEHL] {0,-52} -> {1}, erwartet {2}" -f $Path, $r.Status, ($Expected -join '/')) -ForegroundColor Red
+        Write-Host ("  [FAIL] {0,-52} -> {1}, erwartet {2}" -f $Path, $r.Status, ($Expected -join '/')) -ForegroundColor Red
         Write-Host ("         {0}" -f $Why) -ForegroundColor Red
         $script:failures++
     }
 }
 
 <#
-    Pruefkriterium fuer Traversal-Versuche.
+    Pass/fail criterion for traversal attempts.
 
-    NICHT auf 403 allein pruefen - das waere zu eng und war in der ersten
-    Fassung dieses Tests falsch. Grund: Invoke-WebRequest (und auf dem Weg
-    dorthin auch http.sys) normalisiert '..' in einer URL, BEVOR die Anfrage
-    den Server erreicht. Aus '/../geheim.txt' wird '/geheim.txt', und darauf
-    antwortet der Server voellig korrekt mit 404 - er hat nie einen Traversal
-    gesehen. Ein erwartetes 403 schlaegt dann fehl, ohne dass irgendetwas
-    kaputt waere.
+    Do NOT check for 403 alone — that would be too narrow and was wrong in
+    the first version of this test. Reason: Invoke-WebRequest (and http.sys
+    on the way there) normalises '..' in a URL BEFORE the request reaches
+    the server. '/../secret.txt' becomes '/secret.txt', and the server
+    answers that perfectly correctly with 404 — it never saw a traversal. An
+    expected 403 then fails without anything being broken.
 
-    Genau deshalb sind die prozentkodierten Varianten die interessanten:
-    '%2e%2e%2f' ueberlebt jede Normalisierung und wird erst im Server durch
-    UnescapeDataString aufgeloest - dort, wo Get-SafePath greift.
+    That is precisely why the percent-encoded variants are the interesting
+    ones: '%2e%2e%2f' survives any normalisation and is only resolved inside
+    the server by UnescapeDataString — where Get-SafePath takes effect.
 
-    Das eigentliche Kriterium ist inhaltlich: Der Inhalt der Datei ausserhalb
-    des Wurzelordners darf NIE in der Antwort auftauchen. Status 403 (Server
-    hat abgelehnt) und 404 (Anfrage kam normalisiert an) sind beide in
-    Ordnung; 200 mit dem Marker im Rumpf ist der Befund.
+    The real criterion is about content: the contents of the file outside the
+    root folder must NEVER appear in a response. Status 403 (server refused)
+    and 404 (request arrived normalised) are both fine; 200 with the marker
+    in the body is the finding.
 #>
 function Assert-NoLeak {
     param([string]$Path, [string]$Why)
@@ -95,29 +94,28 @@ function Assert-NoLeak {
     $r = Invoke-Probe $Path
     $leaked = $r.Body -and ($r.Body -like "*$script:SecretMarker*")
     if ($leaked) {
-        Write-Host ("  [FEHL] {0,-52} -> {1} MIT DATEIINHALT" -f $Path, $r.Status) -ForegroundColor Red
-        Write-Host ("         {0} - Datei ausserhalb des Wurzelordners ausgeliefert!" -f $Why) -ForegroundColor Red
+        Write-Host ("  [FAIL] {0,-52} -> {1} WITH FILE CONTENTS" -f $Path, $r.Status) -ForegroundColor Red
+        Write-Host ("         {0} - file outside the root folder was served!" -f $Why) -ForegroundColor Red
         $script:failures++
     } elseif ($r.Status -eq 200) {
-        Write-Host ("  [FEHL] {0,-52} -> 200" -f $Path) -ForegroundColor Red
-        Write-Host ("         {0} - unerwartet erfolgreich" -f $Why) -ForegroundColor Red
+        Write-Host ("  [FAIL] {0,-52} -> 200" -f $Path) -ForegroundColor Red
+        Write-Host ("         {0} - unexpectedly succeeded" -f $Why) -ForegroundColor Red
         $script:failures++
     } elseif ($r.Status -eq 403) {
-        Write-Host ("  [ok]   {0,-52} -> 403 abgelehnt" -f $Path)
+        Write-Host ("  [ok]   {0,-52} -> 403 refused" -f $Path)
     } elseif ($r.Status -eq 404) {
-        Write-Host ("  [ok]   {0,-52} -> 404 (Client normalisierte den Pfad)" -f $Path)
+        Write-Host ("  [ok]   {0,-52} -> 404 (client normalised the path)" -f $Path)
     } else {
-        Write-Host ("  [FEHL] {0,-52} -> {1} unerwartet" -f $Path, $r.Status) -ForegroundColor Red
+        Write-Host ("  [FAIL] {0,-52} -> {1} unexpected" -f $Path, $r.Status) -ForegroundColor Red
         $script:failures++
     }
 }
 
 <#
-    Rohe Anfrage ueber einen TCP-Socket, an jeder Client-Normalisierung
-    vorbei. Nur so laesst sich pruefen, was ein feindlicher Client
-    tatsaechlich schicken wuerde. http.sys kanonisiert unter Umstaenden
-    trotzdem noch - auch das ist ein bestandener Fall, solange der Marker
-    nicht im Rumpf steht.
+    Raw request over a TCP socket, bypassing any client-side normalisation.
+    Only this way can we check what a hostile client would actually send.
+    http.sys may still canonicalise — that is a passing case too, as long as
+    the marker does not appear in the body.
 #>
 function Assert-NoLeakRaw {
     param([string]$RawPath, [string]$Why)
@@ -133,27 +131,27 @@ function Assert-NoLeakRaw {
         $response = $reader.ReadToEnd()
         $client.Close()
     } catch {
-        Write-Host ("  [warn] {0,-52} -> Verbindung fehlgeschlagen, uebersprungen" -f $RawPath) -ForegroundColor Yellow
+        Write-Host ("  [warn] {0,-52} -> connection failed, skipped" -f $RawPath) -ForegroundColor Yellow
         return
     }
     $statusLine = ($response -split "`r`n")[0]
     if ($response -like "*$script:SecretMarker*") {
-        Write-Host ("  [FEHL] {0,-52} -> {1} MIT DATEIINHALT" -f $RawPath, $statusLine) -ForegroundColor Red
-        Write-Host ("         {0} - roh gesendet, Datei ausgeliefert!" -f $Why) -ForegroundColor Red
+        Write-Host ("  [FAIL] {0,-52} -> {1} WITH FILE CONTENTS" -f $RawPath, $statusLine) -ForegroundColor Red
+        Write-Host ("         {0} - sent raw, file was served!" -f $Why) -ForegroundColor Red
         $script:failures++
     } else {
         Write-Host ("  [ok]   {0,-52} -> {1}" -f $RawPath, $statusLine)
     }
 }
 
-# ── Testumgebung aufbauen ────────────────────────────────────────────────
-# Eigener Wurzelordner statt des echten web\, damit der Test auch ohne
-# gebautes Bundle laeuft. Die Zieldatei des Traversals wird ABSICHTLICH
-# angelegt: sonst wuerde ein 404 wie ein bestandener Test aussehen, obwohl
-# der Server bereitwillig hinausgereicht haette.
+# ── Build the test environment ───────────────────────────────────────────
+# A dedicated root folder instead of the real web\, so the test also runs
+# without a built bundle. The traversal's target file is created ON PURPOSE:
+# otherwise a 404 would look like a passing test even though the server
+# would happily have handed the file out.
 $sandbox = Join-Path ([System.IO.Path]::GetTempPath()) ("pcalc-servetest-" + [guid]::NewGuid().ToString("N"))
 $root = Join-Path $sandbox "web"
-$outside = Join-Path $sandbox "geheim.txt"
+$outside = Join-Path $sandbox "secret.txt"
 $sibling = Join-Path $sandbox "webbackup"
 
 New-Item -ItemType Directory -Path $root -Force | Out-Null
@@ -162,8 +160,8 @@ New-Item -ItemType Directory -Path (Join-Path $root "assets") -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $root "index.html") -Value "<html><body>ok</body></html>"
 Set-Content -LiteralPath (Join-Path $root "main.dart.js") -Value "console.log(1)"
 Set-Content -LiteralPath (Join-Path $root "assets\datei.txt") -Value "asset"
-Set-Content -LiteralPath $outside -Value "DIESE-DATEI-DARF-NIE-AUSGELIEFERT-WERDEN"
-Set-Content -LiteralPath (Join-Path $sibling "nachbar.txt") -Value "DIESE-DATEI-DARF-NIE-AUSGELIEFERT-WERDEN"
+Set-Content -LiteralPath $outside -Value "THIS-FILE-MUST-NEVER-BE-SERVED"
+Set-Content -LiteralPath (Join-Path $sibling "neighbour.txt") -Value "THIS-FILE-MUST-NEVER-BE-SERVED"
 
 Write-Host ""
 Write-Host "  Sandbox: $sandbox"
@@ -176,7 +174,7 @@ $job = Start-Job -ScriptBlock {
 } -ArgumentList (Join-Path $PSScriptRoot "serve.ps1"), $Port, $root
 
 try {
-    # Auf den Listener warten statt blind zu schlafen.
+    # Wait for the listener instead of sleeping blindly.
     $ready = $false
     foreach ($i in 1..30) {
         Start-Sleep -Milliseconds 200
@@ -190,8 +188,8 @@ try {
         }
     }
     if (-not $ready) {
-        Write-Host "  FEHLER: Server ist nicht hochgekommen." -ForegroundColor Red
-        Write-Host "  Ausgabe des Serverprozesses:" -ForegroundColor Red
+        Write-Host "  ERROR: the server did not come up." -ForegroundColor Red
+        Write-Host "  Output of the server process:" -ForegroundColor Red
         Receive-Job $job -ErrorAction SilentlyContinue | ForEach-Object {
             Write-Host "    $_" -ForegroundColor Red
         }
@@ -199,42 +197,42 @@ try {
         return
     }
 
-    Write-Host "  Erlaubte Pfade"
-    Assert-Status "/"                    @(200) "Wurzel muss index.html liefern"
-    Assert-Status "/index.html"          @(200) "vorhandene Datei"
-    Assert-Status "/main.dart.js"        @(200) "vorhandene Datei im Wurzelordner"
-    Assert-Status "/assets/datei.txt"    @(200) "vorhandene Datei im Unterordner"
+    Write-Host "  Allowed paths"
+    Assert-Status "/"                    @(200) "root must serve index.html"
+    Assert-Status "/index.html"          @(200) "existing file"
+    Assert-Status "/main.dart.js"        @(200) "existing file in the root folder"
+    Assert-Status "/assets/datei.txt"    @(200) "existing file in a subfolder"
 
     Write-Host ""
-    Write-Host "  Pfad-Traversal (Dateiinhalt darf nie erscheinen)"
-    Assert-NoLeak "/../geheim.txt"                     "Klartext-Traversal"
-    Assert-NoLeak "/%2e%2e%2fgeheim.txt"               "prozentkodiert - ueberlebt die Normalisierung"
-    Assert-NoLeak "/%2e%2e/geheim.txt"                 "gemischt kodiert"
-    Assert-NoLeak "/..%5cgeheim.txt"                   "kodierter Backslash"
-    Assert-NoLeak "/assets/%2e%2e%2f%2e%2e%2fgeheim.txt" "aus einem Unterordner, kodiert"
-    Assert-NoLeak "/assets/../../geheim.txt"           "aus einem Unterordner, Klartext"
-    Assert-NoLeak "/%2e%2e%2fwebbackup%2fnachbar.txt"  "Nachbarordner mit gleichem Praefix"
-    Assert-NoLeak "/../webbackup/nachbar.txt"          "Nachbarordner, Klartext"
-    Assert-NoLeak "/%2e%2e%2f%2e%2e%2fWindows/win.ini" "mehrstufig, echtes Systemziel"
+    Write-Host "  Path traversal (file contents must never appear)"
+    Assert-NoLeak "/../secret.txt"                     "plain-text traversal"
+    Assert-NoLeak "/%2e%2e%2fsecret.txt"               "percent-encoded - survives normalisation"
+    Assert-NoLeak "/%2e%2e/secret.txt"                 "mixed encoding"
+    Assert-NoLeak "/..%5csecret.txt"                   "encoded backslash"
+    Assert-NoLeak "/assets/%2e%2e%2f%2e%2e%2fsecret.txt" "from a subfolder, encoded"
+    Assert-NoLeak "/assets/../../secret.txt"           "from a subfolder, plain text"
+    Assert-NoLeak "/%2e%2e%2fwebbackup%2fneighbour.txt"  "sibling folder with the same prefix"
+    Assert-NoLeak "/../webbackup/neighbour.txt"          "sibling folder, plain text"
+    Assert-NoLeak "/%2e%2e%2f%2e%2e%2fWindows/win.ini" "multi-level, real system target"
 
     Write-Host ""
-    Write-Host "  Roh gesendet, an der Client-Normalisierung vorbei"
-    Assert-NoLeakRaw "/../geheim.txt"                  "unnormalisierter Klartext-Traversal"
-    Assert-NoLeakRaw "/..%2fgeheim.txt"                "unnormalisiert, teilkodiert"
+    Write-Host "  Sent raw, bypassing client normalisation"
+    Assert-NoLeakRaw "/../secret.txt"                  "unnormalised plain-text traversal"
+    Assert-NoLeakRaw "/..%2fsecret.txt"                "unnormalised, partially encoded"
 
     Write-Host ""
-    Write-Host "  Nicht vorhandene Pfade"
-    # Mit Endung: 404. Fuer eine fehlende .js HTML zurueckzugeben erzeugt
-    # sonst einen Folgefehler, der wie ein Syntaxfehler aussieht.
-    Assert-Status "/gibtesnicht.js"      @(404) "fehlende Datei MIT Endung"
+    Write-Host "  Missing paths"
+    # With an extension: 404. Returning HTML for a missing .js otherwise
+    # causes a follow-up error that looks like a syntax error.
+    Assert-Status "/gibtesnicht.js"      @(404) "missing file WITH an extension"
     # Ohne Endung: SPA-Rueckfall auf index.html.
-    Assert-Status "/irgendeine/route"    @(200) "SPA-Rueckfall fuer Pfade OHNE Endung"
+    Assert-Status "/irgendeine/route"    @(200) "SPA fallback for paths WITHOUT an extension"
 
     Write-Host ""
     if ($failures -eq 0) {
-        Write-Host "  $checks Pruefungen, alle bestanden." -ForegroundColor Green
+        Write-Host "  $checks checks, all passed." -ForegroundColor Green
     } else {
-        Write-Host "  $checks Pruefungen, $failures FEHLGESCHLAGEN." -ForegroundColor Red
+        Write-Host "  $checks checks, $failures FAILED." -ForegroundColor Red
     }
 } finally {
     Stop-Job $job -ErrorAction SilentlyContinue | Out-Null
@@ -242,6 +240,6 @@ try {
     Remove-Item -LiteralPath $sandbox -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# Kein ternaerer Operator: den gibt es erst ab PowerShell 7, und auf
-# Windows-Arbeitsplaetzen ist 5.1 der Normalfall.
+# No ternary operator: that only exists from PowerShell 7 onwards, and on
+# Windows workstations 5.1 is the normal case.
 if ($failures -eq 0) { exit 0 } else { exit 1 }

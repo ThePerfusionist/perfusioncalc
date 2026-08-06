@@ -1113,13 +1113,13 @@ void main() {
   });
 
   // ══════════════════════════════════════════════════════════════════════
-  // Negative Null (Eigenbefund v0.4.11)
+  // Negative zero (self-audit v0.4.11)
   // ══════════════════════════════════════════════════════════════════════
-  group('Negative Null erreicht nie die Anzeige', () {
-    test('Base Excess 0 ergibt +0.0, nicht -0.0', () {
-      // IEEE-754: (0 x 80 x 3) / -10 ist -0.0, und Dart formatiert das als
-      // "-0.0". Auf der Karte stand damit "-0.0 ml NaBic" - fachlich
-      // dieselbe Null, aber es sieht nach einem Vorzeichenfehler aus.
+  group('Negative zero never reaches the display', () {
+    test('Base excess 0 yields +0.0, not -0.0', () {
+      // IEEE-754: (0 x 80 x 3) / -10 is -0.0, and Dart formats that as
+      // "-0.0". The card therefore read "-0.0 ml NaBic" — numerically the
+      // same zero, but it looks like a sign error.
       final pd = PatientData()
         ..bodyWeightElec = 80
         ..baseExcess = 0;
@@ -1128,10 +1128,10 @@ void main() {
       expect(pd.nabic.isNegative, isFalse);
     });
 
-    test('Echte Vorzeichen bleiben erhalten', () {
-      // Die Normalisierung darf nur die Null treffen: ein negativer Base
-      // Excess bedeutet Azidose und muss eine positive Puffermenge ergeben,
-      // ein positiver eine negative.
+    test('Real signs are preserved', () {
+      // The normalisation must only affect zero: a negative base excess
+      // means acidosis and has to yield a positive buffer amount, a positive
+      // one a negative amount.
       final acid = PatientData()..bodyWeightElec = 80..baseExcess = -10;
       final alk = PatientData()..bodyWeightElec = 80..baseExcess = 10;
       expect(acid.nabic, closeTo(240, 0.01));

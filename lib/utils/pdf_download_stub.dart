@@ -20,10 +20,10 @@ Future<void> downloadPdf(Uint8List bytes, String filename) async {
   //
   // Return value: path of the saved file, or null (user cancelled).
   // We don't use the path further, so it's ignored.
-  // FilePicker.saveFile(), nicht FilePicker.platform.saveFile(): v11.0.0 hat
-  // die Klasse auf statische Methoden umgestellt und den instanzbasierten
-  // Zugriff ueber .platform entfernt. Signatur gegen die Quelle von v11.0.3
-  // geprueft - alle hier uebergebenen Parameter existieren unveraendert.
+  // FilePicker.saveFile(), not FilePicker.platform.saveFile(): v11.0.0 moved
+  // the class to static methods and removed the instance-based access via
+  // .platform. Signature checked against the v11.0.3 source — every
+  // parameter passed here exists unchanged.
   await FilePicker.saveFile(
     dialogTitle: 'Save PDF',
     fileName: filename,

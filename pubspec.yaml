@@ -9,7 +9,7 @@ description: >-
 
 publish_to: 'none'
 
-version: 0.4.23+45
+version: 0.4.32+54
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
@@ -26,15 +26,15 @@ dependencies:
   timezone: ^0.11.0
   # PDF-Export: erzeugt PDF-Dokumente direkt im Browser, native Dart-Lib.
   pdf: ^3.11.1
-  # Native DOM-API fuer File-Download im Web (window.HTMLAnchorElement).
-  web: ^1.1.0   # war "any": ein frisches pub upgrade duerfte sonst ueber einen Breaking Change springen
-  # Cross-Platform Save-Dialog: oeffnet auf Android das Storage Access
-  # Framework, auf iOS die Files-App, und schreibt das PDF an den vom
-  # Nutzer gewaehlten Speicherort. Selbe API, plattform-uebergreifend.
-  # v11: statische Methoden statt FilePicker.platform (Aufrufstelle in
-  # utils/pdf_download_stub.dart angepasst). Der Sprung bringt ausserdem
-  # einen Fix fuer eine Path-Traversal-Schwachstelle (CWE-22) beim Aufloesen
-  # von Pfaden aus externen Content-Providern.
+  # Native DOM API for file download on the web (window.HTMLAnchorElement).
+  web: ^1.1.0   # was "any": a fresh pub upgrade could otherwise jump across a breaking change
+  # Cross-platform save dialog: opens the Storage Access Framework on
+  # Android and the Files app on iOS, and writes the PDF to the location the
+  # user chose. Same API on every platform.
+  # v11: static methods instead of FilePicker.platform (the call site in
+  # utils/pdf_download_stub.dart was adapted). The jump also brings a fix for
+  # a path traversal vulnerability (CWE-22) when resolving paths from
+  # external content providers.
   file_picker: ^11.0.3
 
 dev_dependencies:
@@ -48,9 +48,9 @@ flutter:
   # index.html) is automatically copied to build/web/ by `flutter build web`.
   # It must NOT be listed here — these are web assets, not Flutter runtime assets.
   assets:
-    # icon.png ist NICHT gelistet: es wird zur Laufzeit nicht verwendet
-    # (nur Quelle fuer die Launcher-/PWA-Icons) und wuerde sonst unnoetig
-    # 451 KB ins Web-Bundle packen.
+    # icon.png is NOT listed: it is not used at runtime (it is only the
+    # source for the launcher/PWA icons) and would otherwise add 451 KB to
+    # the web bundle for nothing.
     - assets/o2_chart.png
     - assets/finck_va.jpg
     - assets/finck_vv.jpg
@@ -58,23 +58,23 @@ flutter:
     - assets/heart_posterior.jpg
     - assets/heart_cross_section.jpg
     - assets/coronary_arteries.jpg
-    # Roboto fuer PDF-Export (Standard-PDF-Schriften unterstuetzen kein Unicode).
-    # Muss AUSSERDEM unter assets: stehen, weil pdf_export.dart die Dateien
-    # ueber rootBundle.load() liest - fonts: allein reicht dafuer nicht.
+    # Roboto for the PDF export (the standard PDF fonts have no Unicode
+    # support). Must ALSO be listed under assets:, because pdf_export.dart
+    # reads the files via rootBundle.load() — fonts: alone is not enough.
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
     - assets/fonts/Roboto-Italic.ttf
 
-  # Dieselben Dateien zusaetzlich als Schriftfamilie der App.
+  # The same files, additionally declared as the app's font family.
   #
-  # Ohne diesen Block laedt CanvasKit seine Standardschrift zur Laufzeit von
-  # fonts.gstatic.com. Das ist an drei Stellen ein Problem:
-  #   1. eine strengere CSP sperrt den Abruf - die App rendert dann ganz ohne
-  #      Text (v0.4.2, siehe web/index.html)
-  #   2. die Offline-Windows-Distribution hat per Definition kein Internet
-  #   3. eine Klinik-Firewall kann fonts.gstatic.com blockieren
-  # Gebuendelt ist die Schrift Teil des Builds und keiner der drei Faelle
-  # tritt ein. Kosten: rund 480 KB im Web-Bundle.
+  # Without this block CanvasKit loads its default font from
+  # fonts.gstatic.com at runtime. That is a problem in three places:
+  #   1. a stricter CSP blocks the request — the app then renders with no
+  #      text at all (v0.4.2, see web/index.html)
+  #   2. the offline Windows distribution has no internet by definition
+  #   3. a hospital firewall can block fonts.gstatic.com
+  # Bundled, the font is part of the build and none of the three cases
+  # occurs. Cost: roughly 480 KB in the web bundle.
   fonts:
     - family: Roboto
       fonts:

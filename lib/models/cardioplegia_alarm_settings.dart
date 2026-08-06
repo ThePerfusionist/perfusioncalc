@@ -42,8 +42,8 @@ class CardioplegiaAlarmSettings extends ChangeNotifier {
   /// Default 15 = the lower bound of the Calafiore re-dose window.
   static const double kDefaultTriggerMinutes = 15;
 
-  /// Unter 1 min waere die Erinnerung nutzlos, ueber 240 min liegt sie
-  /// jenseits des Fensters jedes Protokolls.
+  /// Below 1 min the reminder would be useless, above 240 min it lies
+  /// beyond every protocol's window.
   static const double kMinTriggerMinutes = 1;
   static const double kMaxTriggerMinutes = 240;
 
@@ -70,15 +70,16 @@ class CardioplegiaAlarmSettings extends ChangeNotifier {
     try {
       final p = await SharedPreferences.getInstance();
       _enabled = p.getBool(_kEnabled) ?? false;
-      // GEKLEMMT, nicht roh uebernommen. Dritter Fall derselben Asymmetrie:
-      // TransfusionSettings.load() klemmte von Anfang an,
-      // CardioplegiaSettings.load() bekam es in v0.4.11, hier fehlte es noch.
+      // CLAMPED, not taken raw. Third instance of the same asymmetry:
+      // TransfusionSettings.load() clamped from the start,
+      // CardioplegiaSettings.load() got it in v0.4.11, here it was still
+      // missing.
       //
-      // Die Folgen sind hier die stillsten von den dreien: ein gespeichertes
-      // 0 laesst expectedFireCount() dauerhaft 0 zurueckgeben - der Alarm
-      // ist eingeschaltet und feuert nie. Ein gespeichertes 10000 wirkt
-      // genauso, nur mit anderer Begruendung. Beides ohne Fehlermeldung, an
-      // einer Erinnerung, auf die man sich im Fall verlaesst.
+      // The consequences are the quietest of the three: a stored 0 makes
+      // expectedFireCount() return 0 permanently — the alarm is switched on
+      // and never fires. A stored 10000 behaves the same way for a different
+      // reason. Both without any error message, on a reminder that gets
+      // relied upon during a case.
       _triggerMinutes = _clampMinutes(
           p.getDouble(_kMinutes) ?? kDefaultTriggerMinutes);
       _sound = p.getBool(_kSound) ?? true;

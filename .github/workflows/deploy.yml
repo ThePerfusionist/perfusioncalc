@@ -8,8 +8,8 @@ on:
   push:
     branches:
       - main
-    # Nur neu bauen, wenn App-relevante Dateien geändert wurden.
-    # Änderungen an README, LICENSE, oder docs triggern keinen Build mehr.
+    # Rebuild only when app-relevant files changed. Changes to README,
+    # LICENSE or docs no longer trigger a build.
     paths:
       - 'lib/**'
       - 'web/**'
@@ -25,14 +25,13 @@ on:
 permissions:
   contents: write
 
-# Zwingt alle JavaScript-Actions in diesem Workflow auf Node.js 24, auch wenn
-# die Action selbst noch 'using: node20' in ihrer action.yml deklariert
-# (betrifft hier peaceiris/actions-gh-pages@v4). Damit umgehen wir die
-# Deprecation-Warnung bis der Maintainer einen Node-24-Release veröffentlicht.
-# GitHub macht Node 24 ab 02.06.2026 ohnehin zum Default.
-# Hinweis: Die Warnung im "Complete job"-Schritt kann bestehen bleiben - das
-# ist ein bekannter kosmetischer Bug (actions/runner#4295). Die Action läuft
-# aber real auf Node 24.
+# Forces every JavaScript action in this workflow onto Node.js 24, even when
+# the action itself still declares 'using: node20' in its action.yml (here
+# that concerns peaceiris/actions-gh-pages@v4). This sidesteps the
+# deprecation warning until the maintainer publishes a Node 24 release.
+# GitHub makes Node 24 the default from 2026-06-02 anyway.
+# Note: the warning in the "Complete job" step may persist — that is a known
+# cosmetic bug (actions/runner#4295). The action does run on Node 24.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Single source of truth for the toolchain. pubspec.lock requires
@@ -42,8 +41,8 @@ env:
   # Keep in sync with the other workflows AND with the local dev machines.
   FLUTTER_VERSION: '3.44.8'
 
-# Verhindert, dass sich zwei Deployments gleichzeitig überlagern, wenn
-# mehrere Pushes hintereinander passieren. Neuer Push → alter Run abgebrochen.
+# Prevents two deployments from overlapping when several pushes follow one
+# another. New push → previous run cancelled.
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
@@ -71,55 +70,55 @@ jobs:
         run: flutter pub get
 
       - name: Static analysis (flutter analyze)
-        # Bricht den Build ab, wenn Analyzer-Fehler im Code sind.
-        # Warnings bleiben erlaubt, um dich nicht zu blockieren.
+        # Fails the build on analyzer errors. Warnings remain allowed so as
+        # not to block progress.
         run: flutter analyze --no-fatal-warnings
 
       - name: Run tests
-        # KEIN '|| echo' mehr: perfusioncalc.de darf nicht deployed werden,
-        # wenn die Rechen-Tests rot sind. Ein stiller Fehlschlag hier hiesse,
-        # dass eine Regression, die die Testsuite bereits erkannt hat,
-        # trotzdem an klinische Nutzer ausgeliefert wird.
+        # NO '|| echo' any more: perfusioncalc.de must not be deployed when
+        # the calculation tests are red. A silent failure here would mean
+        # that a regression the test suite has already caught is shipped to
+        # clinical users regardless.
         run: flutter test
 
       - name: Build Flutter Web (WASM build, CanvasKit fallback)
-        # --wasm aktiviert den WebAssembly-Build: Flutter wählt zur Laufzeit
-        # skwasm, wenn der Browser WasmGC unterstützt, sonst CanvasKit (JS-Build).
-        # Auf vielen mobilen Browsern greift weiterhin CanvasKit - das ist okay,
-        # solange WebGL/GPU-Rendering verfügbar ist (deshalb wurden die COOP/COEP-
-        # Header wieder entfernt, die WebGL deaktiviert hatten).
-        # --no-web-resources-cdn: Engine-Assets lokal vom eigenen Origin statt
-        # gstatic.com (kein externer Roundtrip, voll offline-fähig).
-        # --release: Minification, Tree-Shaking, Dead-Code-Elimination.
-        # --pwa-strategy=none ist ZWINGEND und nicht optional:
-        # 'offline-first' laesst Flutter ein eigenes flutter_service_worker.js
-        # erzeugen, das flutter_bootstrap.js beim Start registriert - im
-        # selben Scope '/' wie unser web/sw.js. Zwei Registrierungen fuer
-        # einen Scope koennen nicht koexistieren, die spaetere ersetzt die
-        # fruehere. Online faellt das nicht auf, weil beide aus dem Netz
-        # liefern; OFFLINE bricht die App ab (ERR_INTERNET_DISCONNECTED,
-        # main.dart.js und canvaskit bleiben 'pending', weil unser gerade
-        # verdraengter Worker seine respondWith-Promises nie aufloest).
-        # Unser sw.js uebernimmt das Caching vollstaendig - Flutter braucht
-        # dafuer keinen zweiten Worker.
+        # --wasm enables the WebAssembly build: at runtime Flutter picks
+        # skwasm when the browser supports WasmGC, otherwise CanvasKit (the
+        # JS build). On many mobile browsers CanvasKit still applies — that
+        # is fine as long as WebGL/GPU rendering is available (which is why
+        # the COOP/COEP headers that had disabled WebGL were removed again).
+        # --no-web-resources-cdn: engine assets served locally from our own
+        # origin instead of gstatic.com (no external round trip, fully
+        # offline capable).
+        # --release: minification, tree shaking, dead code elimination.
+        # --pwa-strategy=none is MANDATORY, not optional:
+        # 'offline-first' makes Flutter generate its own
+        # flutter_service_worker.js, which flutter_bootstrap.js registers at
+        # start-up — in the same scope '/' as our web/sw.js. Two
+        # registrations for one scope cannot coexist; the later one replaces
+        # the earlier. Online this goes unnoticed because both serve from the
+        # network; OFFLINE the app breaks (ERR_INTERNET_DISCONNECTED,
+        # main.dart.js and canvaskit stay 'pending' because our just-evicted
+        # worker never resolves its respondWith promises). Our sw.js handles
+        # the caching entirely — Flutter needs no second worker for it.
         run: flutter build web --wasm --release --no-web-resources-cdn --base-href / --pwa-strategy=none
 
-      # Zwei Ersetzungen im ausgelieferten sw.js:
+      # Two substitutions in the shipped sw.js:
       #
-      #   BUILD_ID      koppelt den Cache-Namen an den Commit (Audit 4.1).
-      #                 Ohne ihn aendert sich der Cache-Name nie und Nutzer
-      #                 laufen unbegrenzt auf einem alten klinischen Build.
-      #   BUILD_ASSETS  die vollstaendige Precache-Liste aus build/web.
-      #                 Noetig, WEIL der Cache-Name am Commit haengt: jeder
-      #                 Deploy legt einen leeren Cache an, der alte wird in
-      #                 activate() geloescht. Was nicht im Precache steht und
-      #                 vom bereits geladenen Tab nicht erneut angefragt
-      #                 wird, fehlt danach - genau so ist main.dart.js
-      #                 offline verloren gegangen.
+      #   BUILD_ID      ties the cache name to the commit (audit 4.1).
+      #                 Without it the cache name never changes and users run
+      #                 indefinitely on an old clinical build.
+      #   BUILD_ASSETS  the complete precache list from build/web. Needed
+      #                 BECAUSE the cache name depends on the commit: every
+      #                 deployment creates an empty cache and the old one is
+      #                 deleted in activate(). Anything not in the precache
+      #                 that the already-loaded tab does not request again is
+      #                 missing afterwards — that is exactly how main.dart.js
+      #                 got lost offline.
       #
-      # Beide Ersetzungen werden geprueft und brechen den Job ab, wenn sie
-      # nicht greifen. Ein stilles Fehlschlagen waere unsichtbar und wuerde
-      # den Fehler wieder einfuehren, den dieser Schritt behebt.
+      # Both substitutions are verified and fail the job if they do not take
+      # effect. A silent failure would be invisible and would reintroduce the
+      # very defect this step fixes.
       - name: Stamp service worker build id and precache list
         run: |
           set -euo pipefail
@@ -138,31 +137,32 @@ jobs:
           sw_path = sys.argv[1]
           root = 'build/web'
 
-          # Bereits in CORE_SHELL, dort mit ?v=9 - so fragt die App sie auch
-          # an. Ohne diesen Ausschluss laegen sie doppelt im Cache.
+          # Already in CORE_SHELL, there with ?v=9 — which is how the app
+          # requests them. Without this exclusion they would sit in the cache
+          # twice.
           skip_exact = {
               'sw.js', 'CNAME', 'index.html', 'manifest.json',
               'favicon.ico', 'favicon.png', 'apple-touch-icon.png',
           }
 
-          # Dateien, die der Browser NIE anfragt. Ohne diese Ausschluesse lag
-          # der Precache bei 45,5 MB, waehrend der Offline-Betrieb tatsaechlich
-          # 10,7 MB brauchte - jeder Besucher haette bei jedem Deploy das
-          # Vierfache geladen. Auf einem Klinik-Tablet ueber Mobilfunk zaehlt
-          # das.
+          # Files the browser NEVER requests. Without these exclusions the
+          # precache sat at 45.5 MB while offline operation actually needed
+          # 10.7 MB — every visitor would have downloaded four times the
+          # amount on every deployment. On a clinical tablet over cellular
+          # that matters.
           #
-          #   .map / .symbols  Debug-Artefakte zum Entschluesseln von
-          #                    Stacktraces. Flutter legt neben jede
-          #                    CanvasKit-Variante eine .symbols-Datei; zur
-          #                    Laufzeit wird keine davon geladen.
+          #   .map / .symbols  debug artefacts for symbolising stack traces.
+          #                    Flutter puts a .symbols file next to every
+          #                    CanvasKit variant; none of them is loaded at
+          #                    runtime.
           #   experimental_webparagraph/
-          #                    experimentelle Renderer-Variante, wird nur mit
-          #                    gesetztem Flag geladen.
+          #                    experimental renderer variant, loaded only
+          #                    with a flag set.
           #
-          # Die uebrigen Renderer-Varianten (canvaskit/, canvaskit/chromium/,
-          # skwasm, skwasm_heavy, wimp) bleiben BEWUSST drin: welche greift,
-          # entscheidet erst der Browser zur Laufzeit. Offline-Robustheit ueber
-          # verschiedene Browser hinweg ist hier mehr wert als ein paar MB.
+          # The remaining renderer variants (canvaskit/, canvaskit/chromium/,
+          # skwasm, skwasm_heavy, wimp) stay in DELIBERATELY: which one
+          # applies is decided by the browser at runtime. Offline robustness
+          # across browsers is worth more here than a few MB.
           skip_suffix = ('.map', '.symbols')
           skip_prefix = ('icons/', 'canvaskit/experimental_webparagraph/')
 
@@ -183,8 +183,9 @@ jobs:
                   total += size
           assets.sort()
 
-          # Sicherung gegen einen leeren oder halben Build: ohne ein
-          # Haupt-Bundle waere der Precache wertlos und offline erneut kaputt.
+          # Safeguard against an empty or half-finished build: without a
+          # main bundle the precache would be worthless and offline broken
+          # again.
           entry_points = [a for a in assets
                           if a.startswith('./main.dart.') or a == './flutter_bootstrap.js']
           if not entry_points:
@@ -204,9 +205,9 @@ jobs:
           print('Precache: %d Dateien, %.1f MB' % (len(assets), total / 1024 / 1024))
           for e in entry_points:
               print('  Entry point: ' + e)
-          # Die groessten Brocken mit ausgeben: so ist beim naechsten Lauf ohne
-          # Nachmessen sichtbar, wohin das Gewicht geht, falls Flutter neue
-          # Varianten mitliefert.
+          # Print the largest entries too: that makes it visible on the next
+          # run, without measuring, where the weight goes should Flutter ship
+          # new variants.
           print('  Groesste Eintraege:')
           for a in sorted(assets, key=lambda x: sizes[x], reverse=True)[:5]:
               print('    %7.1f MB  %s' % (sizes[a] / 1024 / 1024, a))
@@ -224,11 +225,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
           publish_branch: gh-pages
-          # Commit-Message im gh-pages-Branch identifiziert den auslösenden Push.
-          # Bewusst NUR die SHA: github.event.head_commit.message ist nicht
-          # vertrauenswuerdiger Input und wurde hier direkt in eine Action-
-          # Eingabe interpoliert (Expression Injection, Standardbefund jedes
-          # Actions-Scanners). Die SHA identifiziert den Push eindeutig und
-          # ist nicht beeinflussbar.
+          # The commit message on the gh-pages branch identifies the push
+          # that triggered it. Deliberately ONLY the SHA:
+          # github.event.head_commit.message is untrusted input and was
+          # interpolated directly into an action input here (expression
+          # injection, the standard finding of every actions scanner). The
+          # SHA identifies the push unambiguously and cannot be influenced.
           commit_message: "Deploy ${{ github.sha }}"
           cname: perfusioncalc.de

@@ -93,10 +93,10 @@ ThemeData buildAppTheme({required bool dark}) {
   final surface = dark ? const Color(0xFF1C1C1C) : const Color(0xFFFFFFFF);
   final onSurface = dark ? Colors.white : const Color(0xFF1A1A1A);
   return ThemeData(
-    // Die in pubspec.yaml gebuendelte Roboto-Familie, nicht die, die
-    // CanvasKit sonst von fonts.gstatic.com nachlaedt. Ohne diese Zeile
-    // haengt jede Beschriftung der App an einem Netzabruf - im Web an der
-    // CSP, in der Offline-Distribution an gar nichts.
+    // The Roboto family bundled via pubspec.yaml, not the one CanvasKit
+    // would otherwise fetch from fonts.gstatic.com. Without this line every
+    // label in the app depends on a network request — on the web that means
+    // the CSP, in the offline distribution it means nothing at all.
     fontFamily: 'Roboto',
     brightness: dark ? Brightness.dark : Brightness.light,
     colorScheme: dark

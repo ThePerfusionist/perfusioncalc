@@ -1,36 +1,35 @@
-// Eingabefilter für numerische Felder
-// ===================================
-// Warum eine eigene Klasse statt FilteringTextInputFormatter.allow():
+// Input filter for numeric fields
+// ===============================
+// Why a dedicated class instead of FilteringTextInputFormatter.allow():
 //
-// `allow` filtert NICHT den Gesamtstring, sondern zeichen- bzw.
-// segmentweise - es läuft mit splitMapJoin über den Text, behält die
-// Treffer und verwirft den Rest. Eine auf ^…$ verankerte Regex, die auf den
-// Gesamtstring nicht passt, liefert dabei NULL Treffer, und dann bleibt ein
-// LEERES Feld übrig.
+// `allow` does NOT filter the whole string; it filters character by
+// character, or rather segment by segment — it runs splitMapJoin over the
+// text, keeps the matches and discards the rest. A regex anchored with ^…$
+// that does not match the whole string therefore yields ZERO matches, and
+// what remains is an EMPTY field.
 //
-// Konkret hieß das (v0.4.2 bis v0.4.7): 82,5 kg stehen im Gewichtsfeld, der
-// Daumen trifft auf dem Tablet neben die Ziffer - und das Feld ist leer.
-// Nicht das Zeichen abgelehnt, sondern die Eingabe weg. In einer
-// OP-Situation ist Datenverlust die schlechtere der beiden möglichen
-// Fehlfunktionen.
+// In practice that meant (v0.4.2 through v0.4.7): 82.5 kg are in the weight
+// field, the thumb lands next to the digit on a tablet — and the field is
+// empty. Not the character rejected, but the entry gone. In an OR situation
+// data loss is the worse of the two possible malfunctions.
 //
-// Der Zustand davor war anders falsch: der Filter ließ "1.2.3" und "--5"
-// stehen, _safeParse gab null zurück, und das Feld sah gefüllt aus, während
-// die Rechnung nichts hatte.
+// The state before that was wrong in a different way: the filter let "1.2.3"
+// and "--5" through, _safeParse returned null, and the field looked filled
+// while the calculation had nothing.
 //
-// Diese Klasse macht das Naheliegende: Passt der neue Gesamtstring auf das
-// Muster, wird er übernommen; sonst bleibt der alte stehen. Der Tastendruck
-// verpufft, nichts geht verloren.
+// This class does the obvious thing: if the new whole string matches the
+// pattern it is accepted, otherwise the old one stays. The keystroke has no
+// effect, nothing is lost.
 
 import 'package:flutter/services.dart';
 
-/// Lässt Dezimalzahlen zu - optionales Minus, Ziffern, ein Trennzeichen
-/// (Punkt oder Komma), Ziffern.
+/// Accepts decimal numbers — optional minus, digits, one separator (period
+/// or comma), digits.
 ///
-/// Teileingaben müssen erlaubt bleiben, sonst ließe sich das Feld nicht
-/// tippen: `''`, `'-'`, `'1.'` sind gültige Zwischenzustände auf dem Weg zu
-/// `'-1.5'`. Die endgültige Prüfung macht `_safeParse` in `common.dart` -
-/// dieser Formatter ist die erste, nicht die einzige Verteidigungslinie.
+/// Partial input has to stay allowed, otherwise the field could not be typed
+/// into: `''`, `'-'`, `'1.'` are valid intermediate states on the way to
+/// `'-1.5'`. The final check is done by `_safeParse` in `common.dart` — this
+/// formatter is the first line of defence, not the only one.
 class DecimalTextInputFormatter extends TextInputFormatter {
   static final RegExp _pattern = RegExp(r'^-?[0-9]*[.,]?[0-9]*$');
 
