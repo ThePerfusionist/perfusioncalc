@@ -142,9 +142,9 @@
     (function () {
       if (!('serviceWorker' in navigator)) return;
 
-      // Einmalige Migration: alte Registrierung von Flutters Worker lösen.
-      // Bewusst NUR diese eine - alles andere würde unseren eigenen Worker
-      // gleich wieder mit abräumen.
+      // One-time migration: release an old registration of Flutter's
+      // worker. Deliberately ONLY that one — anything broader would tear
+      // down our own worker along with it.
       function dropFlutterServiceWorker() {
         if (!navigator.serviceWorker.getRegistrations) return Promise.resolve();
         return navigator.serviceWorker.getRegistrations().then(function (regs) {
@@ -182,15 +182,15 @@
   </script>
 </head>
 <body>
-  <!-- CSS-Splash: wird von Flutter beim ersten Frame automatisch ersetzt. -->
+  <!-- CSS splash: replaced automatically by Flutter on the first frame. -->
   <div id="pc-splash">
     <div class="pc-spinner"></div>
     <div class="pc-title">PerfusionCalc</div>
   </div>
   <script>
-    // Entfernt den CSS-Splash zuverlässig, sobald Flutter sein erstes
-    // Render-Element (<flutter-view> / <flt-glass-pane>) in den DOM hängt.
-    // Versionsunabhängig über MutationObserver, mit Sicherheits-Timeout.
+    // Reliably removes the CSS splash as soon as Flutter attaches its
+    // first render element (<flutter-view> / <flt-glass-pane>) to the DOM.
+    // Version independent via MutationObserver, with a safety timeout.
     (function () {
       function removeSplash() {
         var s = document.getElementById('pc-splash');
@@ -205,8 +205,8 @@
         }
       });
       obs.observe(document.body, { childList: true, subtree: true });
-      // Fallback: spätestens nach 8 s entfernen, falls die Selektoren sich
-      // in einer künftigen Flutter-Version ändern.
+      // Fallback: remove after 8 s at the latest, in case the selectors
+      // change in a future Flutter version.
       setTimeout(removeSplash, 8000);
     })();
   </script>
