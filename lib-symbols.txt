@@ -1,0 +1,68 @@
+.\lib\main.dart : class PerfusionCalcApp extends StatelessWidget {
+.\lib\main.dart : class MainScreen extends StatefulWidget {
+.\lib\main.dart : class _MainScreenState extends State<MainScreen>
+.\lib\i18n\app_strings.dart : enum AppLocale { en, de }
+.\lib\i18n\app_strings.dart : extension AppLocaleX on AppLocale {
+.\lib\i18n\app_strings.dart : class LocaleNotifier extends ChangeNotifier {
+.\lib\i18n\app_strings.dart : class Strings {
+.\lib\models\bga_model.dart : class BgaModel {
+.\lib\models\cardioplegia_alarm_settings.dart : class CardioplegiaAlarmSettings extends ChangeNotifier {
+.\lib\models\cardioplegia_settings.dart : class CardioplegiaSettings extends ChangeNotifier {
+.\lib\models\patient_data.dart : class PatientData {
+.\lib\models\patient_data.dart : enum CardioplegiaDoseStatus {
+.\lib\models\ranges.dart : class Range {
+.\lib\models\ranges.dart : class Ranges {
+.\lib\models\transfusion_settings.dart : class TransfusionSettings extends ChangeNotifier {
+.\lib\screens\bsa_screen.dart : class BSAScreen extends StatefulWidget {
+.\lib\screens\bsa_screen.dart : class _BSAScreenState extends State<BSAScreen> {
+.\lib\screens\bsa_screen.dart : class _CIInputCard extends StatefulWidget {
+.\lib\screens\bsa_screen.dart : class _CIInputCardState extends State<_CIInputCard> {
+.\lib\screens\cardioplegia_screen.dart : class CardioplegiaScreen extends StatefulWidget {
+.\lib\screens\cardioplegia_screen.dart : enum _CardioProtocol { buckberg, delNido, calafiore, bretschneider }
+.\lib\screens\cardioplegia_screen.dart : class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
+.\lib\screens\electrolytes_screen.dart : class ElectrolytesScreen extends StatefulWidget {
+.\lib\screens\electrolytes_screen.dart : class _ElectrolytesScreenState extends State<ElectrolytesScreen> {
+.\lib\screens\heart_anatomy_screen.dart : class HeartAnatomyScreen extends StatelessWidget {
+.\lib\screens\hypothermia_screen.dart : class HypothermiaScreen extends StatefulWidget {
+.\lib\screens\hypothermia_screen.dart : class _HypothermiaScreenState extends State<HypothermiaScreen> {
+.\lib\screens\o2_delivery_screen.dart : class O2DeliveryScreen extends StatefulWidget {
+.\lib\screens\o2_delivery_screen.dart : enum _CoMode { co, ci }
+.\lib\screens\o2_delivery_screen.dart : class _O2DeliveryScreenState extends State<O2DeliveryScreen> {
+.\lib\screens\o2_delivery_screen.dart : class _CoCiCard extends StatefulWidget {
+.\lib\screens\o2_delivery_screen.dart : class _CoCiCardState extends State<_CoCiCard> {
+.\lib\screens\pediatric_screen.dart : class PediatricScreen extends StatefulWidget {
+.\lib\screens\pediatric_screen.dart : class _PediatricScreenState extends State<PediatricScreen> {
+.\lib\screens\reference_pressure_screen.dart : class ReferencePressureScreen extends StatelessWidget {
+.\lib\screens\resistances_screen.dart : class ResistancesScreen extends StatefulWidget {
+.\lib\screens\resistances_screen.dart : class _ResistancesScreenState extends State<ResistancesScreen> {
+.\lib\screens\tube_volume_screen.dart : class TubeVolumeScreen extends StatefulWidget {
+.\lib\screens\tube_volume_screen.dart : class _TubeVolumeScreenState extends State<TubeVolumeScreen> {
+.\lib\screens\ultrafiltration_screen.dart : class UltrafiltrationScreen extends StatefulWidget {
+.\lib\screens\ultrafiltration_screen.dart : enum _UfMetric { hct, hb }
+.\lib\screens\ultrafiltration_screen.dart : class _UltrafiltrationScreenState extends State<UltrafiltrationScreen> {
+.\lib\screens\zoll_chairre_screen.dart : class ZollChairreScreen extends StatefulWidget {
+.\lib\screens\zoll_chairre_screen.dart : class _ZollChairreScreenState extends State<ZollChairreScreen> {
+.\lib\theme\app_theme.dart : class ThemeNotifier extends ChangeNotifier {
+.\lib\utils\decimal_input_formatter.dart : class DecimalTextInputFormatter extends TextInputFormatter {
+.\lib\utils\notification_service.dart : class CardioplegiaNotifications {
+.\lib\utils\pdf_export.dart : class PdfSection {
+.\lib\utils\pdf_export.dart : class PdfRow {
+.\lib\utils\pdf_export.dart : class PdfTabReport {
+.\lib\utils\pdf_export.dart : class _PdfLabels {
+.\lib\utils\web_notifications_stub.dart : class WebNotifications {
+.\lib\utils\web_notifications_web.dart : class WebNotifications {
+.\lib\widgets\common.dart : class InputCard extends StatefulWidget {
+.\lib\widgets\common.dart : class _InputCardState extends State<InputCard> {
+.\lib\widgets\common.dart : class ResultCard extends StatelessWidget {
+.\lib\widgets\common.dart : class SectionHeader extends StatelessWidget {
+.\lib\widgets\common.dart : class DataTable2 extends StatelessWidget {
+.\lib\widgets\common.dart : class GoldListCard extends StatelessWidget {
+.\lib\widgets\common.dart : class BrowserSafeImage extends StatelessWidget {
+.\lib\widgets\common.dart : class ImageSectionCard extends StatelessWidget {
+.\lib\widgets\common.dart : class PdfExportButton extends StatelessWidget {
+.\lib\widgets\common.dart : class SourceButton extends StatelessWidget {
+.\lib\widgets\common.dart : class SourceRef {
+.\lib\widgets\common.dart : class AppSources {
+.\lib\widgets\in_app_alert.dart : class InAppAlert {
+.\lib\widgets\in_app_alert.dart : class _AlertBanner extends StatefulWidget {
+.\lib\widgets\in_app_alert.dart : class _AlertBannerState extends State<_AlertBanner> with SingleTickerProviderStateMixin {

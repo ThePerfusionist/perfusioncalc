@@ -561,7 +561,61 @@ def check_lockfile() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 15. Workflows: valid YAML, syntactically correct shell blocks
+# 16. SourceRef.doi holds identifiers only, never prose
+#     Source 35 (Calafiore 2020) kept its German description inside the `doi`
+#     field and never got a noteKey, because the conversion worked from a
+#     hand-written list. Three further entries kept a German remnant, because
+#     the script treated the LAST segment separated by a middle dot as the
+#     description — and their descriptions contained a middle dot themselves
+#     (a unit, or several equations).
+#
+#     Checked here rather than in a Dart test on purpose: AppSources has no
+#     list of all entries, and maintaining one by hand would be the same trap
+#     as the hard-wired TabController. Reading the source text catches every
+#     entry, including ones added later.
+# ═══════════════════════════════════════════════════════════════════════════
+def check_source_refs() -> None:
+    section("Source references")
+    src = read("lib/widgets/common.dart")
+    start = src.find("class AppSources {")
+    if start < 0:
+        return warn("Source refs", "AppSources not found in common.dart")
+    body = src[start:]
+
+    entries = re.findall(r"static const (\w+) = SourceRef\((.*?)\n  \);", body, re.S)
+    if not entries:
+        return fail("Source refs", "no SourceRef entries found")
+
+    prose = []
+    for name, entry in entries:
+        m = re.search(r"doi: '((?:[^']|\\')*)'", entry)
+        if not m:
+            continue
+        # Dart escapes the middle dot as \u00b7 in some entries, so the
+        # literal escape has to be normalised before splitting — otherwise
+        # those entries look like a single identifier and slip through. That
+        # gap hid two further German descriptions on the first run.
+        doi = m.group(1).replace("\\u00b7", "·")
+        parts = [p.strip() for p in doi.split("·") if p.strip()]
+        # Several identifiers separated by a middle dot are legitimate
+        # (doi + PMID). Only a segment that is not an identifier is prose —
+        # checking the count instead produced false positives.
+        for part in parts:
+            if not re.match(r"^(doi:|PMID:|PMCID:|ISBN|https?://|www\.)", part):
+                prose.append(f"{name}: {part[:60]}")
+
+    if prose:
+        fail("Source refs",
+             "doi field contains prose instead of identifiers:\n        "
+             + "\n        ".join(prose)
+             + "\n        → move it into a noteKey and add an EN/DE pair")
+    else:
+        ok(f"all {len(entries)} doi fields contain identifiers only")
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 17. Workflows: valid YAML, syntactically correct shell blocks
 # ═══════════════════════════════════════════════════════════════════════════
 def check_workflows() -> None:
     section("Workflows")
@@ -602,7 +656,7 @@ def main() -> int:
                   check_defaults_not_in_pdf, check_listeners, check_code_hygiene,
                   check_privacy_pair, check_html_csp,
                   check_unreferenced_web_files, check_sdk_table,
-                  check_lockfile, check_workflows):
+                  check_lockfile, check_source_refs, check_workflows):
         try:
             check()
         except Exception as e:  # a broken check must not abort the run

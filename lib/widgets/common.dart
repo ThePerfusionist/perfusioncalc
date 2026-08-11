@@ -809,10 +809,17 @@ class SourceButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Text(t('sources'),
             style: const TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 17)),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: refs.map((r) => _refTile(r)).toList(),
+        // SelectionArea around the whole list, not around each entry: only
+        // this way can a drag run across several references, and across the
+        // lines within one. Without it every SelectableText would be its own
+        // island and a selection would stop at the end of a line — but a
+        // citation is only useful complete.
+        content: SelectionArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: refs.map((r) => _refTile(r)).toList(),
+            ),
           ),
         ),
         actions: [
@@ -825,6 +832,20 @@ class SourceButton extends StatelessWidget {
     );
   }
 
+  /// One reference in the source dialog.
+  ///
+  /// Everything here is a SelectableText, and one SelectionArea in
+  /// [_dialogBody] spans the whole list. That combination is what allows a
+  /// drag across several lines: authors, title, journal and DOI can be
+  /// selected in one go and pasted into a search engine or a reference
+  /// manager. Individual SelectableTexts without the surrounding
+  /// SelectionArea would each be their own island, so a selection would stop
+  /// at the end of a line — which is precisely the case that matters, since
+  /// a citation is only useful in one piece.
+  ///
+  /// The bracketed number stays a plain Text on purpose: "[35]" is a label
+  /// for this dialog, not part of the citation, and including it in a
+  /// selection would only have to be deleted again.
   Widget _refTile(SourceRef r) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -841,18 +862,18 @@ class SourceButton extends StatelessWidget {
         ),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(r.authors,
+            SelectableText(r.authors,
                 style:  TextStyle(color: kText, fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
-            Text(r.title,
+            SelectableText(r.title,
                 style:  TextStyle(color: kTextSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
             const SizedBox(height: 2),
-            Text(r.journal,
+            SelectableText(r.journal,
                 style:  TextStyle(color: kTextMuted, fontSize: 11)),
             if (r.doi.isNotEmpty)
-              Text(r.doi, style: TextStyle(color: kLink, fontSize: 11)),
+              SelectableText(r.doi, style: TextStyle(color: kLink, fontSize: 11)),
             if (r.noteKey != null)
-              Text(t(r.noteKey!),
+              SelectableText(t(r.noteKey!),
                   style: TextStyle(color: kTextMuted, fontSize: 11)),
           ]),
         ),
@@ -953,7 +974,8 @@ class AppSources {
     authors: 'Newland RF, Baker RA, Woodman RJ, Barnes MB, Willcox TW; Australian and New Zealand Collaborative Perfusion Registry.',
     title: 'Predictive Capacity of Oxygen Delivery During Cardiopulmonary Bypass on Acute Kidney Injury.',
     journal: 'Annals of Thoracic Surgery. 2019;108(6):1807–1814.',
-    doi: 'doi: 10.1016/j.athoracsur.2019.04.115  ·  Multizentrische ANZCPR-Studie, n = 19 410',
+    doi: 'doi: 10.1016/j.athoracsur.2019.04.115',
+    noteKey: 'src_note_newland_2019',
   );
 
   static const ranucci2018 = SourceRef(
@@ -996,7 +1018,7 @@ class AppSources {
     authors: 'Barratt-Boyes BG, Wood EH.',
     title: 'Cardiac output and related measurements and pressure values in the right heart and associated vessels, together with an analysis of the hemodynamic response to the inhalation of high oxygen mixtures in healthy subjects.',
     journal: 'Journal of Laboratory and Clinical Medicine. 1958;51(1):72–90.',
-    doi: 'PMID: 13502983  ·  Faktor 80 für SVR/PVR-Umrechnung in dyn  ·  s',
+    doi: 'PMID: 13502983',
     noteKey: 'src_note_barrett_boyes',
   );
 
@@ -1022,7 +1044,8 @@ class AppSources {
     authors: 'Nahas GG.',
     title: 'Use of an organic carbon dioxide buffer in vivo.',
     journal: 'Science. 1959;129(3346):782–783.',
-    doi: 'doi: 10.1126/science.129.3346.782  ·  TRIS-Puffer (Tris-Hydroxymethyl-Aminomethan).',
+    doi: 'doi: 10.1126/science.129.3346.782',
+    noteKey: 'src_note_nahas_1959',
   );
 
   static const adrogueMadias2000 = SourceRef(
@@ -1030,7 +1053,8 @@ class AppSources {
     authors: 'Adrogué HJ, Madias NE.',
     title: 'Hyponatremia.',
     journal: 'New England Journal of Medicine. 2000;342(21):1581–1589.',
-    doi: 'doi: 10.1056/NEJM200005253422107  ·  Natrium-Defizit-Berechnungsformel.',
+    doi: 'doi: 10.1056/NEJM200005253422107',
+    noteKey: 'src_note_adrogue_madias_2000',
   );
 
   // ── Severinghaus – BGA temperature correction ─────────────────────────────
@@ -1039,7 +1063,7 @@ class AppSources {
     authors: 'Severinghaus JW.',
     title: 'Simple, accurate equations for human blood O₂ dissociation computations.',
     journal: 'Journal of Applied Physiology. 1979;46(3):599–602.',
-    doi: 'Eq. 1: O₂-Dissoziationskurve  ·  Eq. 2: PO₂ aus SaO₂',
+    doi: 'doi: 10.1152/jappl.1979.46.3.599',
     noteKey: 'src_note_severinghaus_1979',
   );
 
@@ -1057,7 +1081,7 @@ class AppSources {
     authors: 'Severinghaus JW.',
     title: 'Blood gas calculator.',
     journal: 'Journal of Applied Physiology. 1966;21(3):1108–1116.',
-    doi: 'Henderson-Hasselbalch-Gleichung für Blut',
+    doi: 'doi: 10.1152/jappl.1966.21.3.1108',
     noteKey: 'src_note_severinghaus_1966',
   );
 
@@ -1075,7 +1099,8 @@ class AppSources {
     authors: 'Gocoł R, Hudziak D, Bis J, Mendrala K, Morkisz Ł, Podsiadło P, Kosiński S, Piątek J, Darocha T.',
     title: 'The Role of Deep Hypothermia in Cardiac Surgery.',
     journal: 'International Journal of Environmental Research and Public Health. 2021;18(13):7061.',
-    doi: 'doi: 10.3390/ijerph18137061  ·  Vierstufige CPB-Hypothermie-Klassifikation (mild/mittel/tief/sehr tief).',
+    doi: 'doi: 10.3390/ijerph18137061',
+    noteKey: 'src_note_gocol_2021',
   );
 
   static const linderkamp1977 = SourceRef(
@@ -1153,7 +1178,8 @@ class AppSources {
     authors: 'Hensley NB, Colao JA, Zorrilla-Vaca A, et al.',
     title: 'Ultrafiltration in cardiac surgery: Results of a systematic review and meta-analysis.',
     journal: 'Perfusion. 2024;39(4):743\u2013751.',
-    doi: 'doi: 10.1177/02676591231157970  \u00b7  Modifizierte Ultrafiltration (MUF) senkt intraoperative Erythrozytentransfusionen.',
+    doi: 'doi: 10.1177/02676591231157970',
+    noteKey: 'src_note_hensley_2024',
   );
 
   static const buckberg1987 = SourceRef(
@@ -1161,7 +1187,8 @@ class AppSources {
     authors: 'Buckberg GD.',
     title: 'Strategies and logic of cardioplegic delivery to prevent, avoid, and reverse ischemic and reperfusion damage.',
     journal: 'J Thorac Cardiovasc Surg. 1987;93(1):127\u2013139.',
-    doi: 'PMID: 3540457  \u00b7  4:1 Blut:Kristalloid-Kardioplegie, Erhaltungsdosis alle 15\u201320 min.',
+    doi: 'PMID: 3540457',
+    noteKey: 'src_note_buckberg_1987',
   );
 
   static const matteDelNido2012 = SourceRef(
@@ -1169,7 +1196,8 @@ class AppSources {
     authors: 'Matte GS, del Nido PJ.',
     title: 'History and use of del Nido cardioplegia solution at Boston Children\u2019s Hospital.',
     journal: 'J Extra Corpor Technol. 2012;44(3):98\u2013103.',
-    doi: 'doi: 10.1051/ject/201244098  \u00b7  4:1 Kristalloid:Blut-Kardioplegie als Einzeldosis.',
+    doi: 'doi: 10.1051/ject/201244098',
+    noteKey: 'src_note_matte_del_nido_2012',
   );
 
   static const calafiore1995 = SourceRef(
@@ -1186,7 +1214,8 @@ class AppSources {
     authors: 'Calafiore AM, Pelini P, Foschi M, Di Mauro M.',
     title: 'Intermittent Antegrade Warm Blood Cardioplegia: What Is Next?',
     journal: 'Thorac Cardiovasc Surg. 2020 Apr;68(3):232\u2013234. Epub 2019 Mar 5.',
-    doi: 'doi: 10.1055/s-0039-1679925  \u00b7  PMID: 30836397  \u00b7  Modifiziertes Calafiore-Protokoll (absteigende K\u207a-Dosierung).',
+    doi: 'doi: 10.1055/s-0039-1679925  \u00b7  PMID: 30836397',
+    noteKey: 'src_note_calafiore_2020',
   );
 
   static const bretschneider1980 = SourceRef(
@@ -1212,6 +1241,7 @@ class AppSources {
     authors: 'Gebhard MM, Preusse CJ, Schnabel PA, Bretschneider HJ.',
     title: 'Different effects of cardioplegic solution HTK during single or intermittent administration.',
     journal: 'Thorac Cardiovasc Surg. 1984;32(5):271\u2013276.',
-    doi: 'doi: 10.1055/s-2007-1023400  \u00b7  Einmalige vs. intermittierende HTK-Gabe.',
+    doi: 'doi: 10.1055/s-2007-1023400',
+    noteKey: 'src_note_gebhard_1984',
   );
 }

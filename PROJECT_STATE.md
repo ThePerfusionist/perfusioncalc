@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.32+54 · 12 tabs · **278 unit tests** (12 files) · i18n complete
+**State:** v0.4.33+55 · 12 tabs · **278 unit tests** (12 files) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -493,3 +493,27 @@ they are called.
 Two tests guard it: every `src_note_*` key resolves in both languages, and EN
 and DE must **differ** — which catches the case where a German string was
 pasted into both slots.
+
+**The first pass caught only 21 of 30 entries (v0.4.33).** The conversion
+script worked from a hand-written list of translations, so anything absent
+from that list stayed German — Calafiore 2020 (source 35) among them. Three
+further entries kept a German remnant because the script treated the LAST
+segment separated by a middle dot as the description, and their descriptions
+contained a middle dot themselves: a unit (`dyn · s · cm⁻⁵`), or several
+equations. Six more were only found once the check no longer guessed the
+language but examined the structure — is each segment an identifier? — and
+once the escaped `\u00b7` was normalised before splitting.
+
+That is check 16 in `consistency_check.py`: `SourceRef.doi` holds identifiers
+only. It lives there rather than in a Dart test because `AppSources` has no
+list of all entries, and maintaining one by hand would be the same trap as
+the hard-wired `TabController`.
+
+**Everything in the source dialog is selectable (v0.4.33).** Every line is a
+`SelectableText` and one `SelectionArea` spans the whole list — that
+combination is what allows a drag across several lines and several
+references, so a citation can be copied in one piece into a search engine or
+a reference manager. Individual `SelectableText`s without the surrounding
+area would each be their own island and a selection would stop at the end of
+a line. The bracketed number stays a plain `Text`: "[35]" labels the dialog,
+it is not part of the citation.
