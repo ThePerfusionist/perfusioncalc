@@ -108,7 +108,9 @@ def check_test_count() -> None:
     actual = 0
     for f in dart_files("test"):
         with open(f, encoding="utf-8") as fh:
-            actual += len(re.findall(r"^\s*test\(", fh.read(), re.M))
+            # testWidgets counts too — the widget tests added in v0.4.34
+            # were invisible to the previous pattern.
+            actual += len(re.findall(r"^\s*(?:test|testWidgets)\(", fh.read(), re.M))
     badge = re.search(r"badge/tests-(\d+)%20passing", read("README.md"))
     if not badge:
         return fail("Test count", "test badge not found in README.md")
@@ -293,6 +295,13 @@ def check_listeners() -> None:
             src = fh.read()
         add = len(re.findall(r"\.addListener\(", src))
         rem = len(re.findall(r"\.removeListener\(", src))
+        # A listener on an own FocusNode is released by its dispose(), not by
+        # removeListener — the node dies with the widget. Only listeners on
+        # objects that OUTLIVE the widget (the settings singletons) have to be
+        # detached, and those are the ones this check is for.
+        own = len(re.findall(r"_focus\.addListener\(", src))
+        if own and re.search(r"_focus\.dispose\(\)", src):
+            add -= own
         if add != rem:
             problems.append(f"{os.path.relpath(f, ROOT)}: {add}x addListener, {rem}x removeListener")
     if problems:

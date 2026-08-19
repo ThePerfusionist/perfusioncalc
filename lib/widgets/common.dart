@@ -107,28 +107,69 @@ class InputCard extends StatefulWidget {
 
 class _InputCardState extends State<InputCard> {
   late TextEditingController _ctrl;
+
+  /// Own focus node so that [_syncControllerFromValue] can ask whether the
+  /// field really holds the cursor. Without it, `_editing` alone decided —
+  /// and that flag survived a stepper tap.
+  late FocusNode _focus;
+
   bool _editing = false;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: formatFieldNumber(widget.value));
+    _focus = FocusNode();
+    // On losing focus the field is no longer being edited, whatever caused
+    // it — tapping elsewhere, the keyboard closing, a tab switch.
+    _focus.addListener(() {
+      if (!_focus.hasFocus && _editing) {
+        setState(() => _editing = false);
+        _syncControllerFromValue();
+      }
+    });
   }
 
+  /// Keeps the text field in sync with [InputCard.value].
+  ///
+  /// The `_editing` guard exists so that typing is not disturbed: while the
+  /// user types, `onChanged` writes the parsed value upwards, the parent
+  /// rebuilds, and writing the reformatted text back would move the cursor
+  /// and swallow a half-finished entry such as "1." or "-".
+  ///
+  /// The guard must NOT apply to the stepper buttons, though — and that is
+  /// the defect fixed in v0.4.34. `_editing` becomes true on the field's
+  /// `onTap` and is only cleared by `onEditingComplete` or `onTapOutside`.
+  /// Tapping + or - triggers neither: both buttons sit inside the same
+  /// `InputCard`, so the tap is not "outside" the field, and no editing was
+  /// completed. `_editing` therefore stayed true, this method skipped the
+  /// update, and the number in the field stopped following the value. That
+  /// it corrected itself on the next tap into the field was the symptom of
+  /// exactly that: the tap re-focused, a later rebuild found `_editing`
+  /// still true — but the value had long since been written and the widget
+  /// was rebuilt with a fresh text.
+  ///
+  /// The guard is now narrower: it applies only while the field actually has
+  /// focus. That is the state in which a cursor exists that could be moved.
+  /// A stepper does not take focus away from the field, but it also does not
+  /// give it any — so if the field never had focus, there is nothing to
+  /// protect.
   @override
   void didUpdateWidget(InputCard old) {
     super.didUpdateWidget(old);
-    if (!_editing) {
-      final newText = formatFieldNumber(widget.value);
-      if (_ctrl.text != newText) {
-        _ctrl.text = newText;
-        _ctrl.selection = TextSelection.collapsed(offset: newText.length);
-      }
-    }
+    _syncControllerFromValue();
+  }
+
+  void _syncControllerFromValue() {
+    if (_editing && _focus.hasFocus) return;
+    final newText = formatFieldNumber(widget.value);
+    if (_ctrl.text == newText) return;
+    _ctrl.text = newText;
+    _ctrl.selection = TextSelection.collapsed(offset: newText.length);
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() { _focus.dispose(); _ctrl.dispose(); super.dispose(); }
 
   /// Safely parse a numeric string input. Returns null for invalid/extreme values.
   /// Rejects NaN, Infinity, and values outside a sensible clinical range (±1e6).
@@ -148,15 +189,26 @@ class _InputCardState extends State<InputCard> {
   double _clampStep(double v) =>
       clampStep(v, widget.range, fromEmpty: widget.value == null);
 
-  void _increment() {
-    final v = double.parse(((widget.value ?? 0) + widget.step).toStringAsFixed(4));
-    widget.onChanged(_clampStep(v));
+  /// A stepper is not an edit: it ends the editing state and writes the new
+  /// text immediately, rather than waiting for the parent to rebuild. Waiting
+  /// would work in the common case, but only as long as every screen calls
+  /// setState in its onChanged — an assumption this widget should not depend
+  /// on, and one that already failed once (v0.4.34).
+  void _step(double delta) {
+    final v = double.parse(((widget.value ?? 0) + delta).toStringAsFixed(4));
+    final clamped = _clampStep(v);
+    if (_editing) setState(() => _editing = false);
+    final text = formatFieldNumber(clamped);
+    _ctrl.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    widget.onChanged(clamped);
   }
 
-  void _decrement() {
-    final v = double.parse(((widget.value ?? 0) - widget.step).toStringAsFixed(4));
-    widget.onChanged(_clampStep(v));
-  }
+  void _increment() => _step(widget.step);
+
+  void _decrement() => _step(-widget.step);
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +295,7 @@ class _InputCardState extends State<InputCard> {
                   hintText: t('enter_value'),
                   hintStyle:  TextStyle(color: kTextGhost2, fontSize: 18),
                 ),
+                focusNode: _focus,
                 onTap: () => setState(() => _editing = true),
                 onChanged: (s) => widget.onChanged(_safeParse(s)),
                 onEditingComplete: () { setState(() => _editing = false); FocusScope.of(context).unfocus(); },

@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.33+55 · 12 tabs · **278 unit tests** (12 files) · i18n complete
+**State:** v0.4.34+56 · 12 tabs · **285 tests** (13 files, incl. the first widget tests) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -394,6 +394,47 @@ Documented in full, because together they form a pattern.
   Fixed with `GetFullPath` before the comparison; covered by
   `tool/offline/test-serve.ps1` with 17 checks including raw TCP requests that
   bypass client-side normalisation.
+
+### 7.5b The stepper buttons stopped updating the field (v0.4.34)
+
+Reported from use: + and - changed the value — every result on the screen
+followed — but the number **inside the text field** kept showing the old one.
+It only caught up once the field was tapped, as if for manual entry.
+
+`_editing` was set on the field's `onTap` and cleared only by
+`onEditingComplete` or `onTapOutside`. Tapping a stepper triggers neither:
+both buttons sit inside the same `InputCard`, so the tap is not "outside" the
+field, and no editing was completed. `_editing` stayed true, and
+`didUpdateWidget` skipped the sync it guards. That the field corrected itself
+on the next tap was the same cause seen from the other side.
+
+The guard itself was right — while typing, writing the reformatted text back
+would move the cursor and swallow a partial entry such as "1." or "-". It was
+simply too broad. Two changes:
+
+- each card now owns a `FocusNode`, and the guard applies only while the
+  field **actually holds focus**. That is the state in which a cursor exists
+  that could be moved.
+- a stepper writes the new text **immediately** instead of waiting for the
+  parent rebuild. Waiting works in the common case, but only as long as every
+  screen calls `setState` in its `onChanged` — an assumption this widget
+  should not depend on.
+
+All three cards with this pattern were affected: `InputCard`,
+`_CIInputCard` (BSA) and `_CoCiCard` (O₂ delivery). Fixing one and leaving the
+others would have been the sample-based approach rule 12 warns about.
+
+**The first widget tests in the project (7 of them).** The defect was
+invisible to a unit test: the value was always correct, only its rendering was
+not. The decisive case is the reported sequence — tap into the field, then
+step — plus the counter-test that typing still survives a rebuild.
+
+Two follow-ups the consistency check caught immediately: its test counter did
+not know `testWidgets`, and the listener rule flagged the new `FocusNode`
+listeners. The latter is a real distinction rather than a false positive: a
+listener on an **own** node is released by its `dispose()`, whereas one on a
+settings singleton — which outlives the widget — has to be detached
+explicitly. The check now separates the two.
 
 ### 7.6 Rules for future audits
 

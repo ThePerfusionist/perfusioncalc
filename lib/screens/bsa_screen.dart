@@ -179,25 +179,58 @@ class _CIInputCard extends StatefulWidget {
 
 class _CIInputCardState extends State<_CIInputCard> {
   late TextEditingController _ctrl;
+  /// Own focus node, so the sync below can ask whether the field really
+  /// holds the cursor — `_editing` alone survived a stepper tap and stopped
+  /// the field from following the value (v0.4.34, same defect as in
+  /// InputCard).
+  late FocusNode _focus;
   bool _editing = false;
 
   @override
-  void initState() { super.initState(); _ctrl = TextEditingController(text: formatFieldNumber(widget.value)); }
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: formatFieldNumber(widget.value));
+    _focus = FocusNode();
+    _focus.addListener(() {
+      if (!_focus.hasFocus && _editing) {
+        setState(() => _editing = false);
+        _sync();
+      }
+    });
+  }
 
   @override
   void didUpdateWidget(_CIInputCard old) {
     super.didUpdateWidget(old);
-    if (!_editing) {
-      final t = formatFieldNumber(widget.value);
-      if (_ctrl.text != t) { _ctrl.text = t; _ctrl.selection = TextSelection.collapsed(offset: t.length); }
-    }
+    _sync();
+  }
+
+  void _sync() {
+    if (_editing && _focus.hasFocus) return;
+    final text = formatFieldNumber(widget.value);
+    if (_ctrl.text == text) return;
+    _ctrl.text = text;
+    _ctrl.selection = TextSelection.collapsed(offset: text.length);
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() { _focus.dispose(); _ctrl.dispose(); super.dispose(); }
 
-  void _inc() => widget.onChanged(double.parse((widget.value + 0.1).toStringAsFixed(4)));
-  void _dec() => widget.onChanged(double.parse((widget.value - 0.1).toStringAsFixed(4)));
+  /// Writes the new text immediately instead of waiting for the parent
+  /// rebuild — see the comment on InputCard._step.
+  void _step(double delta) {
+    final v = double.parse((widget.value + delta).toStringAsFixed(4));
+    if (_editing) setState(() => _editing = false);
+    final text = formatFieldNumber(v);
+    _ctrl.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    widget.onChanged(v);
+  }
+
+  void _inc() => _step(0.1);
+  void _dec() => _step(-0.1);
 
   @override
   Widget build(BuildContext context) {
@@ -229,6 +262,7 @@ class _CIInputCardState extends State<_CIInputCard> {
             Expanded(
               child: TextField(
                 controller: _ctrl,
+                focusNode: _focus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textAlign: TextAlign.center,
                 style:  TextStyle(color: kTextSecondary, fontSize: 22),

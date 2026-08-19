@@ -328,7 +328,7 @@ jobs:
             |-------|-------------|
             | `PerfusionCalc-${{ env.VERSION }}.apk` | Android-App (Direktinstall / Sideloading) |
             | `PerfusionCalc-${{ env.VERSION }}.aab` | Android App Bundle (Google Play Store Upload) |
-            | `PerfusionCalc-Offline-Windows-${{ env.VERSION }}.zip` | Webapp for Windows **without Internet access** |
+            | `PerfusionCalc-Offline-Windows-${{ env.VERSION }}.zip` | Webapp für Windows-PCs **ohne Internetzugang** |
 
             ### Installation
             1. Download the APK
