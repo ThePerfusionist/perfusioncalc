@@ -25,7 +25,7 @@ dependencies:
   # Required by flutter_local_notifications for zonedSchedule().
   timezone: ^0.11.0
   # PDF-Export: erzeugt PDF-Dokumente direkt im Browser, native Dart-Lib.
-  pdf: ^3.11.1
+  pdf: ^3.13.0
   # Native DOM API for file download on the web (window.HTMLAnchorElement).
   web: ^1.1.0   # was "any": a fresh pub upgrade could otherwise jump across a breaking change
   # Cross-platform save dialog: opens the Storage Access Framework on
