@@ -217,12 +217,10 @@ class _CoCiCard extends StatefulWidget {
 class _CoCiCardState extends State<_CoCiCard> {
   late TextEditingController _ctrl;
 
-  /// Own focus node, so the sync below can ask whether the field really
-  /// holds the cursor — `_editing` alone survived a stepper tap and stopped
-  /// the field from following the value (v0.4.34, same defect as in
-  /// InputCard).
+  /// Focus is the only signal for "the user is editing" — see the comment on
+  /// InputCard._focus for why a separate `_editing` flag was wrong in both
+  /// directions (v0.4.34).
   late FocusNode _focus;
-  bool _editing = false;
 
   double? get _val => widget.mode == _CoMode.co ? widget.coValue : widget.ciValue;
   ValueChanged<double?> get _cb => widget.mode == _CoMode.co ? widget.onCoChanged : widget.onCiChanged;
@@ -233,10 +231,7 @@ class _CoCiCardState extends State<_CoCiCard> {
     _ctrl = TextEditingController(text: formatFieldNumber(_val));
     _focus = FocusNode();
     _focus.addListener(() {
-      if (!_focus.hasFocus && _editing) {
-        setState(() => _editing = false);
-        _sync();
-      }
+      if (!_focus.hasFocus) _sync();
     });
   }
 
@@ -247,7 +242,7 @@ class _CoCiCardState extends State<_CoCiCard> {
   }
 
   void _sync() {
-    if (_editing && _focus.hasFocus) return;
+    if (_focus.hasFocus) return;
     final text = formatFieldNumber(_val);
     if (_ctrl.text == text) return;
     _ctrl.text = text;
@@ -261,7 +256,6 @@ class _CoCiCardState extends State<_CoCiCard> {
   /// rebuild — see the comment on InputCard._step.
   void _step(double delta) {
     final v = double.parse(((_val ?? 0) + delta).toStringAsFixed(4));
-    if (_editing) setState(() => _editing = false);
     final text = formatFieldNumber(v);
     _ctrl.value = TextEditingValue(
       text: text,
@@ -342,10 +336,9 @@ class _CoCiCardState extends State<_CoCiCard> {
               style: TextStyle(color: outOfRange ? warnColor : kTextSecondary, fontSize: 22),
               decoration: InputDecoration(border: InputBorder.none, hintText: t('o2_enter_value'),
                   hintStyle:  TextStyle(color: kTextGhost2, fontSize: 18)),
-              onTap: () => setState(() => _editing = true),
               onChanged: (s) => _cb(double.tryParse(s.replaceAll(',', '.'))),
-              onEditingComplete: () { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
-              onTapOutside: (_) { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
+              onEditingComplete: () => FocusScope.of(context).unfocus(),
+              onTapOutside: (_) => FocusScope.of(context).unfocus(),
             )),
             _btn(Icons.add, _inc, '${t('a11y_increase')}: ${isCo ? t('o2_co_label') : t('o2_ci_label')}'),
           ]),

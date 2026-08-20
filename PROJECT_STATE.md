@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.34+56 · 12 tabs · **285 tests** (13 files, incl. the first widget tests) · i18n complete
+**State:** v0.4.35+57 · 12 tabs · **287 tests** (13 files, incl. the first widget tests) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -428,6 +428,18 @@ others would have been the sample-based approach rule 12 warns about.
 invisible to a unit test: the value was always correct, only its rendering was
 not. The decisive case is the reported sequence — tap into the field, then
 step — plus the counter-test that typing still survives a rebuild.
+
+**The first version of the fix was still half wrong, and the new tests said
+so (v0.4.35).** Keeping `_editing` as a second signal alongside focus failed
+in the opposite direction: `enterText` focuses a field WITHOUT firing
+`onTap`, so the flag stayed false while the user was genuinely typing, and a
+rebuild overwrote the partial entry `82.` with `82`. The same state arises
+from Tab navigation on web and desktop — a real case, not a test artefact.
+
+The flag is gone. **Focus alone decides**, and the steppers write their text
+themselves, so they work whether or not the field holds focus. That is
+simpler than what it replaced: three `setState` calls and a flag disappeared
+from each of the three cards.
 
 Two follow-ups the consistency check caught immediately: its test counter did
 not know `testWidgets`, and the listener rule flagged the new `FocusNode`

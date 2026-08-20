@@ -108,60 +108,51 @@ class InputCard extends StatefulWidget {
 class _InputCardState extends State<InputCard> {
   late TextEditingController _ctrl;
 
-  /// Own focus node so that [_syncControllerFromValue] can ask whether the
-  /// field really holds the cursor. Without it, `_editing` alone decided —
-  /// and that flag survived a stepper tap.
+  /// Focus is the ONLY signal for "the user is editing this field".
+  ///
+  /// There used to be a separate `_editing` flag, set on the field's `onTap`.
+  /// It was wrong in both directions. Too sticky: a tap on + or - triggers
+  /// neither `onEditingComplete` nor `onTapOutside` — both buttons sit inside
+  /// the same card, so the tap is not "outside" the field — and the flag
+  /// stayed true, which made the sync below skip and froze the displayed
+  /// number (the reported defect, v0.4.34). And too narrow: a field can gain
+  /// focus without ever being tapped, via Tab on web or desktop, and then the
+  /// flag stayed false while the user typed.
+  ///
+  /// Focus answers the question directly. It is true exactly when a cursor
+  /// exists that could be moved by rewriting the text.
   late FocusNode _focus;
-
-  bool _editing = false;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: formatFieldNumber(widget.value));
     _focus = FocusNode();
-    // On losing focus the field is no longer being edited, whatever caused
-    // it — tapping elsewhere, the keyboard closing, a tab switch.
+    // On losing focus, catch up on whatever the guard suppressed — whatever
+    // caused it: tapping elsewhere, the keyboard closing, a tab switch.
     _focus.addListener(() {
-      if (!_focus.hasFocus && _editing) {
-        setState(() => _editing = false);
-        _syncControllerFromValue();
-      }
+      if (!_focus.hasFocus) _syncControllerFromValue();
     });
   }
 
-  /// Keeps the text field in sync with [InputCard.value].
-  ///
-  /// The `_editing` guard exists so that typing is not disturbed: while the
-  /// user types, `onChanged` writes the parsed value upwards, the parent
-  /// rebuilds, and writing the reformatted text back would move the cursor
-  /// and swallow a half-finished entry such as "1." or "-".
-  ///
-  /// The guard must NOT apply to the stepper buttons, though — and that is
-  /// the defect fixed in v0.4.34. `_editing` becomes true on the field's
-  /// `onTap` and is only cleared by `onEditingComplete` or `onTapOutside`.
-  /// Tapping + or - triggers neither: both buttons sit inside the same
-  /// `InputCard`, so the tap is not "outside" the field, and no editing was
-  /// completed. `_editing` therefore stayed true, this method skipped the
-  /// update, and the number in the field stopped following the value. That
-  /// it corrected itself on the next tap into the field was the symptom of
-  /// exactly that: the tap re-focused, a later rebuild found `_editing`
-  /// still true — but the value had long since been written and the widget
-  /// was rebuilt with a fresh text.
-  ///
-  /// The guard is now narrower: it applies only while the field actually has
-  /// focus. That is the state in which a cursor exists that could be moved.
-  /// A stepper does not take focus away from the field, but it also does not
-  /// give it any — so if the field never had focus, there is nothing to
-  /// protect.
   @override
   void didUpdateWidget(InputCard old) {
     super.didUpdateWidget(old);
     _syncControllerFromValue();
   }
 
+  /// Keeps the text field in sync with [InputCard.value].
+  ///
+  /// Skipped while the field has focus: while the user types, `onChanged`
+  /// writes the parsed value upwards, the parent rebuilds, and writing the
+  /// reformatted text back would move the cursor and swallow a half-finished
+  /// entry. "82." parses as 82, so without the guard the trailing dot would
+  /// vanish the moment it is typed.
+  ///
+  /// The steppers do not rely on this method — [_step] writes the text
+  /// itself, so it works whether or not the field holds focus.
   void _syncControllerFromValue() {
-    if (_editing && _focus.hasFocus) return;
+    if (_focus.hasFocus) return;
     final newText = formatFieldNumber(widget.value);
     if (_ctrl.text == newText) return;
     _ctrl.text = newText;
@@ -189,15 +180,14 @@ class _InputCardState extends State<InputCard> {
   double _clampStep(double v) =>
       clampStep(v, widget.range, fromEmpty: widget.value == null);
 
-  /// A stepper is not an edit: it ends the editing state and writes the new
-  /// text immediately, rather than waiting for the parent to rebuild. Waiting
-  /// would work in the common case, but only as long as every screen calls
-  /// setState in its onChanged — an assumption this widget should not depend
-  /// on, and one that already failed once (v0.4.34).
+  /// A stepper writes the new text immediately rather than waiting for the
+  /// parent to rebuild. Waiting works in the common case, but only as long as
+  /// every screen calls setState in its onChanged, and as long as the field
+  /// does not hold focus — two assumptions this widget should not depend on.
+  /// Writing directly makes the button work in every case.
   void _step(double delta) {
     final v = double.parse(((widget.value ?? 0) + delta).toStringAsFixed(4));
     final clamped = _clampStep(v);
-    if (_editing) setState(() => _editing = false);
     final text = formatFieldNumber(clamped);
     _ctrl.value = TextEditingValue(
       text: text,
@@ -296,10 +286,9 @@ class _InputCardState extends State<InputCard> {
                   hintStyle:  TextStyle(color: kTextGhost2, fontSize: 18),
                 ),
                 focusNode: _focus,
-                onTap: () => setState(() => _editing = true),
                 onChanged: (s) => widget.onChanged(_safeParse(s)),
-                onEditingComplete: () { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
-                onTapOutside: (_) { setState(() => _editing = false); FocusScope.of(context).unfocus(); },
+                onEditingComplete: () => FocusScope.of(context).unfocus(),
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
               ),
             ),
             _btn(Icons.add, _increment, '${t('a11y_increase')}: ${widget.label}'),

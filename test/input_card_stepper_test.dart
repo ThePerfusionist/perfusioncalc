@@ -5,14 +5,20 @@
 // showing the old one. It only caught up once the field was tapped, as if
 // for manual entry.
 //
-// Cause: `_editing` was set on the field's `onTap` and cleared only by
-// `onEditingComplete` or `onTapOutside`. Tapping a stepper triggers neither —
-// both buttons sit inside the same InputCard, so the tap is not "outside" the
-// field. `_editing` stayed true, and didUpdateWidget skipped the sync it
-// guards.
+// Cause: a separate `_editing` flag was set on the field's `onTap` and
+// cleared only by `onEditingComplete` or `onTapOutside`. Tapping a stepper
+// triggers neither — both buttons sit inside the same InputCard, so the tap
+// is not "outside" the field. The flag stayed true, and didUpdateWidget
+// skipped the sync it guards.
 //
-// This is the first widget test in the project. It exists because the defect
-// is invisible to a unit test: the value was always correct, only its
+// The flag is gone; focus is now the only signal. The test below on typing
+// is what showed that the flag was wrong in the OTHER direction as well:
+// `enterText` focuses the field without firing `onTap`, so the flag stayed
+// false and the reformatted text overwrote a partial entry. The same thing
+// happens on web and desktop when a field is reached with the Tab key.
+//
+// These are the first widget tests in the project. They exist because the
+// defect is invisible to a unit test: the value was always correct, only its
 // rendering was not.
 
 import 'package:flutter/material.dart';
@@ -115,7 +121,13 @@ void main() {
 
   testWidgets('Typing is not disturbed by the sync', (tester) async {
     // The guard exists for a reason: while typing, writing the reformatted
-    // text back would move the cursor and swallow a partial entry.
+    // text back would move the cursor and swallow a partial entry. "82."
+    // parses as 82, so an unguarded sync would drop the trailing dot the
+    // moment it is typed — and with it the chance to type "82.5".
+    //
+    // enterText focuses the field WITHOUT firing onTap. That is exactly the
+    // case in which the old `_editing` flag stayed false and the guard did
+    // not engage; on web and desktop the Tab key produces the same state.
     await tester.pumpWidget(const _Host(initial: null));
     await tester.enterText(find.byType(TextField), '8');
     await tester.pump();
@@ -124,6 +136,34 @@ void main() {
     await tester.pump();
     expect(fieldText(tester), '82.',
         reason: 'a partial entry must survive the rebuild');
+  });
+
+  testWidgets('Losing focus catches up on what the guard suppressed',
+      (tester) async {
+    // "82." is displayed while typing but the model holds 82. Once focus
+    // goes away the field has to show the canonical form again, otherwise a
+    // dangling dot would stay on screen for good.
+    await tester.pumpWidget(const _Host(initial: null));
+    await tester.enterText(find.byType(TextField), '82.');
+    await tester.pump();
+    expect(fieldText(tester), '82.');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    expect(fieldText(tester), '82');
+  });
+
+  testWidgets('After losing focus the field catches up with the value',
+      (tester) async {
+    // The counterpart to the guard: once focus is gone it must let go,
+    // otherwise a value changed elsewhere would never reach the display.
+    await tester.pumpWidget(const _Host(initial: 70));
+    await tester.enterText(find.byType(TextField), '80.0');
+    await tester.pump();
+    expect(fieldText(tester), '80.0', reason: 'still focused, so untouched');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    expect(fieldText(tester), '80',
+        reason: 'after losing focus the text is normalised from the value');
   });
 
   testWidgets('A step after typing continues from the typed value',
