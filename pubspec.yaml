@@ -35,7 +35,7 @@ dependencies:
   # utils/pdf_download_stub.dart was adapted). The jump also brings a fix for
   # a path traversal vulnerability (CWE-22) when resolving paths from
   # external content providers.
-  file_picker: ^11.0.3
+  file_picker: ^12.1.2
 
 dev_dependencies:
   flutter_test:
