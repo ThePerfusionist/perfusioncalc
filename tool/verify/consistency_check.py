@@ -95,6 +95,21 @@ def check_version() -> None:
     if badge.group(1) != ver:
         return fail("Version", f"pubspec {ver} != README-Badge {badge.group(1)}")
 
+    # Documents that carry a "State: vX.Y.Z+B" header. They are not derived
+    # from anywhere, so they go stale silently — PLAY_DATA_SAFETY.md sat five
+    # versions behind before this check existed.
+    for rel in ("PROJECT_STATE.md", "docs/PLAY_DATA_SAFETY.md"):
+        path = os.path.join(ROOT, rel)
+        if not os.path.exists(path):
+            continue
+        head = re.search(r"^\*\*State:\*\*\s*v([0-9.]+)\+(\d+)", read(rel), re.M)
+        if not head:
+            warn("Version", f"{rel}: no 'State: vX.Y.Z+B' header found")
+        elif head.group(1) != ver or head.group(2) != build:
+            fail("Version",
+                 f"{rel} says v{head.group(1)}+{head.group(2)}, "
+                 f"pubspec says {ver}+{build}")
+
     ok(f"pubspec, kAppVersion and README badge agree ({ver}+{build})")
 
 

@@ -32,7 +32,7 @@ in `PROJECT_STATE.md` § 7:
 
 | Check | Defect it prevents |
 |---|---|
-| version identical in three places | a divergence otherwise surfaces only in the PDF footer |
+| version identical in three places, plus the `State:` header of PROJECT_STATE.md and PLAY_DATA_SAFETY.md | a divergence otherwise surfaces only in the PDF footer; the document headers derive from nothing and go stale silently |
 | test badge = actual count | a number in the docs that does not grow with the code |
 | i18n complete, no orphans | a key used in code but missing shows the bug marker in the app |
 | SW placeholders ↔ workflow `sed` patterns | if the coupling breaks, the cache never expires |

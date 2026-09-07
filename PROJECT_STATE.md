@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.35+57 · 12 tabs · **287 tests** (13 files, incl. the first widget tests) · i18n complete
+**State:** v0.4.36+58 · 12 tabs · **297 tests** (14 files, incl. widget tests) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -248,7 +248,10 @@ its protocol-specific pressure instead.
 | St. Thomas' and Eppendorf protocols · perfusion log with timestamps · heparin/protamine + ACT calculator · native share sheet | ideas |
 
 **Version numbers** are raised on request in three places: `pubspec.yaml`,
-`kAppVersion` in `main.dart`, README badge. Everything else derives: Android
+`kAppVersion` in `main.dart`, README badge — plus the `State:` header of this
+document and of `docs/PLAY_DATA_SAFETY.md`, which derive from nothing and
+therefore go stale silently (PLAY_DATA_SAFETY sat five versions behind before
+check 1 was extended to cover them). Everything else derives: Android
 via `flutter.versionName/versionCode`, iOS/macOS via `$(FLUTTER_BUILD_NAME)`,
 Windows/Linux via CMake, the PDF footer via `kAppVersion`, the bundle file
 name via `grep '^version:' pubspec.yaml`. `sw.js` deliberately carries the
@@ -447,6 +450,32 @@ listeners. The latter is a real distinction rather than a false positive: a
 listener on an **own** node is released by its `dispose()`, whereas one on a
 settings singleton — which outlives the widget — has to be detached
 explicitly. The check now separates the two.
+
+### 7.5c Dark as the default theme (v0.4.36)
+
+The app started in whatever the OS was set to. In an operating theatre or a
+dimmed room a light screen is glaring, so the first impression depended on a
+preference that has nothing to do with this context.
+`ThemeNotifier.kDefaultMode` is now `ThemeMode.dark`.
+
+Two details that make the difference between a change and a regression:
+
+- **Only the ABSENCE of a stored value falls back to dark.** `load()` now
+  matches `'system'` explicitly instead of letting it fall into the default
+  branch — otherwise a deliberate "System" would have been silently
+  overridden on the next start, and it would have looked like the switch had
+  no effect.
+- **The default is a named constant**, because it appears in three places:
+  the field initialiser, the fallback in `load()` and its catch branch. Had
+  they drifted apart, the effective default would have depended on whether
+  SharedPreferences was reachable.
+
+No flash on the web: `index.html` and `manifest.json` already carry the dark
+`#2C2C2C` as the splash and background colour, and `load()` runs before
+`runApp()`.
+
+Ten tests, `test/theme_notifier_test.dart` — the class had none until now,
+the same gradient that exposed the alarm settings defect in 7.5.
 
 ### 7.6 Rules for future audits
 

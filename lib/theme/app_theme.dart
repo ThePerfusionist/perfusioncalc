@@ -23,7 +23,21 @@ class ThemeNotifier extends ChangeNotifier {
   static final ThemeNotifier instance = ThemeNotifier._();
   ThemeNotifier._();
 
-  ThemeMode _mode = ThemeMode.system;
+  /// Dark on first start, on every platform.
+  ///
+  /// The app is used in the operating theatre and in dimmed rooms; a light
+  /// screen there is glaring, and following the system setting made the
+  /// first impression depend on a preference that has nothing to do with
+  /// this context. All three options stay in the menu — this only changes
+  /// which one applies before anyone has chosen.
+  ///
+  /// Deliberately a named constant rather than a literal: the value appears
+  /// in three places (this field, the fallback in [load] and its catch
+  /// branch), and having them drift apart would mean the default silently
+  /// depends on whether SharedPreferences is reachable.
+  static const ThemeMode kDefaultMode = ThemeMode.dark;
+
+  ThemeMode _mode = kDefaultMode;
   ThemeMode get mode => _mode;
 
   /// Resolved light/dark state. For ThemeMode.system, the current
@@ -40,7 +54,11 @@ class ThemeNotifier extends ChangeNotifier {
   }
 
   /// Loads the saved mode from SharedPreferences.
-  /// If none is saved yet: defaults to "system".
+  /// If none is saved yet: [kDefaultMode].
+  ///
+  /// Note that 'system' is still read back when it was chosen explicitly —
+  /// only the absence of a stored value falls back to dark. Anyone who has
+  /// picked "System" keeps it across restarts.
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -48,11 +66,12 @@ class ThemeNotifier extends ChangeNotifier {
       _mode = switch (saved) {
         'light' => ThemeMode.light,
         'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
+        'system' => ThemeMode.system,
+        _ => kDefaultMode,
       };
     } catch (_) {
       // SharedPreferences unavailable (e.g. in tests) -> default.
-      _mode = ThemeMode.system;
+      _mode = kDefaultMode;
     }
   }
 
