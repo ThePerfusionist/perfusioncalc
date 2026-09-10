@@ -90,11 +90,11 @@ jobs:
         run: |
           set -euo pipefail
           SW=build/web/sw.js
-          test -f "$SW" || { echo "::error::$SW fehlt"; exit 1; }
+          test -f "$SW" || { echo "::error::$SW is missing"; exit 1; }
 
           sed -i "s/const BUILD_ID = 'DEV';/const BUILD_ID = '${GITHUB_SHA}';/" "$SW"
           grep -q "const BUILD_ID = '${GITHUB_SHA}';" "$SW" || {
-            echo "::error::BUILD_ID nicht ersetzt - Cache-Invalidierung waere wirkungslos."
+            echo "::error::BUILD_ID was not replaced - cache invalidation would have no effect."
             exit 1
           }
 
@@ -156,35 +156,35 @@ jobs:
           entry_points = [a for a in assets
                           if a.startswith('./main.dart.') or a == './flutter_bootstrap.js']
           if not entry_points:
-              print('::error::Kein main.dart.*/flutter_bootstrap.js in build/web gefunden')
+              print('::error::No main.dart.*/flutter_bootstrap.js found in build/web')
               sys.exit(1)
 
           src = open(sw_path, encoding='utf-8').read()
           placeholder = 'const BUILD_ASSETS = [];'
           if placeholder not in src:
-              print('::error::Platzhalter BUILD_ASSETS nicht gefunden - sw.js geaendert?')
+              print('::error::BUILD_ASSETS placeholder not found - has sw.js changed?')
               sys.exit(1)
 
           body = ',\n'.join('  ' + json.dumps(a) for a in assets)
           src = src.replace(placeholder, 'const BUILD_ASSETS = [\n' + body + ',\n];', 1)
           open(sw_path, 'w', encoding='utf-8').write(src)
 
-          print('Precache: %d Dateien, %.1f MB' % (len(assets), total / 1024 / 1024))
+          print('Precache: %d files, %.1f MB' % (len(assets), total / 1024 / 1024))
           for e in entry_points:
               print('  Entry point: ' + e)
           # Print the largest entries too: that makes it visible on the next
           # run, without measuring, where the weight goes should Flutter ship
           # new variants.
-          print('  Groesste Eintraege:')
+          print('  Largest entries:')
           for a in sorted(assets, key=lambda x: sizes[x], reverse=True)[:5]:
               print('    %7.1f MB  %s' % (sizes[a] / 1024 / 1024, a))
           PY
 
           grep -q "const BUILD_ASSETS = \[$" "$SW" || {
-            echo "::error::BUILD_ASSETS nicht ersetzt - Precache waere leer."
+            echo "::error::BUILD_ASSETS was not replaced - the precache would be empty."
             exit 1
           }
-          echo "Service-Worker-Cache: perfusioncalc-pcalc-${GITHUB_SHA}"
+          echo "Service worker cache: perfusioncalc-pcalc-${GITHUB_SHA}"
 
       - name: Assemble bundle
         run: |
@@ -207,7 +207,7 @@ jobs:
           unzip -o -j caddy.zip LICENSE -d bundle/ || true
           if [ -f bundle/LICENSE ]; then mv bundle/LICENSE bundle/LICENSE-caddy.txt; fi
 
-          test -f bundle/caddy.exe || { echo "::error::caddy.exe fehlt"; exit 1; }
+          test -f bundle/caddy.exe || { echo "::error::caddy.exe is missing"; exit 1; }
           cp tool/offline/start.bat bundle/
           cp tool/offline/serve.ps1 bundle/
           cp tool/offline/LIESMICH.txt bundle/

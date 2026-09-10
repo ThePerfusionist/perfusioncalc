@@ -639,7 +639,72 @@ def check_source_refs() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 17. Workflows: valid YAML, syntactically correct shell blocks
+# 17. No German left in anything the CI or a release publishes
+#     The v0.4.24–v0.4.32 conversion covered comments. It missed the strings
+#     that get PUBLISHED: the release notes in release.yml (visible on every
+#     GitHub release page) and roughly thirty ::error / echo messages that end
+#     up in the public Actions log. Comments are read by contributors, but
+#     these are read by everyone — so they matter more, not less.
+#
+#     Deliberately limited to workflows. The console output of start.bat and
+#     serve.ps1 stays German on purpose (PROJECT_STATE § 7.8): it is read by
+#     staff at the clinical workstation.
+# ═══════════════════════════════════════════════════════════════════════════
+def check_published_strings() -> None:
+    section("Published strings")
+    try:
+        import yaml
+    except ImportError:
+        return warn("Published strings", "PyYAML not installed — check skipped")
+
+    files = sorted(glob.glob(os.path.join(ROOT, ".github/workflows/*.yml")))
+    if not files:
+        return warn("Published strings", ".github/ missing from the package")
+
+    # Umlauts, plus function words, plus the German participle pattern
+    # ge…t / ge…en. The word list alone was not enough: "key.properties
+    # geschrieben." and "Keystore dekodiert" passed it, so a reintroduced
+    # message would have slipped through — the counter-check caught that.
+    #
+    # Still deliberately narrow, because a false positive would train people
+    # to ignore the check. English words that would match the participle
+    # pattern (get, gen, …) are excluded by requiring at least six letters.
+    german = re.compile(
+        r"[äöüßÄÖÜ]"
+        r"|\b(nicht|fehlt|wird|wurde|gefunden|waere|geaendert|Dateien|ohne"
+        r"|fuer|Abbruch|leer|kein|keine|eine|einen|und|oder|aber|dass|damit"
+        r"|wenn|dann|sonst|muss|kann|soll|hier|diese|dieser|dieses)\b"
+        r"|\bge[a-z]{4,}(?:t|en)\b"
+        # Loanword participles without the ge- prefix: dekodiert, konfiguriert,
+        # installiert. English has no -iert ending, so this is unambiguous.
+        r"|\b[a-zäöü]{4,}iert\b")
+
+    hits = []
+    for wf in files:
+        name = os.path.basename(wf)
+        doc = yaml.safe_load(open(wf, encoding="utf-8"))
+        for job in (doc.get("jobs") or {}).values():
+            for step in job.get("steps", []):
+                # Messages printed into the Actions log
+                for line in (step.get("run") or "").splitlines():
+                    if re.search(r"echo|::error|::warning|print\(", line) \
+                            and german.search(line):
+                        hits.append(f"{name}: {line.strip()[:70]}")
+                # Anything handed to an action — release notes above all
+                for key, value in (step.get("with") or {}).items():
+                    if isinstance(value, str) and german.search(value):
+                        hits.append(f"{name}: with.{key}")
+
+    if hits:
+        fail("Published strings",
+             "German in text that CI or a release publishes:\n        "
+             + "\n        ".join(hits))
+    else:
+        ok("no German in CI messages or release notes")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 18. Workflows: valid YAML, syntactically correct shell blocks
 # ═══════════════════════════════════════════════════════════════════════════
 def check_workflows() -> None:
     section("Workflows")
@@ -680,7 +745,8 @@ def main() -> int:
                   check_defaults_not_in_pdf, check_listeners, check_code_hygiene,
                   check_privacy_pair, check_html_csp,
                   check_unreferenced_web_files, check_sdk_table,
-                  check_lockfile, check_source_refs, check_workflows):
+                  check_lockfile, check_source_refs,
+                  check_published_strings, check_workflows):
         try:
             check()
         except Exception as e:  # a broken check must not abort the run

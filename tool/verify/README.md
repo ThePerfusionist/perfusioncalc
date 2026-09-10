@@ -27,7 +27,7 @@ Or simply use `py -3`; the launcher is not shadowed by the aliases.
 ### `tool/verify/consistency_check.py`
 
 Cross-language guarantees — Dart against YAML, Dart against JavaScript, code
-against documentation. Fifteen checks, each standing for a defect documented
+against documentation. Seventeen checks, each standing for a defect documented
 in `PROJECT_STATE.md` § 7:
 
 | Check | Defect it prevents |
@@ -45,6 +45,7 @@ in `PROJECT_STATE.md` § 7:
 | CSP on every `web/*.html` | pages in the hard precache without protection |
 | every dependency in the Data safety SDK table | a new package makes the Play declaration "no data collected" quietly false |
 | `pubspec.lock` satisfies the constraints | CI would otherwise build against different versions than the development machine (a missing file is only a warning, with a pointer to `flutter pub get`) |
+| no German in CI messages or release notes | the conversion covered comments but missed what gets **published** — release notes and ~30 Actions-log messages |
 | workflows: YAML + shell syntax | a broken `run` block otherwise surfaces only in CI |
 
 **Documented exceptions:** a finding can be marked as deliberate with

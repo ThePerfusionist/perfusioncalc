@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.36+58 · 12 tabs · **297 tests** (14 files, incl. widget tests) · i18n complete
+**State:** v0.4.37+59 · 12 tabs · **297 tests** (14 files, incl. widget tests) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -548,6 +548,22 @@ converted in v0.4.24 through v0.4.30, roughly 750 comment lines and 17,500
 words of documentation. Nothing about behaviour changed: `consistency_check.py`
 produced byte-identical output before and after its own translation, the CI
 placeholders in `sw.js` survived, and the test count stayed at 276.
+
+**The conversion covered comments and missed what gets published
+(v0.4.37).** Spotted on the release page: the download table in
+`release.yml` still described the Windows bundle as "Webapp für Windows-PCs
+ohne Internetzugang", and with it about thirty `::error` and `echo` messages
+that end up in the public Actions log. Comments are read by contributors;
+these are read by anyone who opens a release or a failed run — so they matter
+more, not less.
+
+Check 17 covers it now. Its first version was too weak, and the counter-check
+said so: a word list alone let "key.properties geschrieben" and "Keystore
+dekodiert" through, because neither contains an umlaut or a listed word. The
+pattern now also matches the German participle forms `ge…t` / `ge…en` and the
+loanword ending `…iert`, which English does not have. Verified in both
+directions — every German message is caught, and none of the twenty English
+ones is.
 
 Four things stay German on purpose:
 

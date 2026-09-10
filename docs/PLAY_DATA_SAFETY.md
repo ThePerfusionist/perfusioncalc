@@ -1,6 +1,6 @@
 # Play Console — Data safety, cross-checked against the privacy policy
 
-**State:** v0.4.36+58 · checked against `privacy_policy.md`, `web/privacy.html`,
+**State:** v0.4.37+59 · checked against `privacy_policy.md`, `web/privacy.html`,
 `pubspec.yaml` and the release manifest.
 
 A filling aid for *Play Console → App content → Data safety*. Each answer

@@ -97,23 +97,23 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::KEYSTORE_BASE64 fehlt. Ein Release-Tag ohne Signaturschlüssel würde debug-signierte Artefakte erzeugen – Abbruch."
+            echo "::error::KEYSTORE_BASE64 is missing. A release tag without a signing key would produce debug-signed artefacts - aborting."
             exit 1
           fi
-          echo "Keystore-Secret gefunden – release-signing wird konfiguriert."
+          echo "Keystore secret found - configuring release signing."
           echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > android/app/release.keystore
           if [ ! -s android/app/release.keystore ]; then
-            echo "FEHLER: Keystore-Datei ist leer – KEYSTORE_BASE64 prüfen."
+            echo "ERROR: the keystore file is empty - check KEYSTORE_BASE64."
             exit 1
           fi
-          echo "Keystore dekodiert ($(wc -c < android/app/release.keystore) Bytes)."
+          echo "Keystore decoded ($(wc -c < android/app/release.keystore) bytes)."
           cat > android/key.properties << EOF
           storePassword=${STORE_PASSWORD}
           keyPassword=${KEY_PASSWORD}
           keyAlias=${KEY_ALIAS}
           storeFile=release.keystore
           EOF
-          echo "key.properties geschrieben."
+          echo "key.properties written."
 
       # ── 6. APK bauen (für Direktinstall / Sideloading) ────────────────
       - name: Build release APK
@@ -167,11 +167,11 @@ jobs:
         run: |
           set -euo pipefail
           SW=build/web/sw.js
-          test -f "$SW" || { echo "::error::$SW fehlt"; exit 1; }
+          test -f "$SW" || { echo "::error::$SW is missing"; exit 1; }
 
           sed -i "s/const BUILD_ID = 'DEV';/const BUILD_ID = '${GITHUB_SHA}';/" "$SW"
           grep -q "const BUILD_ID = '${GITHUB_SHA}';" "$SW" || {
-            echo "::error::BUILD_ID nicht ersetzt - Cache-Invalidierung waere wirkungslos."
+            echo "::error::BUILD_ID was not replaced - cache invalidation would have no effect."
             exit 1
           }
 
@@ -233,35 +233,35 @@ jobs:
           entry_points = [a for a in assets
                           if a.startswith('./main.dart.') or a == './flutter_bootstrap.js']
           if not entry_points:
-              print('::error::Kein main.dart.*/flutter_bootstrap.js in build/web gefunden')
+              print('::error::No main.dart.*/flutter_bootstrap.js found in build/web')
               sys.exit(1)
 
           src = open(sw_path, encoding='utf-8').read()
           placeholder = 'const BUILD_ASSETS = [];'
           if placeholder not in src:
-              print('::error::Platzhalter BUILD_ASSETS nicht gefunden - sw.js geaendert?')
+              print('::error::BUILD_ASSETS placeholder not found - has sw.js changed?')
               sys.exit(1)
 
           body = ',\n'.join('  ' + json.dumps(a) for a in assets)
           src = src.replace(placeholder, 'const BUILD_ASSETS = [\n' + body + ',\n];', 1)
           open(sw_path, 'w', encoding='utf-8').write(src)
 
-          print('Precache: %d Dateien, %.1f MB' % (len(assets), total / 1024 / 1024))
+          print('Precache: %d files, %.1f MB' % (len(assets), total / 1024 / 1024))
           for e in entry_points:
               print('  Entry point: ' + e)
           # Print the largest entries too: that makes it visible on the next
           # run, without measuring, where the weight goes should Flutter ship
           # new variants.
-          print('  Groesste Eintraege:')
+          print('  Largest entries:')
           for a in sorted(assets, key=lambda x: sizes[x], reverse=True)[:5]:
               print('    %7.1f MB  %s' % (sizes[a] / 1024 / 1024, a))
           PY
 
           grep -q "const BUILD_ASSETS = \[$" "$SW" || {
-            echo "::error::BUILD_ASSETS nicht ersetzt - Precache waere leer."
+            echo "::error::BUILD_ASSETS was not replaced - the precache would be empty."
             exit 1
           }
-          echo "Service-Worker-Cache: perfusioncalc-pcalc-${GITHUB_SHA}"
+          echo "Service worker cache: perfusioncalc-pcalc-${GITHUB_SHA}"
 
       - name: Assemble offline Windows bundle
         run: |
@@ -294,8 +294,8 @@ jobs:
           cp tool/offline/LIESMICH.txt bundle/
           cp OFFLINE_WINDOWS.md bundle/
 
-          test -f bundle/caddy.exe   || { echo "::error::caddy.exe fehlt"; exit 1; }
-          test -f bundle/web/index.html || { echo "::error::Web-Build fehlt"; exit 1; }
+          test -f bundle/caddy.exe   || { echo "::error::caddy.exe is missing"; exit 1; }
+          test -f bundle/web/index.html || { echo "::error::the web build is missing"; exit 1; }
 
       # ── 9. Artefakte umbenennen (Tag-Version in Dateinamen) ───────────
       - name: Rename artifacts with version
@@ -326,14 +326,21 @@ jobs:
 
             | File | Description |
             |-------|-------------|
-            | `PerfusionCalc-${{ env.VERSION }}.apk` | Android-App (Direktinstall / Sideloading) |
-            | `PerfusionCalc-${{ env.VERSION }}.aab` | Android App Bundle (Google Play Store Upload) |
-            | `PerfusionCalc-Offline-Windows-${{ env.VERSION }}.zip` | Webapp für Windows-PCs **ohne Internetzugang** |
+            | `PerfusionCalc-${{ env.VERSION }}.apk` | Android app (direct install / sideloading) |
+            | `PerfusionCalc-${{ env.VERSION }}.aab` | Android App Bundle (Google Play Store upload) |
+            | `PerfusionCalc-Offline-Windows-${{ env.VERSION }}.zip` | Web app for Windows PCs **without internet access** |
 
-            ### Installation
+            ### Installing the APK
             1. Download the APK
             2. On the Android device, enable **Settings → Security → Unknown sources**
             3. Open the APK and install it
+
+            ### Using the offline Windows bundle
+            Unpack the ZIP, copy the folder to the target machine and
+            double-click `start.bat`. A web server is included; no internet
+            connection is required at any point. See
+            [OFFLINE_WINDOWS.md](https://github.com/ThePerfusionist/perfusioncalc/blob/main/OFFLINE_WINDOWS.md)
+            for details, including the checksums of the bundled Caddy.
 
             > **⚠️ Disclaimer** This application is intended only for educational and personal use.
             > It is not validated for clinical use and must not be used for medical diagnosis, treatment decisions, or patient management.
