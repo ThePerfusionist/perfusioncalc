@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'calafiore_syringe.dart';
+
 class PatientData {
   // ── Internal helper: guards against NaN/Infinity in results ─────────────
   // Any calculation producing NaN or Infinity is treated as "no result" (0).
@@ -573,6 +575,12 @@ class PatientData {
   // 50 ml syringe - both components' ampoule counts, per-ampoule volume,
   // and concentration are individually adjustable to match institutional
   // practice.
+  //
+  // Since v0.4.38 the syringe composition is NOT a field here: it is an
+  // institutional setting (CardioplegiaSettings.calafioreSyringe, persisted
+  // across restarts) and is passed into calafiorePerfusorRate() /
+  // calafioreMgDeliveryRate() as a CalafioreSyringe - the same pattern as
+  // the del Nido share. PatientData keeps holding only per-case values.
   // Source (technique origin): Calafiore AM, Teodori G, Mezzetti A, Bosco G,
   // Verna AM, Di Giammarco G, Lapenna D. Intermittent antegrade warm blood
   // cardioplegia. Ann Thorac Surg. 1995;59(2):398-402.
@@ -580,11 +588,6 @@ class PatientData {
   double? cardioplegiaCalafioreSerumK;  // mmol/l, patient's current serum K+ (ABG)
   int? cardioplegiaCalafioreDoseNumber; // 1-6, which dose in the intermittent sequence
   double? cardioplegiaCalafioreTargetKAlt;  // mmol/l, only used for doses 4-6 (alt. 12/10/8)
-
-  double? cardioplegiaCalafioreKclVolume; // ml, TOTAL KCl volume drawn into the syringe
-  double? cardioplegiaCalafioreKclConc;   // mmol/ml, KCl stock concentration
-  double? cardioplegiaCalafioreMgVolume;  // ml, TOTAL MgSO4 volume drawn in (OPTIONAL)
-  double? cardioplegiaCalafioreMgConc;    // mmol/ml, MgSO4 stock concentration (OPTIONAL)
 
   static const Map<int, double> _calafioreTargetKDefaults = {1: 20, 2: 12, 3: 12, 4: 12, 5: 12, 6: 12};
   static const Map<int, double> _calafioreMgBolusDefaultsMg = {1: 1000, 2: 100, 3: 100, 4: 500, 5: 100, 6: 100};
@@ -608,32 +611,6 @@ class PatientData {
     return _calafioreMgBolusDefaultsMg[dose] ?? 100;
   }
 
-  /// Total volume of the prepared syringe. The MgSO4 component is optional:
-  /// if it is left blank the syringe is pure KCl and every downstream
-  /// calculation still works (the K+ concentration is then simply
-  /// undiluted).
-  double get calafioreSyringeTotalVolume {
-    final kcl = cardioplegiaCalafioreKclVolume ?? 0;
-    final mg = cardioplegiaCalafioreMgVolume ?? 0;
-    return _safe(kcl + mg);
-  }
-
-  /// Resulting [K+] in the syringe (mmol/ml) after the (optional) MgSO4
-  /// volume has diluted the KCl stock.
-  double get calafioreSyringeKConc {
-    final total = calafioreSyringeTotalVolume;
-    if (total <= 0 || cardioplegiaCalafioreKclVolume == null || cardioplegiaCalafioreKclConc == null) return 0;
-    return _safe(cardioplegiaCalafioreKclVolume! * cardioplegiaCalafioreKclConc! / total);
-  }
-
-  /// Resulting [Mg2+] in the syringe (mmol/ml). Returns 0 when no magnesium
-  /// was added - that is a valid configuration, not a missing input.
-  double get calafioreSyringeMgConc {
-    final total = calafioreSyringeTotalVolume;
-    if (total <= 0 || cardioplegiaCalafioreMgVolume == null || cardioplegiaCalafioreMgConc == null) return 0;
-    return _safe(cardioplegiaCalafioreMgVolume! * cardioplegiaCalafioreMgConc! / total);
-  }
-
   /// K+ concentration still needed above the patient's own serum level
   /// (mmol/l), relative to the effective per-dose target. Clamped at 0: if
   /// the patient's serum K+ already meets or exceeds the target, no
@@ -650,11 +627,12 @@ class PatientData {
   /// cardioplegia solution to the effective per-dose target [K+] - this is
   /// the value that must be re-entered/recalculated whenever the
   /// pressure-controlled flow changes, to keep the delivered concentration
-  /// constant.
-  double get calafiorePerfusorRate {
+  /// constant. The syringe composition comes in as a parameter (see the
+  /// note above the Calafiore fields).
+  double calafiorePerfusorRate(CalafioreSyringe syringe) {
     final flow = cardioplegiaCalafioreFlow;
     final deltaK = calafioreDeltaK;
-    final kConc = calafioreSyringeKConc;
+    final kConc = syringe.resultingKConc;
     if (flow == null || flow <= 0 || deltaK <= 0 || kConc <= 0) return 0;
     final massRatePerMin = deltaK * flow / 1000; // mmol/min
     final syringeRatePerMin = massRatePerMin / kConc; // ml/min
@@ -667,11 +645,28 @@ class PatientData {
   /// syringe/pump. Returns 0 if no magnesium was added to the syringe.
   /// Separate from the discrete end-of-dose Mg2+ bolus
   /// (calafioreMgBolusMg).
-  double get calafioreMgDeliveryRate {
-    final rate = calafiorePerfusorRate;
-    final mgConc = calafioreSyringeMgConc;
+  double calafioreMgDeliveryRate(CalafioreSyringe syringe) {
+    final rate = calafiorePerfusorRate(syringe);
+    final mgConc = syringe.resultingMgConc;
     if (rate <= 0 || mgConc <= 0) return 0;
     return _safe(rate * mgConc);
+  }
+
+  /// How long a FULL syringe lasts at the current Perfusor rate, in minutes
+  /// of pumping: total syringe volume [ml] / rate [ml/h] x 60. E.g. 50 ml at
+  /// 114 ml/h -> 26.3 min. It is pumping time, not wall-clock time: if the
+  /// Perfusor only runs while a dose is being delivered, the syringe spans
+  /// correspondingly more doses.
+  ///
+  /// Returns 0 whenever there is no rate (inputs missing, or the serum K+
+  /// already meets the target). "Never runs out" has no finite number, and
+  /// 0 min would read as "empty right away" - so the screen hides the card
+  /// and the PDF prints "—" in that case.
+  double calafioreSyringeRuntimeMin(CalafioreSyringe syringe) {
+    final rate = calafiorePerfusorRate(syringe);
+    final volume = syringe.totalVolume;
+    if (rate <= 0 || volume <= 0) return 0;
+    return _safe(volume / rate * 60);
   }
 
   // ── Bretschneider (HTK / Custodiol) crystalloid cardioplegia ────────────

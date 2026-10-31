@@ -8,6 +8,7 @@ import '../widgets/in_app_alert.dart';
 import '../models/patient_data.dart';
 import '../models/cardioplegia_alarm_settings.dart';
 import '../models/cardioplegia_settings.dart';
+import '../models/calafiore_syringe.dart';
 import '../utils/duration_format.dart';
 import '../utils/notification_service.dart';
 import '../models/ranges.dart';
@@ -67,14 +68,13 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   PatientData get patientData => widget.patientData;
   _CardioProtocol _protocol = _kVisibleProtocols.first;
 
-  // Unit selection for the two Calafiore syringe concentration fields.
-  // Purely a display/input convenience: the canonical stored value stays
-  // mmol/ml (PatientData.cardioplegiaCalafioreKclConc/MgConc) regardless of
-  // which unit is currently shown - switching converts and preserves the
-  // value exactly (% <-> mmol/ml is a lossless, unambiguous conversion via
-  // a fixed molar mass, so there's no reason to clear the field on switch).
-  String _kclUnit = _kUnitMmolPerMl;
-  String _mgUnit = _kUnitMmolPerMl;
+  // The unit selection for the two Calafiore syringe concentration fields
+  // lives in CardioplegiaSettings (persisted with the syringe itself since
+  // v0.4.38). It is purely a display/input convenience: the canonical stored
+  // value stays mmol/ml regardless of which unit is shown - switching
+  // converts and preserves the value exactly (% <-> mmol/ml is a lossless,
+  // unambiguous conversion via a fixed molar mass, so there's no reason to
+  // clear the field on switch).
 
   /// 1-second ticker that only redraws the elapsed-time readout. It is
   /// started/stopped on demand so no timer runs while no delivery has been
@@ -233,6 +233,12 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
           _ => _buildWeightBasedSection(),
         },
 
+        // Protocol background (grey box) sits at the end, directly above the
+        // PDF export: it is reference text that does not change during a
+        // case, so it should not push the timer and the inputs down the
+        // screen (moved from the top of each section in v0.4.38).
+        _protocolInfoCard(lines: _protocolInfoLines()),
+
         const SizedBox(height: 8),
         PdfExportButton(
           filename: 'cardioplegia',
@@ -244,6 +250,31 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
       ]),
     );
   }
+
+  /// Background lines for the grey protocol info box, per protocol.
+  List<(IconData, String)> _protocolInfoLines() => switch (_protocol) {
+        _CardioProtocol.calafiore => [
+            (Icons.opacity, t('cardio_calafiore_principle')),
+            (Icons.speed, t('cardio_pressure_limits')),
+            (Icons.repeat, t('cardio_interval_calafiore')),
+          ],
+        _CardioProtocol.bretschneider => [
+            (Icons.science_outlined, t('cardio_bret_principle')),
+            (Icons.speed, t('cardio_bret_pressure')),
+            (Icons.schedule, t('cardio_bret_duration')),
+            (Icons.timer_outlined, t('cardio_bret_ischemia')),
+          ],
+        _CardioProtocol.delNido => [
+            (Icons.opacity, t('cardio_ratio_delnido')),
+            (Icons.speed, t('cardio_pressure_limits')),
+            (Icons.repeat, t('cardio_interval_delnido')),
+          ],
+        _CardioProtocol.buckberg => [
+            (Icons.opacity, t('cardio_ratio_buckberg')),
+            (Icons.speed, t('cardio_pressure_limits')),
+            (Icons.repeat, t('cardio_interval_buckberg')),
+          ],
+      };
 
   /// Only cite what's actually on screen - listing every protocol's sources
   /// under a single protocol view would make it unclear which reference
@@ -292,12 +323,6 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
         onChanged: (v) { patientData.cardioplegiaDoseBuckberg = v; onChanged(); },
       ),
 
-      _protocolInfoCard(lines: [
-        (Icons.opacity, t('cardio_ratio_buckberg')),
-        (Icons.speed, t('cardio_pressure_limits')),
-        (Icons.repeat, t('cardio_interval_buckberg')),
-      ]),
-
       SectionHeader(t('cardio_section_result')),
       ResultCard(label: t('cardio_total_volume'), unit: 'ml', value: patientData.buckbergDoseVolume,
           decimals: 0, missingInputs: missing([hWeight, hDose])),
@@ -318,9 +343,17 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
   // flow-controlled, the actual blood flow varies with coronary/graft
   // resistance - so the Perfusor rate must track the CURRENT flow to keep
   // the delivered [K+] constant for whichever dose is currently selected.
+  //
+  // Layout order (v0.4.38): timer -> dose -> per-dose targets -> flow ->
+  // results ("Kardioplegievolumen") -> syringe. The syringe is prepared once
+  // and persisted (CardioplegiaSettings), so it moved below the values that
+  // actually change from dose to dose.
   Widget _buildCalafioreSection() {
     List<String> missing(List<({Object? v, String label})> fields) =>
         fields.where((f) => f.v == null).map((f) => f.label).toList();
+
+    final cfg = CardioplegiaSettings.instance;
+    final CalafioreSyringe syringe = cfg.calafioreSyringe;
 
     final doseNumber = patientData.cardioplegiaCalafioreDoseNumber ?? 1;
     final hasTargetAlt = doseNumber >= 4 && doseNumber <= 6;
@@ -328,8 +361,8 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     // Magnesium is OPTIONAL: it is deliberately excluded from every
     // "missing input" list, so leaving it blank yields a pure-KCl syringe
     // and all K+ results still compute normally.
-    final hKclVol = (v: patientData.cardioplegiaCalafioreKclVolume, label: t('cardio_kcl_volume'));
-    final hKclConc = (v: patientData.cardioplegiaCalafioreKclConc, label: t('cardio_kcl_conc'));
+    final hKclVol = (v: syringe.kclVolume, label: t('cardio_kcl_volume'));
+    final hKclConc = (v: syringe.kclStockConc, label: t('cardio_kcl_conc'));
     final hFlow = (v: patientData.cardioplegiaCalafioreFlow, label: t('cardio_flow'));
     final hSerumK = (v: patientData.cardioplegiaCalafioreSerumK, label: t('cardio_serum_k'));
 
@@ -340,26 +373,27 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
         patientData.calafioreDeltaK == 0 &&
         rateMissing.isEmpty;
 
+    // Syringe runtime is only meaningful while there is a rate. With complete
+    // inputs and a rate of 0 (no supplementation needed) the card is hidden:
+    // "0 min" would read as "syringe empty right away", the opposite of what
+    // is true. With inputs missing it stays, showing "—" and what is missing.
+    final perfusorRate = patientData.calafiorePerfusorRate(syringe);
+    final showRuntime = rateMissing.isNotEmpty || perfusorRate > 0;
+
     // Displayed concentration values depend on the active unit; onChanged
     // always converts back to the canonical mmol/ml before storing.
-    final kclConcMmol = patientData.cardioplegiaCalafioreKclConc;
-    final kclIsPercent = _kclUnit == _kUnitPercent;
+    final kclConcMmol = syringe.kclStockConc;
+    final kclIsPercent = cfg.calafioreKclInPercent;
     final kclConcDisplay = (kclIsPercent && kclConcMmol != null)
         ? _mmolPerMlToPercent(kclConcMmol, _kKclMolarMass)
         : kclConcMmol;
-    final mgConcMmol = patientData.cardioplegiaCalafioreMgConc;
-    final mgIsPercent = _mgUnit == _kUnitPercent;
+    final mgConcMmol = syringe.mgStockConc;
+    final mgIsPercent = cfg.calafioreMgInPercent;
     final mgConcDisplay = (mgIsPercent && mgConcMmol != null)
         ? _mmolPerMlToPercent(mgConcMmol, _kMgso4MolarMass)
         : mgConcMmol;
 
     return Column(children: [
-      _protocolInfoCard(lines: [
-        (Icons.opacity, t('cardio_calafiore_principle')),
-        (Icons.speed, t('cardio_pressure_limits')),
-        (Icons.repeat, t('cardio_interval_calafiore')),
-      ]),
-
       // Re-dose stopwatch: Calafiore is intermittent, the window opens at
       // 15 min and is exceeded past 20 min.
       _doseTimerCard(
@@ -410,51 +444,7 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
         hint: doseNumber == 2 ? t('cardio_mg_bolus_dose2_hint') : null,
       ),
 
-      SectionHeader(t('cardio_syringe_section')),
-      InputCard(label: t('cardio_kcl_volume'), unit: 'ml', value: patientData.cardioplegiaCalafioreKclVolume,
-          range: Ranges.cardioplegiaCalafioreKclVolume,
-          step: 5, onChanged: (v) { patientData.cardioplegiaCalafioreKclVolume = v; onChanged(); }),
-      InputCard(
-        label: t('cardio_kcl_conc'),
-        unit: _kclUnit,
-        unitOptions: const [_kUnitMmolPerMl, _kUnitPercent],
-        onUnitChanged: (u) => setState(() => _kclUnit = u),
-        value: kclConcDisplay,
-        range: kclIsPercent ? Ranges.cardioplegiaCalafioreKclConcPercent : Ranges.cardioplegiaCalafioreKclConc,
-        step: kclIsPercent ? 0.5 : 0.1,
-        onChanged: (v) {
-          patientData.cardioplegiaCalafioreKclConc =
-              (v == null) ? null : (kclIsPercent ? _percentToMmolPerMl(v, _kKclMolarMass) : v);
-          onChanged();
-        },
-      ),
-
-      InputCard(label: t('cardio_mg_volume'), unit: 'ml', value: patientData.cardioplegiaCalafioreMgVolume,
-          range: Ranges.cardioplegiaCalafioreMgVolume,
-          step: 5, onChanged: (v) { patientData.cardioplegiaCalafioreMgVolume = v; onChanged(); }),
-      InputCard(
-        label: t('cardio_mg_conc'),
-        unit: _mgUnit,
-        unitOptions: const [_kUnitMmolPerMl, _kUnitPercent],
-        onUnitChanged: (u) => setState(() => _mgUnit = u),
-        value: mgConcDisplay,
-        range: mgIsPercent ? Ranges.cardioplegiaCalafioreMgConcPercent : Ranges.cardioplegiaCalafioreMgConc,
-        step: mgIsPercent ? 1 : 0.1,
-        onChanged: (v) {
-          patientData.cardioplegiaCalafioreMgConc =
-              (v == null) ? null : (mgIsPercent ? _percentToMmolPerMl(v, _kMgso4MolarMass) : v);
-          onChanged();
-        },
-      ),
-      _noteRow(Icons.info_outline, t('cardio_mg_optional_hint')),
-
-      ResultCard(label: t('cardio_syringe_k_conc'), unit: 'mmol/ml', value: patientData.calafioreSyringeKConc,
-          decimals: 2, missingInputs: syringeMissing),
-      // No missingInputs on the Mg readout: a blank value here is a valid
-      // "no magnesium added" configuration, not an incomplete entry.
-      ResultCard(label: t('cardio_syringe_mg_conc'), unit: 'mmol/ml', value: patientData.calafioreSyringeMgConc,
-          decimals: 3),
-
+      // ── Per-case inputs: current flow and serum K+ ──────────────────────
       SectionHeader(t('cardio_flow_section')),
       InputCard(label: t('cardio_flow'), unit: 'ml/min', value: patientData.cardioplegiaCalafioreFlow,
           range: Ranges.cardioplegiaCalafioreFlow,
@@ -463,14 +453,65 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
           range: Ranges.kalium,
           step: 0.1, onChanged: (v) { patientData.cardioplegiaCalafioreSerumK = v; onChanged(); }),
 
+      // ── Results ("Kardioplegievolumen") ─────────────────────────────────
       SectionHeader(t('cardio_section_result')),
-      ResultCard(label: t('cardio_perfusor_rate'), unit: 'ml/h', value: patientData.calafiorePerfusorRate,
+      ResultCard(label: t('cardio_perfusor_rate'), unit: 'ml/h', value: perfusorRate,
           decimals: 1, missingInputs: rateMissing),
-      ResultCard(label: t('cardio_mg_delivery'), unit: 'mmol/h', value: patientData.calafioreMgDeliveryRate,
+      ResultCard(label: t('cardio_mg_delivery'), unit: 'mmol/h', value: patientData.calafioreMgDeliveryRate(syringe),
           decimals: 2),
+      if (showRuntime) ...[
+        ResultCard(label: t('cardio_syringe_runtime'), unit: 'min',
+            value: patientData.calafioreSyringeRuntimeMin(syringe),
+            decimals: 0, missingInputs: rateMissing),
+        _noteRow(Icons.hourglass_bottom, t('cardio_syringe_runtime_hint')),
+      ],
 
       if (showNoDoseNote)
         _noteRow(Icons.info_outline, t('cardio_no_dose_needed')),
+
+      // ── Perfusor syringe (persisted institutional setting) ──────────────
+      // The setters notify CardioplegiaSettings' listeners, which this State
+      // is subscribed to (_onSettingsChanged -> setState), so the results
+      // above update without an explicit onChanged() here.
+      SectionHeader(t('cardio_syringe_section')),
+      InputCard(label: t('cardio_kcl_volume'), unit: 'ml', value: syringe.kclVolume,
+          range: Ranges.cardioplegiaCalafioreKclVolume,
+          step: 5, onChanged: (v) => cfg.setCalafioreKclVolume(v)),
+      InputCard(
+        label: t('cardio_kcl_conc'),
+        unit: kclIsPercent ? _kUnitPercent : _kUnitMmolPerMl,
+        unitOptions: const [_kUnitMmolPerMl, _kUnitPercent],
+        onUnitChanged: (u) => cfg.setCalafioreKclInPercent(u == _kUnitPercent),
+        value: kclConcDisplay,
+        range: kclIsPercent ? Ranges.cardioplegiaCalafioreKclConcPercent : Ranges.cardioplegiaCalafioreKclConc,
+        step: kclIsPercent ? 0.5 : 0.1,
+        onChanged: (v) => cfg.setCalafioreKclConc(
+            (v == null) ? null : (kclIsPercent ? _percentToMmolPerMl(v, _kKclMolarMass) : v)),
+      ),
+
+      InputCard(label: t('cardio_mg_volume'), unit: 'ml', value: syringe.mgVolume,
+          range: Ranges.cardioplegiaCalafioreMgVolume,
+          step: 5, onChanged: (v) => cfg.setCalafioreMgVolume(v)),
+      InputCard(
+        label: t('cardio_mg_conc'),
+        unit: mgIsPercent ? _kUnitPercent : _kUnitMmolPerMl,
+        unitOptions: const [_kUnitMmolPerMl, _kUnitPercent],
+        onUnitChanged: (u) => cfg.setCalafioreMgInPercent(u == _kUnitPercent),
+        value: mgConcDisplay,
+        range: mgIsPercent ? Ranges.cardioplegiaCalafioreMgConcPercent : Ranges.cardioplegiaCalafioreMgConc,
+        step: mgIsPercent ? 1 : 0.1,
+        onChanged: (v) => cfg.setCalafioreMgConc(
+            (v == null) ? null : (mgIsPercent ? _percentToMmolPerMl(v, _kMgso4MolarMass) : v)),
+      ),
+      _noteRow(Icons.info_outline, t('cardio_mg_optional_hint')),
+
+      ResultCard(label: t('cardio_syringe_k_conc'), unit: 'mmol/ml', value: syringe.resultingKConc,
+          decimals: 2, missingInputs: syringeMissing),
+      // No missingInputs on the Mg readout: a blank value here is a valid
+      // "no magnesium added" configuration, not an incomplete entry.
+      ResultCard(label: t('cardio_syringe_mg_conc'), unit: 'mmol/ml', value: syringe.resultingMgConc,
+          decimals: 3),
+      _noteRow(Icons.save_outlined, t('cardio_syringe_saved_hint')),
     ]);
   }
 
@@ -487,13 +528,6 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     final hTime = (v: patientData.cardioplegiaBretschneiderTime, label: t('cardio_bret_time'));
 
     return Column(children: [
-      _protocolInfoCard(lines: [
-        (Icons.science_outlined, t('cardio_bret_principle')),
-        (Icons.speed, t('cardio_bret_pressure')),
-        (Icons.schedule, t('cardio_bret_duration')),
-        (Icons.timer_outlined, t('cardio_bret_ischemia')),
-      ]),
-
       // Re-dose stopwatch: Bretschneider is a single shot whose protection
       // window closes at ~180 min - warn 30 min ahead so there is time to
       // prepare a re-infusion rather than being surprised at the limit.
@@ -915,12 +949,6 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
     final hWeight = (v: patientData.cardioplegiaWeight, label: t('bsa_body_weight'));
 
     return Column(children: [
-      _protocolInfoCard(lines: [
-        (Icons.opacity, t('cardio_ratio_delnido')),
-        (Icons.speed, t('cardio_pressure_limits')),
-        (Icons.repeat, t('cardio_interval_delnido')),
-      ]),
-
       // Re-dose stopwatch: del Nido is a single dose effective for ~90 min,
       // warn 15 min ahead of that.
       _doseTimerCard(
@@ -1200,14 +1228,18 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
 // was never opened. Gating each protocol block on its own user input fixes
 // that at the source.
 //
-// Buckberg/del Nido rows are omitted entirely because those protocols are
-// currently not selectable in the UI - re-add them here if
-// _kVisibleProtocols is widened again.
+// Buckberg rows are omitted entirely because that protocol is currently not
+// selectable in the UI - re-add them here if _kVisibleProtocols is widened
+// again.
+//
+// The Calafiore SYRINGE is deliberately not part of _hasCalafioreInput()
+// (since v0.4.38): it is a persisted setting, so once entered it is present
+// in every session. Counting it as input would attach the cardioplegia tab
+// to every combined report forever - exactly the C-1 defect described
+// above. Its rows are emitted inside `if (calafiore)`, i.e. only when there
+// is per-case Calafiore input anyway, which is the same rule the del Nido
+// share follows.
 bool _hasCalafioreInput(PatientData pd) =>
-    pd.cardioplegiaCalafioreKclVolume != null ||
-    pd.cardioplegiaCalafioreKclConc != null ||
-    pd.cardioplegiaCalafioreMgVolume != null ||
-    pd.cardioplegiaCalafioreMgConc != null ||
     pd.cardioplegiaCalafioreFlow != null ||
     pd.cardioplegiaCalafioreSerumK != null ||
     pd.cardioplegiaCalafioreDoseNumber != null;
@@ -1224,20 +1256,26 @@ List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
   final calafiore = _hasCalafioreInput(pd);
   final bretschneider = _hasBretschneiderInput(pd);
   final delNido = _hasDelNidoInput(pd);
-  // Ratio is an institutional setting, read from the persisted singleton.
+  // Ratio and syringe are institutional settings, read from the persisted
+  // singleton.
   final dnPct = CardioplegiaSettings.instance.delNidoCrystalloidPercent;
+  final syr = CardioplegiaSettings.instance.calafioreSyringe;
 
   return [
     PdfSection(title: t('pdf_inputs'), rows: [
       if (calafiore) ...[
         PdfRow(label: '${t('cardio_dose_number')} (Calafiore)',
             value: '${pd.cardioplegiaCalafioreDoseNumber ?? 1}', unit: ''),
-        PdfRow.numeric(label: '${t('cardio_kcl_volume')} (Calafiore)', value: pd.cardioplegiaCalafioreKclVolume, unit: 'ml'),
-        PdfRow.numeric(label: '${t('cardio_kcl_conc')} (Calafiore)', value: pd.cardioplegiaCalafioreKclConc, unit: 'mmol/ml'),
-        PdfRow.numeric(label: '${t('cardio_mg_volume')} (Calafiore)', value: pd.cardioplegiaCalafioreMgVolume, unit: 'ml'),
-        PdfRow.numeric(label: '${t('cardio_mg_conc')} (Calafiore)', value: pd.cardioplegiaCalafioreMgConc, unit: 'mmol/ml'),
         PdfRow.numeric(label: '${t('cardio_flow')} (Calafiore)', value: pd.cardioplegiaCalafioreFlow, unit: 'ml/min'),
         PdfRow.numeric(label: '${t('cardio_serum_k')} (Calafiore)', value: pd.cardioplegiaCalafioreSerumK, unit: 'mmol/l'),
+        // verify:ok the syringe comes from a setting, but these rows only
+        // exist inside `if (calafiore)`, which is gated on per-case input -
+        // the tab cannot appear permanently "filled" (see the note above
+        // _hasCalafioreInput).
+        PdfRow.numeric(label: '${t('cardio_kcl_volume')} (Calafiore)', value: syr.kclVolume, unit: 'ml'),
+        PdfRow.numeric(label: '${t('cardio_kcl_conc')} (Calafiore)', value: syr.kclStockConc, unit: 'mmol/ml'),
+        PdfRow.numeric(label: '${t('cardio_mg_volume')} (Calafiore)', value: syr.mgVolume, unit: 'ml'),
+        PdfRow.numeric(label: '${t('cardio_mg_conc')} (Calafiore)', value: syr.mgStockConc, unit: 'mmol/ml'),
       ],
       if (bretschneider) ...[
         PdfRow.numeric(label: '${t('cardio_bret_flow')} (Bretschneider)', value: pd.cardioplegiaBretschneiderFlow, unit: 'ml/min'),
@@ -1274,33 +1312,42 @@ List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
         // Magnesium is optional: 0 means "no Mg in the syringe" or "no Mg
         // delivery" here, not "not calculable". Availability therefore
         // depends on the KCl inputs only.
-        PdfRow.numeric(label: '${t('cardio_syringe_k_conc')} (Calafiore)',
-            value: resultIf([pd.cardioplegiaCalafioreKclVolume, pd.cardioplegiaCalafioreKclConc],
-                pd.calafioreSyringeKConc),
-            unit: 'mmol/ml', decimals: 2, zeroIsValid: true),
-        PdfRow.numeric(label: '${t('cardio_syringe_mg_conc')} (Calafiore)',
-            value: resultIf([pd.cardioplegiaCalafioreKclVolume, pd.cardioplegiaCalafioreKclConc],
-                pd.calafioreSyringeMgConc),
-            unit: 'mmol/ml', decimals: 3, zeroIsValid: true),
         PdfRow.numeric(label: '${t('cardio_perfusor_rate')} (Calafiore)',
             value: resultIf([
-              pd.cardioplegiaCalafioreKclVolume,
-              pd.cardioplegiaCalafioreKclConc,
+              syr.kclVolume,
+              syr.kclStockConc,
               pd.cardioplegiaCalafioreFlow,
               pd.cardioplegiaCalafioreSerumK,
-            ], pd.calafiorePerfusorRate),
+            ], pd.calafiorePerfusorRate(syr)),
             unit: 'ml/h', decimals: 1, zeroIsValid: true,
             note: (pd.cardioplegiaCalafioreSerumK != null && pd.calafioreDeltaK == 0)
                 ? t('cardio_no_dose_needed')
                 : null),
         PdfRow.numeric(label: '${t('cardio_mg_delivery')} (Calafiore)',
             value: resultIf([
-              pd.cardioplegiaCalafioreKclVolume,
-              pd.cardioplegiaCalafioreKclConc,
+              syr.kclVolume,
+              syr.kclStockConc,
               pd.cardioplegiaCalafioreFlow,
               pd.cardioplegiaCalafioreSerumK,
-            ], pd.calafioreMgDeliveryRate),
+            ], pd.calafioreMgDeliveryRate(syr)),
             unit: 'mmol/h', decimals: 2, zeroIsValid: true),
+        // No zeroIsValid: 0 means "no rate", where a runtime does not exist -
+        // the row then prints "—", matching the hidden card on screen.
+        PdfRow.numeric(label: '${t('cardio_syringe_runtime')} (Calafiore)',
+            value: resultIf([
+              syr.kclVolume,
+              syr.kclStockConc,
+              pd.cardioplegiaCalafioreFlow,
+              pd.cardioplegiaCalafioreSerumK,
+            ], pd.calafioreSyringeRuntimeMin(syr)),
+            unit: 'min', decimals: 0),
+        // Syringe readouts last, mirroring the screen order since v0.4.38.
+        PdfRow.numeric(label: '${t('cardio_syringe_k_conc')} (Calafiore)',
+            value: resultIf([syr.kclVolume, syr.kclStockConc], syr.resultingKConc),
+            unit: 'mmol/ml', decimals: 2, zeroIsValid: true),
+        PdfRow.numeric(label: '${t('cardio_syringe_mg_conc')} (Calafiore)',
+            value: resultIf([syr.kclVolume, syr.kclStockConc], syr.resultingMgConc),
+            unit: 'mmol/ml', decimals: 3, zeroIsValid: true),
       ],
       if (bretschneider)
         PdfRow.numeric(label: '${t('cardio_bret_volume')} (Bretschneider)', value: pd.bretschneiderVolumeFromFlow, unit: 'ml', decimals: 0),

@@ -14,6 +14,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:perfusion_calc/models/patient_data.dart';
+import 'package:perfusion_calc/models/calafiore_syringe.dart';
 import 'package:perfusion_calc/models/cardioplegia_alarm_settings.dart';
 
 void main() {
@@ -526,18 +527,43 @@ void main() {
     // Bosco G, Verna AM, Di Giammarco G, Lapenna D. Ann Thorac Surg.
     // 1995;59(2):398-402.
 
+    // Since v0.4.38 the syringe is a persisted setting (CardioplegiaSettings)
+    // and reaches the Calafiore methods as a CalafioreSyringe parameter. The
+    // expected values below are unchanged from when it was a PatientData
+    // field - the refactor moved where the composition lives, not the maths.
+    const syringe = CalafioreSyringe(
+        kclVolume: 40, kclStockConc: 2.0, mgVolume: 10, mgStockConc: 2.0);
+    const pureKcl = CalafioreSyringe(kclVolume: 40, kclStockConc: 2.0);
+
     PatientData calafioreSyringe({int? dose}) => PatientData()
-      ..cardioplegiaCalafioreKclVolume = 40
-      ..cardioplegiaCalafioreKclConc = 2.0
-      ..cardioplegiaCalafioreMgVolume = 10
-      ..cardioplegiaCalafioreMgConc = 2.0
       ..cardioplegiaCalafioreDoseNumber = dose;
 
     test('Institutional syringe mixture (40 ml KCl 2mmol/ml + 10 ml MgSO4 2mmol/ml [500mg/ml]): 1.6 / 0.4 mmol/ml', () {
-      final pd = calafioreSyringe();
-      expect(pd.calafioreSyringeTotalVolume, closeTo(50, 0.01));
-      expect(pd.calafioreSyringeKConc, closeTo(1.6, 0.001));
-      expect(pd.calafioreSyringeMgConc, closeTo(0.4, 0.001));
+      expect(syringe.totalVolume, closeTo(50, 0.01));
+      expect(syringe.resultingKConc, closeTo(1.6, 0.001));
+      expect(syringe.resultingMgConc, closeTo(0.4, 0.001));
+    });
+
+    test('Institutional spreadsheet worked example: serum 5.0 -> target 10, 200 ml/min, 2 mmol/ml -> 30.0 ml/h', () {
+      // The anchor the formula was originally verified against (see
+      // PROJECT_STATE § 4). Target 10 mmol/l is reachable via the dose 4-6
+      // alternative; the syringe is undiluted KCl as in the spreadsheet.
+      final pd = calafioreSyringe(dose: 4)
+        ..cardioplegiaCalafioreTargetKAlt = 10
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 5.0;
+      expect(pd.calafiorePerfusorRate(pureKcl), closeTo(30.0, 0.001));
+    });
+
+    test('An empty syringe yields 0, never NaN', () {
+      final pd = calafioreSyringe(dose: 1)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(CalafioreSyringe.empty.totalVolume, 0);
+      expect(CalafioreSyringe.empty.resultingKConc, 0);
+      expect(CalafioreSyringe.empty.resultingMgConc, 0);
+      expect(pd.calafiorePerfusorRate(CalafioreSyringe.empty), 0);
+      expect(pd.calafioreMgDeliveryRate(CalafioreSyringe.empty), 0);
     });
 
     test('Default target [K+] and Mg2+ bolus follow the dose-number schedule', () {
@@ -561,16 +587,16 @@ void main() {
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 4.8;
       expect(pd.calafioreDeltaK, closeTo(15.2, 0.001));
-      expect(pd.calafiorePerfusorRate, closeTo(114.0, 0.01));
-      expect(pd.calafioreMgDeliveryRate, closeTo(45.6, 0.01));
+      expect(pd.calafiorePerfusorRate(syringe), closeTo(114.0, 0.01));
+      expect(pd.calafioreMgDeliveryRate(syringe), closeTo(45.6, 0.01));
     });
 
     test('Dose 2 (target 12), serum 4.8, flow 200 ml/min -> Perfusor rate 54.0 ml/h', () {
       final pd = calafioreSyringe(dose: 2)
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 4.8;
-      expect(pd.calafiorePerfusorRate, closeTo(54.0, 0.01));
-      expect(pd.calafioreMgDeliveryRate, closeTo(21.6, 0.01));
+      expect(pd.calafiorePerfusorRate(syringe), closeTo(54.0, 0.01));
+      expect(pd.calafioreMgDeliveryRate(syringe), closeTo(21.6, 0.01));
     });
 
     test('Dose 4 alt target 10 mmol/l overrides the default 12 -> Perfusor rate 39.0 ml/h', () {
@@ -579,7 +605,7 @@ void main() {
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 4.8;
       expect(pd.calafioreTargetK, 10.0);
-      expect(pd.calafiorePerfusorRate, closeTo(39.0, 0.01));
+      expect(pd.calafiorePerfusorRate(syringe), closeTo(39.0, 0.01));
     });
 
     test('Dose 4 alt target 8 mmol/l overrides the default 12 -> Perfusor rate 24.0 ml/h', () {
@@ -588,7 +614,7 @@ void main() {
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 4.8;
       expect(pd.calafioreTargetK, 8.0);
-      expect(pd.calafiorePerfusorRate, closeTo(24.0, 0.01));
+      expect(pd.calafiorePerfusorRate(syringe), closeTo(24.0, 0.01));
     });
 
     test('Target alt override is ignored outside doses 4-6 (dose 2 stays at default 12)', () {
@@ -620,9 +646,9 @@ void main() {
       // Pressure-controlled delivery: if flow drops (e.g. higher coronary
       // resistance at the same 90-100 mmHg line pressure), the Perfusor
       // rate must drop proportionally to hold the same concentration.
-      expect(pdBase.calafiorePerfusorRate, closeTo(54.0, 0.01));
-      expect(pdLowerFlow.calafiorePerfusorRate, closeTo(40.5, 0.01));
-      expect(pdLowerFlow.calafiorePerfusorRate / pdBase.calafiorePerfusorRate,
+      expect(pdBase.calafiorePerfusorRate(syringe), closeTo(54.0, 0.01));
+      expect(pdLowerFlow.calafiorePerfusorRate(syringe), closeTo(40.5, 0.01));
+      expect(pdLowerFlow.calafiorePerfusorRate(syringe) / pdBase.calafiorePerfusorRate(syringe),
           closeTo(150 / 200, 0.001));
     });
 
@@ -631,12 +657,12 @@ void main() {
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 12.0; // == dose 2's target of 12
       expect(pd.calafioreDeltaK, 0);
-      expect(pd.calafiorePerfusorRate, 0);
+      expect(pd.calafiorePerfusorRate(syringe), 0);
     });
 
     test('Missing flow yields 0 even with a complete syringe mixture', () {
       final pd = calafioreSyringe(dose: 1)..cardioplegiaCalafioreSerumK = 4.8;
-      expect(pd.calafiorePerfusorRate, 0);
+      expect(pd.calafiorePerfusorRate(syringe), 0);
     });
 
     test('Magnesium is OPTIONAL: a pure-KCl syringe still computes the full K+ result', () {
@@ -646,25 +672,72 @@ void main() {
       // mmol/ml), and the K+ calculation proceeds normally.
       // Dose 1: (20 - 4.8) x 200 / 1000 / 2.0 x 60 = 91.2 ml/h.
       final pd = PatientData()
-        ..cardioplegiaCalafioreKclVolume = 40
-        ..cardioplegiaCalafioreKclConc = 2.0
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 4.8;
-      expect(pd.calafioreSyringeTotalVolume, closeTo(40, 0.01));
-      expect(pd.calafioreSyringeKConc, closeTo(2.0, 0.001));
-      expect(pd.calafiorePerfusorRate, closeTo(91.2, 0.01));
+      expect(pureKcl.totalVolume, closeTo(40, 0.01));
+      expect(pureKcl.resultingKConc, closeTo(2.0, 0.001));
+      expect(pd.calafiorePerfusorRate(pureKcl), closeTo(91.2, 0.01));
       // No magnesium in the syringe -> no continuous Mg2+ delivery, but
       // that is a valid state, not an error.
-      expect(pd.calafioreSyringeMgConc, 0);
-      expect(pd.calafioreMgDeliveryRate, 0);
+      expect(pureKcl.resultingMgConc, 0);
+      expect(pd.calafioreMgDeliveryRate(pureKcl), 0);
     });
 
     test('Missing KCl concentration still yields 0 (K+ source is genuinely required)', () {
       final pd = PatientData()
-        ..cardioplegiaCalafioreKclVolume = 40
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 4.8;
-      expect(pd.calafiorePerfusorRate, 0);
+      expect(pd.calafiorePerfusorRate(const CalafioreSyringe(kclVolume: 40)), 0);
+    });
+
+    // Syringe runtime: total syringe volume / Perfusor rate x 60.
+    test('Runtime of a full syringe: 50 ml at 114 ml/h (dose 1) -> 26.3 min', () {
+      final pd = calafioreSyringe(dose: 1)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafiorePerfusorRate(syringe), closeTo(114.0, 0.01));
+      expect(pd.calafioreSyringeRuntimeMin(syringe), closeTo(50 / 114 * 60, 0.001));
+      expect(pd.calafioreSyringeRuntimeMin(syringe), closeTo(26.32, 0.01));
+    });
+
+    test('Runtime follows the dose: dose 2 (54 ml/h) -> 55.6 min', () {
+      final pd = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(pd.calafioreSyringeRuntimeMin(syringe), closeTo(55.56, 0.01));
+    });
+
+    test('Runtime uses the whole syringe volume: pure KCl 40 ml at 30 ml/h -> 80 min', () {
+      // The spreadsheet anchor case again (30.0 ml/h).
+      final pd = calafioreSyringe(dose: 4)
+        ..cardioplegiaCalafioreTargetKAlt = 10
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 5.0;
+      expect(pd.calafioreSyringeRuntimeMin(pureKcl), closeTo(80.0, 0.001));
+    });
+
+    test('Runtime is inversely proportional to flow', () {
+      final at200 = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreSerumK = 4.8
+        ..cardioplegiaCalafioreFlow = 200;
+      final at100 = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreSerumK = 4.8
+        ..cardioplegiaCalafioreFlow = 100;
+      expect(at100.calafioreSyringeRuntimeMin(syringe) / at200.calafioreSyringeRuntimeMin(syringe),
+          closeTo(2.0, 1e-9));
+    });
+
+    test('No rate -> runtime 0, never Infinity (serum at target, missing flow, empty syringe)', () {
+      final atTarget = calafioreSyringe(dose: 2)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 12.0;
+      expect(atTarget.calafioreSyringeRuntimeMin(syringe), 0);
+      final noFlow = calafioreSyringe(dose: 1)..cardioplegiaCalafioreSerumK = 4.8;
+      expect(noFlow.calafioreSyringeRuntimeMin(syringe), 0);
+      final full = calafioreSyringe(dose: 1)
+        ..cardioplegiaCalafioreFlow = 200
+        ..cardioplegiaCalafioreSerumK = 4.8;
+      expect(full.calafioreSyringeRuntimeMin(CalafioreSyringe.empty), 0);
     });
 
     test('Calafiore is independent of Buckberg/del Nido fields', () {
@@ -674,7 +747,7 @@ void main() {
         ..cardioplegiaCalafioreFlow = 200
         ..cardioplegiaCalafioreSerumK = 4.8;
       expect(pd.buckbergDoseVolume, closeTo(105, 0.01));
-      expect(pd.calafiorePerfusorRate, closeTo(114.0, 0.01));
+      expect(pd.calafiorePerfusorRate(syringe), closeTo(114.0, 0.01));
     });
   });
 

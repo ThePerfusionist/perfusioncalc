@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.37+59 · 12 tabs · **297 tests** (14 files, incl. widget tests) · i18n complete
+**State:** v0.4.38+60 · 12 tabs · **324 tests** (15 files, incl. widget tests) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -14,8 +14,8 @@ EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 | Rule | Reason |
 |---|---|
 | Always deliver a **complete cumulative ZIP** of every file ever changed | partial diffs caused `flutter analyze` errors in the past |
-| **No compiler in the assistant's container** — Flutter/Dart cannot be installed (network allow-list) | substitute checks: `tool/verify/consistency_check.py` plus targeted greps |
-| The maintainer runs `flutter analyze` / `flutter test` and reports back | that is the only real compile evidence |
+| **Compiler availability depends on the assistant's environment** — the claude.ai chat container cannot install Flutter (network allow-list); a Claude Code cloud session can (Flutter 3.44.8 cloned from GitHub, used for v0.4.38) | without a toolchain: substitute checks (`tool/verify/consistency_check.py` plus targeted greps) and no Dart delivered as ready-to-paste |
+| The maintainer runs `flutter analyze` / `flutter test` and reports back | the maintainer's run on the CI-pinned SDK stays the reference, even when the assistant compiled too |
 | Verify formulas numerically **before** implementing them | clinical app — arithmetic errors are safety relevant |
 | **Peer-reviewed primary sources only**, no textbooks | explicit maintainer requirement |
 | A ZIP cannot delete files → list deletions explicitly in the accompanying text | packaging can only add and overwrite |
@@ -66,7 +66,8 @@ lib/
     patient_data.dart    central case data + ALL calculation formulas (getters)
     bga_model.dart       Severinghaus temperature correction (own model)
     ranges.dart          plausibility ranges (UI warning only, never blocking)
-    cardioplegia_settings.dart      persisted del Nido mixing ratio
+    cardioplegia_settings.dart      persisted del Nido mixing ratio + Calafiore syringe
+    calafiore_syringe.dart          pure value object: syringe composition + derived [K+]/[Mg2+]
     cardioplegia_alarm_settings.dart persisted re-dose alarm + firing schedule
     transfusion_settings.dart        persisted RBC unit haematocrit
   i18n/app_strings.dart  EN/DE maps + t() helper + LocaleNotifier
@@ -76,7 +77,7 @@ lib/
   utils/                 pdf_export, duration_format, step_clamp,
                          decimal_input_formatter, notification_service
   screens/*.dart         one screen per tab
-test/                    12 files, 276 tests
+test/                    15 files, 324 tests
 tool/verify/             consistency_check.py, coverage_report.py, verify-all.ps1
 tool/offline/            start.bat, serve.ps1, test-serve.ps1, LIESMICH.txt
 ```
@@ -155,6 +156,22 @@ optional** (500 mg/ml MgSO₄·7H₂O = 20 mmol per 10 ml ≈ 2.0 mmol/ml ≈ 50
 w/v). Institutionally 40 ml KCl + 10 ml Mg ⇒ 1.6 mmol/ml K⁺, 0.4 mmol/ml Mg²⁺.
 Concentration fields have a built-in mmol/ml ⇄ % switch (molar masses KCl
 74.55 / MgSO₄·7H₂O 246.47).
+
+**The syringe is a persisted institutional setting (v0.4.38)**, like the del
+Nido share: composition and entry unit live in `CardioplegiaSettings`, the
+value object is `CalafioreSyringe`, and `calafiorePerfusorRate(syringe)` /
+`calafioreMgDeliveryRate(syringe)` take it as a parameter. No shipped default:
+a fresh install starts blank. See § 7.5d for the two rules that come with it.
+
+**Syringe runtime** (v0.4.38, `calafioreSyringeRuntimeMin(syringe)`): total
+syringe volume ÷ Perfusor rate × 60, e.g. 50 ml at 114 ml/h ⇒ 26.3 min. It is
+**pumping time**, not wall-clock time. With a rate of 0 (serum K⁺ at target)
+the card is hidden and the PDF row prints "—" — "0 min" would read as "empty
+right away".
+
+Screen order (v0.4.38): timer → dose („Gabe") → target K⁺ / Mg bolus → flow +
+serum K⁺ → results („Kardioplegievolumen") → syringe. On every protocol the
+grey info box (`_protocolInfoLines()`) sits directly above the PDF export.
 
 `calafioreDeltaK` is clamped at 0: when the serum potassium already meets the
 target, the correct answer is "0 ml/h, no supplementation needed" — and that
@@ -476,6 +493,40 @@ No flash on the web: `index.html` and `manifest.json` already carry the dark
 
 Ten tests, `test/theme_notifier_test.dart` — the class had none until now,
 the same gradient that exposed the alarm settings defect in 7.5.
+
+### 7.5d Calafiore syringe persisted, tab layout (v0.4.38)
+
+Maintainer request: the syringe had to be re-entered after every start
+although it is drawn up the same way for every case. It moved out of
+`PatientData` into `CardioplegiaSettings` (keys `cpl_calafiore_*`), with the
+pure `CalafioreSyringe` value object in between so `PatientData` keeps holding
+only per-case values — what the privacy policy promises.
+
+Two rules that are easy to get wrong and are now covered by tests:
+
+- **The syringe does not count as Calafiore input for the PDF.**
+  `_hasCalafioreInput()` looks at flow, serum K⁺ and dose number only. A
+  setting is present in every session; counting it would attach the tab to
+  every combined report (the C-1 pattern from § 3). The syringe rows sit
+  inside `if (calafiore)` with a `verify:ok` marker, like the del Nido share.
+- **Sanitised, not clamped, on load.** The syringe fields are free entries
+  whose ranges only warn, so a stored 120 ml must come back as 120 ml, not as
+  the 100 ml plausibility limit. `load()` drops only what no entry can
+  produce (NaN, ±∞, negative) and reads each key separately, so one entry of
+  the wrong type costs only that entry.
+
+Also in this version: the syringe runtime readout (§ 4, Calafiore); German
+dose label „Wievielte Gabe" → „Gabe"; the grey
+protocol info box moved from the top of each protocol to directly above the
+PDF export; privacy policy (both files) lists the syringe and the del Nido
+row's purpose was corrected (it said "last protocol used").
+
+Tests: `test/cardioplegia_screen_test.dart` (new: layout order, PDF gating,
+UI → setting), syringe group in `test/cardioplegia_settings_test.dart`, and
+the Calafiore unit tests ported to the parameter API with unchanged expected
+values plus the spreadsheet anchor (30.0 ml/h) as an explicit test; runtime
+tests (26.3 / 55.6 / 80 min, inverse to flow, 0 instead of Infinity, card
+hidden at rate 0).
 
 ### 7.6 Rules for future audits
 

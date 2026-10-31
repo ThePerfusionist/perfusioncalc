@@ -1,6 +1,6 @@
 # Datenschutzerklärung / Privacy Policy — PerfusionCalc
 
-**Stand / Last updated:** 01.08.2026 · **Gilt für / Applies to:** PerfusionCalc Android-App, iOS-App, Web-App ([perfusioncalc.de](https://perfusioncalc.de)) und die Offline-Windows-Distribution.
+**Stand / Last updated:** 31.10.2026 · **Gilt für / Applies to:** PerfusionCalc Android-App, iOS-App, Web-App ([perfusioncalc.de](https://perfusioncalc.de)) und die Offline-Windows-Distribution.
 
 Online-Fassung / online version: **https://perfusioncalc.de/privacy.html**
 
@@ -34,7 +34,8 @@ In der geräteeigenen Ablage (Android/iOS: `SharedPreferences`; Web: `localStora
 | Sprachauswahl (DE/EN) | Oberflächensprache über Neustarts hinweg |
 | Design (Hell/Dunkel/System) | Darstellung |
 | Kardioplegie-Alarmeinstellungen (Intervall, Ton, Vibration, Wiederholung) | Erinnerungsfunktion |
-| del-Nido-Mischungsverhältnis | zuletzt genutztes Protokoll |
+| del-Nido-Mischungsverhältnis | Einstellung der Einrichtung für die del-Nido-Mischung |
+| Zusammensetzung der Calafiore-Perfusorspritze (KCl- und MgSO₄-Volumen und -Konzentration, Eingabeeinheit) | Einstellung der Einrichtung, damit die Spritze nicht bei jedem Start neu eingegeben werden muss |
 | Hämatokrit des Erythrozytenkonzentrats | Einstellung der Einrichtung für die pädiatrische Transfusionsberechnung |
 
 Diese Einträge enthalten keine personenbezogenen Daten. Sie lassen sich durch Deinstallation der App bzw. durch Löschen der Websitedaten im Browser vollständig entfernen.
@@ -121,7 +122,8 @@ Only application settings are written to device storage (Android/iOS: `SharedPre
 | Language (DE/EN) | interface language across restarts |
 | Theme (light/dark/system) | appearance |
 | Cardioplegia alarm settings (interval, sound, vibration, repeat) | reminder feature |
-| del Nido mixing ratio | last protocol used |
+| del Nido mixing ratio | institutional setting for the del Nido mixture |
+| Calafiore Perfusor syringe composition (KCl and MgSO₄ volume and concentration, entry unit) | institutional setting, so the syringe does not have to be re-entered on every start |
 | Hematocrit of the RBC concentrate | institutional setting for the pediatric transfusion calculation |
 
 None of these contain personal data. They are removed completely by uninstalling the app or clearing site data in the browser.

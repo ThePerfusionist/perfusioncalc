@@ -1,6 +1,6 @@
 # Play Console — Data safety, cross-checked against the privacy policy
 
-**State:** v0.4.37+59 · checked against `privacy_policy.md`, `web/privacy.html`,
+**State:** v0.4.38+60 · checked against `privacy_policy.md`, `web/privacy.html`,
 `pubspec.yaml` and the release manifest.
 
 A filling aid for *Play Console → App content → Data safety*. Each answer
@@ -22,7 +22,7 @@ Everything else for PerfusionCalc follows from that:
 | What the app does | Leaves the device? | Declare in the form? |
 |---|---|---|
 | Calculate patient values in memory | no | **no** |
-| Store language, theme, alarm parameters, del Nido ratio, RBC haematocrit in `SharedPreferences` | no | **no** |
+| Store language, theme, alarm parameters, del Nido ratio, Calafiore syringe composition, RBC haematocrit in `SharedPreferences` | no | **no** |
 | Save a PDF through the system save dialog | no — the user picks the destination and the app never reads the file again | **no** |
 | Schedule a local notification | no | **no** |
 
