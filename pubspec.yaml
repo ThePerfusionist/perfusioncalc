@@ -17,7 +17,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.3.0
+  shared_preferences: ^2.5.6
   # Scheduled local notifications for the cardioplegia re-dose reminder.
   # Needed because an in-app timer cannot fire while the app is backgrounded
   # or the screen is off - the OS has to deliver the alert.
