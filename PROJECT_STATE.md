@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.38+60 · 12 tabs · **324 tests** (15 files, incl. widget tests) · i18n complete
+**State:** v0.4.39+61 · 12 tabs · **316 tests** (15 files, incl. widget tests) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -77,7 +77,7 @@ lib/
   utils/                 pdf_export, duration_format, step_clamp,
                          decimal_input_formatter, notification_service
   screens/*.dart         one screen per tab
-test/                    15 files, 324 tests
+test/                    15 files, 316 tests
 tool/verify/             consistency_check.py, coverage_report.py, verify-all.ps1
 tool/offline/            start.bat, serve.ps1, test-serve.ps1, LIESMICH.txt
 ```
@@ -162,12 +162,6 @@ Nido share: composition and entry unit live in `CardioplegiaSettings`, the
 value object is `CalafioreSyringe`, and `calafiorePerfusorRate(syringe)` /
 `calafioreMgDeliveryRate(syringe)` take it as a parameter. No shipped default:
 a fresh install starts blank. See § 7.5d for the two rules that come with it.
-
-**Syringe runtime** (v0.4.38, `calafioreSyringeRuntimeMin(syringe)`): total
-syringe volume ÷ Perfusor rate × 60, e.g. 50 ml at 114 ml/h ⇒ 26.3 min. It is
-**pumping time**, not wall-clock time. With a rate of 0 (serum K⁺ at target)
-the card is hidden and the PDF row prints "—" — "0 min" would read as "empty
-right away".
 
 Screen order (v0.4.38): timer → dose („Gabe") → target K⁺ / Mg bolus → flow +
 serum K⁺ → results („Kardioplegievolumen") → syringe. On every protocol the
@@ -515,8 +509,7 @@ Two rules that are easy to get wrong and are now covered by tests:
   produce (NaN, ±∞, negative) and reads each key separately, so one entry of
   the wrong type costs only that entry.
 
-Also in this version: the syringe runtime readout (§ 4, Calafiore); German
-dose label „Wievielte Gabe" → „Gabe"; the grey
+Also in this version: German dose label „Wievielte Gabe" → „Gabe"; the grey
 protocol info box moved from the top of each protocol to directly above the
 PDF export; privacy policy (both files) lists the syringe and the del Nido
 row's purpose was corrected (it said "last protocol used").
@@ -524,9 +517,13 @@ row's purpose was corrected (it said "last protocol used").
 Tests: `test/cardioplegia_screen_test.dart` (new: layout order, PDF gating,
 UI → setting), syringe group in `test/cardioplegia_settings_test.dart`, and
 the Calafiore unit tests ported to the parameter API with unchanged expected
-values plus the spreadsheet anchor (30.0 ml/h) as an explicit test; runtime
-tests (26.3 / 55.6 / 80 min, inverse to flow, 0 instead of Infinity, card
-hidden at rate 0).
+values plus the spreadsheet anchor (30.0 ml/h) as an explicit test.
+
+**v0.4.39 — syringe runtime readout removed again.** v0.4.38 also shipped a
+"Volle Spritze reicht für … min" card (syringe volume ÷ Perfusor rate) with a
+PDF row and eight tests. The maintainer decided against it after seeing it in
+use; method, card, PDF row, strings and tests are gone. **Do not re-propose it
+without a new reason.**
 
 ### 7.6 Rules for future audits
 

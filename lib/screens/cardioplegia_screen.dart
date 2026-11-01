@@ -373,13 +373,6 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
         patientData.calafioreDeltaK == 0 &&
         rateMissing.isEmpty;
 
-    // Syringe runtime is only meaningful while there is a rate. With complete
-    // inputs and a rate of 0 (no supplementation needed) the card is hidden:
-    // "0 min" would read as "syringe empty right away", the opposite of what
-    // is true. With inputs missing it stays, showing "—" and what is missing.
-    final perfusorRate = patientData.calafiorePerfusorRate(syringe);
-    final showRuntime = rateMissing.isNotEmpty || perfusorRate > 0;
-
     // Displayed concentration values depend on the active unit; onChanged
     // always converts back to the canonical mmol/ml before storing.
     final kclConcMmol = syringe.kclStockConc;
@@ -455,16 +448,10 @@ class _CardioplegiaScreenState extends State<CardioplegiaScreen> {
 
       // ── Results ("Kardioplegievolumen") ─────────────────────────────────
       SectionHeader(t('cardio_section_result')),
-      ResultCard(label: t('cardio_perfusor_rate'), unit: 'ml/h', value: perfusorRate,
+      ResultCard(label: t('cardio_perfusor_rate'), unit: 'ml/h', value: patientData.calafiorePerfusorRate(syringe),
           decimals: 1, missingInputs: rateMissing),
       ResultCard(label: t('cardio_mg_delivery'), unit: 'mmol/h', value: patientData.calafioreMgDeliveryRate(syringe),
           decimals: 2),
-      if (showRuntime) ...[
-        ResultCard(label: t('cardio_syringe_runtime'), unit: 'min',
-            value: patientData.calafioreSyringeRuntimeMin(syringe),
-            decimals: 0, missingInputs: rateMissing),
-        _noteRow(Icons.hourglass_bottom, t('cardio_syringe_runtime_hint')),
-      ],
 
       if (showNoDoseNote)
         _noteRow(Icons.info_outline, t('cardio_no_dose_needed')),
@@ -1331,16 +1318,6 @@ List<PdfSection> buildCardioplegiaPdfSections(PatientData pd) {
               pd.cardioplegiaCalafioreSerumK,
             ], pd.calafioreMgDeliveryRate(syr)),
             unit: 'mmol/h', decimals: 2, zeroIsValid: true),
-        // No zeroIsValid: 0 means "no rate", where a runtime does not exist -
-        // the row then prints "—", matching the hidden card on screen.
-        PdfRow.numeric(label: '${t('cardio_syringe_runtime')} (Calafiore)',
-            value: resultIf([
-              syr.kclVolume,
-              syr.kclStockConc,
-              pd.cardioplegiaCalafioreFlow,
-              pd.cardioplegiaCalafioreSerumK,
-            ], pd.calafioreSyringeRuntimeMin(syr)),
-            unit: 'min', decimals: 0),
         // Syringe readouts last, mirroring the screen order since v0.4.38.
         PdfRow.numeric(label: '${t('cardio_syringe_k_conc')} (Calafiore)',
             value: resultIf([syr.kclVolume, syr.kclStockConc], syr.resultingKConc),

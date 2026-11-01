@@ -652,23 +652,6 @@ class PatientData {
     return _safe(rate * mgConc);
   }
 
-  /// How long a FULL syringe lasts at the current Perfusor rate, in minutes
-  /// of pumping: total syringe volume [ml] / rate [ml/h] x 60. E.g. 50 ml at
-  /// 114 ml/h -> 26.3 min. It is pumping time, not wall-clock time: if the
-  /// Perfusor only runs while a dose is being delivered, the syringe spans
-  /// correspondingly more doses.
-  ///
-  /// Returns 0 whenever there is no rate (inputs missing, or the serum K+
-  /// already meets the target). "Never runs out" has no finite number, and
-  /// 0 min would read as "empty right away" - so the screen hides the card
-  /// and the PDF prints "—" in that case.
-  double calafioreSyringeRuntimeMin(CalafioreSyringe syringe) {
-    final rate = calafiorePerfusorRate(syringe);
-    final volume = syringe.totalVolume;
-    if (rate <= 0 || volume <= 0) return 0;
-    return _safe(volume / rate * 60);
-  }
-
   // ── Bretschneider (HTK / Custodiol) crystalloid cardioplegia ────────────
   // Single-shot intracellular crystalloid solution: extracellular sodium is
   // lowered to intracellular levels, abolishing the electrochemical

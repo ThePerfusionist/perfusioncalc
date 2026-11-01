@@ -690,56 +690,6 @@ void main() {
       expect(pd.calafiorePerfusorRate(const CalafioreSyringe(kclVolume: 40)), 0);
     });
 
-    // Syringe runtime: total syringe volume / Perfusor rate x 60.
-    test('Runtime of a full syringe: 50 ml at 114 ml/h (dose 1) -> 26.3 min', () {
-      final pd = calafioreSyringe(dose: 1)
-        ..cardioplegiaCalafioreFlow = 200
-        ..cardioplegiaCalafioreSerumK = 4.8;
-      expect(pd.calafiorePerfusorRate(syringe), closeTo(114.0, 0.01));
-      expect(pd.calafioreSyringeRuntimeMin(syringe), closeTo(50 / 114 * 60, 0.001));
-      expect(pd.calafioreSyringeRuntimeMin(syringe), closeTo(26.32, 0.01));
-    });
-
-    test('Runtime follows the dose: dose 2 (54 ml/h) -> 55.6 min', () {
-      final pd = calafioreSyringe(dose: 2)
-        ..cardioplegiaCalafioreFlow = 200
-        ..cardioplegiaCalafioreSerumK = 4.8;
-      expect(pd.calafioreSyringeRuntimeMin(syringe), closeTo(55.56, 0.01));
-    });
-
-    test('Runtime uses the whole syringe volume: pure KCl 40 ml at 30 ml/h -> 80 min', () {
-      // The spreadsheet anchor case again (30.0 ml/h).
-      final pd = calafioreSyringe(dose: 4)
-        ..cardioplegiaCalafioreTargetKAlt = 10
-        ..cardioplegiaCalafioreFlow = 200
-        ..cardioplegiaCalafioreSerumK = 5.0;
-      expect(pd.calafioreSyringeRuntimeMin(pureKcl), closeTo(80.0, 0.001));
-    });
-
-    test('Runtime is inversely proportional to flow', () {
-      final at200 = calafioreSyringe(dose: 2)
-        ..cardioplegiaCalafioreSerumK = 4.8
-        ..cardioplegiaCalafioreFlow = 200;
-      final at100 = calafioreSyringe(dose: 2)
-        ..cardioplegiaCalafioreSerumK = 4.8
-        ..cardioplegiaCalafioreFlow = 100;
-      expect(at100.calafioreSyringeRuntimeMin(syringe) / at200.calafioreSyringeRuntimeMin(syringe),
-          closeTo(2.0, 1e-9));
-    });
-
-    test('No rate -> runtime 0, never Infinity (serum at target, missing flow, empty syringe)', () {
-      final atTarget = calafioreSyringe(dose: 2)
-        ..cardioplegiaCalafioreFlow = 200
-        ..cardioplegiaCalafioreSerumK = 12.0;
-      expect(atTarget.calafioreSyringeRuntimeMin(syringe), 0);
-      final noFlow = calafioreSyringe(dose: 1)..cardioplegiaCalafioreSerumK = 4.8;
-      expect(noFlow.calafioreSyringeRuntimeMin(syringe), 0);
-      final full = calafioreSyringe(dose: 1)
-        ..cardioplegiaCalafioreFlow = 200
-        ..cardioplegiaCalafioreSerumK = 4.8;
-      expect(full.calafioreSyringeRuntimeMin(CalafioreSyringe.empty), 0);
-    });
-
     test('Calafiore is independent of Buckberg/del Nido fields', () {
       final pd = calafioreSyringe(dose: 1)
         ..cardioplegiaWeight = 70

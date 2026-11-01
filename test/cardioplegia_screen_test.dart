@@ -84,18 +84,6 @@ void main() {
       expect(valueOf(sections, '${t('cardio_mg_delivery')} (Calafiore)'), '45.60');
       expect(valueOf(sections, '${t('cardio_syringe_k_conc')} (Calafiore)'), '1.60');
       expect(valueOf(sections, '${t('cardio_kcl_volume')} (Calafiore)'), isNot('\u2014'));
-      // 50 ml / 114 ml/h = 26.3 min.
-      expect(valueOf(sections, '${t('cardio_syringe_runtime')} (Calafiore)'), '26');
-    });
-
-    test('No supplementation needed -> runtime row prints "\u2014", not "0"', () async {
-      await fillInstitutionalSyringe(cfg);
-      final pd = PatientData()
-        ..cardioplegiaCalafioreDoseNumber = 2
-        ..cardioplegiaCalafioreFlow = 200
-        ..cardioplegiaCalafioreSerumK = 12.0;
-      final sections = buildCardioplegiaPdfSections(pd);
-      expect(valueOf(sections, '${t('cardio_syringe_runtime')} (Calafiore)'), '\u2014');
     });
 
     test('Per-case input without a syringe still prints "—" for the rate', () {
@@ -108,7 +96,7 @@ void main() {
   });
 
   group('Layout', () {
-    Future<void> pumpScreen(WidgetTester tester, {PatientData? pd}) async {
+    Future<void> pumpScreen(WidgetTester tester) async {
       // Tall surface so the whole column is laid out without scrolling.
       tester.view.physicalSize = const Size(1080, 9000);
       tester.view.devicePixelRatio = 1.0;
@@ -116,7 +104,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: CardioplegiaScreen(patientData: pd ?? PatientData(), onChanged: () {}),
+          body: CardioplegiaScreen(patientData: PatientData(), onChanged: () {}),
         ),
       ));
       await tester.pump();
@@ -162,41 +150,6 @@ void main() {
         expect(find.text(entry.value), findsOneWidget,
             reason: '${entry.key}: info box rendered once');
       }
-    });
-
-    testWidgets('Runtime card: shows the minutes, hidden when no K+ is needed',
-        (tester) async {
-      await fillInstitutionalSyringe(cfg);
-      final pd = PatientData()
-        ..cardioplegiaCalafioreDoseNumber = 1
-        ..cardioplegiaCalafioreFlow = 200
-        ..cardioplegiaCalafioreSerumK = 4.8;
-      await pumpScreen(tester, pd: pd);
-      final card = find.ancestor(
-          of: find.text(t('cardio_syringe_runtime')),
-          matching: find.byType(ResultCard));
-      expect(card, findsOneWidget);
-      expect(find.descendant(of: card, matching: find.text('26')), findsOneWidget);
-      // Sits in the results block, above the syringe section.
-      expect(top(tester, t('cardio_syringe_runtime')),
-          lessThan(top(tester, t('cardio_syringe_section'))));
-
-      // Serum K+ above the dose-1 target of 20: rate 0, so no runtime card -
-      // "0 min" would claim the syringe is empty right away.
-      pd.cardioplegiaCalafioreSerumK = 25;
-      await pumpScreen(tester, pd: pd);
-      expect(find.text(t('cardio_syringe_runtime')), findsNothing);
-      expect(find.text(t('cardio_no_dose_needed')), findsOneWidget);
-    });
-
-    testWidgets('Runtime card with incomplete inputs shows "\u2014", not "0"',
-        (tester) async {
-      await pumpScreen(tester);
-      final card = find.ancestor(
-          of: find.text(t('cardio_syringe_runtime')),
-          matching: find.byType(ResultCard));
-      expect(card, findsOneWidget);
-      expect(find.descendant(of: card, matching: find.text('\u2014')), findsOneWidget);
     });
 
     testWidgets('Syringe entered in the UI lands in the persisted setting',
