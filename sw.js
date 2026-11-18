@@ -52,7 +52,7 @@
 //     fell back to CPU rendering -> slower than without. GPU rendering is the
 //     bigger lever. This version discards the responses cached with COI
 //     headers in v5.
-const BUILD_ID = '00b1f838564563919ad007be231784c05876acd7';
+const BUILD_ID = 'c1a2215cc42026cbc2edf3be0f0b278013c3e4d3';
 const VERSION = `pcalc-${BUILD_ID}`;
 const CACHE_NAME = `perfusioncalc-${VERSION}`;
 
