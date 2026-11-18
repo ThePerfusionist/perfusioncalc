@@ -25,11 +25,15 @@ class _TubeVolumeScreenState extends State<TubeVolumeScreen> {
   // tab. Static reference values (not patient-specific), so they don't
   // appear in the PDF export - same treatment as the other pure reference
   // tabs (e.g. ReferencePressureScreen).
+  //
+  // The unit lives in the column header since v0.4.40, on its own line:
+  // in every cell it made the columns wider and wrapped as "l/" + "min",
+  // and appended to the header text it wrapped the same way there.
   static const _flowRows = [
-    ['3/16"', '< 1.3 l/min', '0.5 \u2013 0.65 l/min'],
-    ['1/4"',  '< 3.0 l/min', '1.2 \u2013 1.6 l/min'],
-    ['3/8"',  '> 5.0 l/min', '4.0 \u2013 4.5 l/min'],
-    ['1/2"',  '> 5.0 l/min', '> 5.0 l/min'],
+    ['3/16"', '< 1.3', '0.5 \u2013 0.65'],
+    ['1/4"',  '< 3.0', '1.2 \u2013 1.6'],
+    ['3/8"',  '> 5.0', '4.0 \u2013 4.5'],
+    ['1/2"',  '> 5.0', '> 5.0'],
   ];
 
   @override
@@ -51,35 +55,49 @@ class _TubeVolumeScreenState extends State<TubeVolumeScreen> {
           ]);
         }),
         SectionHeader(t('flow_title')),
+        // A Table rather than Rows of Expanded flex cells (v0.4.40): the
+        // first column is as wide as its widest entry, so "Schlauch" can no
+        // longer be split into "Schlauc" + "h" at larger text sizes. The
+        // two value columns share what is left.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Container(
             decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: kDivider)),
-            child: Column(children: [
-              Container(
-                decoration:  BoxDecoration(color: kTableHeaderBg, borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
-                child: Row(children: [
-                  _hCell(t('flow_col_tube'),         flex: 2),
-                  _hCell(t('flow_col_max_flow'),     flex: 3),
-                  _hCell(t('flow_col_max_drainage'), flex: 3),
-                ]),
-              ),
-              ..._flowRows.asMap().entries.map((e) {
-                final i = e.key; final r = e.value; final isLast = i == _flowRows.length - 1;
-                return Container(
-                  decoration: BoxDecoration(
-                    color: i.isOdd ? kRowStripeA : kRowStripeB,
-                    borderRadius: isLast ? const BorderRadius.vertical(bottom: Radius.circular(12)) : BorderRadius.zero,
-                    border: isLast ? null :  Border(bottom: BorderSide(color: kSurfaceWash)),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: Table(
+                columnWidths: const {
+                  0: IntrinsicColumnWidth(),
+                  1: FlexColumnWidth(),
+                  2: FlexColumnWidth(),
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  TableRow(
+                    decoration: BoxDecoration(color: kTableHeaderBg),
+                    children: [
+                      _hCell(t('flow_col_tube')),
+                      _hCell('${t('flow_col_max_flow')}\n(l/min)'),
+                      _hCell('${t('flow_col_max_drainage')}\n(l/min)'),
+                    ],
                   ),
-                  child: Row(children: [
-                    _flowCell(r[0], flex: 2, color: kGold, bold: true),
-                    _flowCell(r[1], flex: 3),
-                    _flowCell(r[2], flex: 3),
-                  ]),
-                );
-              }),
-            ]),
+                  for (var i = 0; i < _flowRows.length; i++)
+                    TableRow(
+                      decoration: BoxDecoration(
+                        color: i.isOdd ? kRowStripeA : kRowStripeB,
+                        border: i == _flowRows.length - 1
+                            ? null
+                            : Border(bottom: BorderSide(color: kSurfaceWash)),
+                      ),
+                      children: [
+                        _flowCell(_flowRows[i][0], color: kGold, bold: true),
+                        _flowCell(_flowRows[i][1]),
+                        _flowCell(_flowRows[i][2]),
+                      ],
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -96,14 +114,13 @@ class _TubeVolumeScreenState extends State<TubeVolumeScreen> {
     );
   }
 
-  Widget _hCell(String text, {int flex = 1}) => Expanded(flex: flex,
-    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Text(text, style: TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 13))));
+  Widget _hCell(String text) =>
+    Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Text(text, style: const TextStyle(color: kGold, fontWeight: FontWeight.bold, fontSize: 13)));
 
-  Widget _flowCell(String text, {int flex = 1, Color? color, bool bold = false}) =>
-    Expanded(flex: flex,
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        child: Text(text, style: TextStyle(color: color ?? kText, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14))));
+  Widget _flowCell(String text, {Color? color, bool bold = false}) =>
+    Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      child: Text(text, style: TextStyle(color: color ?? kText, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 14)));
 }
 
 // ── PDF sections (extracted, for the single-tab export and the combined report) ─

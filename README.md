@@ -4,13 +4,13 @@
 
 **A comprehensive, evidence-based medical calculator for perfusionists**
 
-[![Version](https://img.shields.io/badge/version-0.4.39-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
+[![Version](https://img.shields.io/badge/version-0.4.40-orange?style=flat-square)](https://github.com/ThePerfusionist/perfusioncalc/releases)
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-brightgreen?style=flat-square)](https://perfusioncalc.de/)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3.0-blue?style=flat-square)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-≥%203.38-54C5F8?style=flat-square&logo=flutter)](https://flutter.dev)
 [![WebApp](https://img.shields.io/badge/WebApp-live-success?style=flat-square)](https://perfusioncalc.de/)
 [![Languages](https://img.shields.io/badge/i18n-EN%20%2F%20DE-blueviolet?style=flat-square)](#-internationalization)
-[![Tests](https://img.shields.io/badge/tests-316%20passing-brightgreen?style=flat-square)](test/)
+[![Tests](https://img.shields.io/badge/tests-332%20passing-brightgreen?style=flat-square)](test/)
 [![PWA](https://img.shields.io/badge/PWA-offline%20capable-5A0FC8?style=flat-square)](#-progressive-web-app)
 
 </div>
@@ -608,6 +608,7 @@ lib/
 │   └── app_strings.dart            # All EN/DE translations + LocaleNotifier
 ├── models/
 │   ├── patient_data.dart           # All calculation formulas (single source of truth)
+│   ├── finck_cannula_tables.dart   # Finck 2025 V-A/V-V cannula tables (transcribed data)
 │   ├── bga_model.dart              # Severinghaus BGA temperature correction
 │   └── ranges.dart                 # Plausibility ranges for input validation
 ├── theme/
@@ -630,8 +631,9 @@ lib/
 │   ├── pdf_download_web.dart       # Browser download via Blob + <a download>
 │   └── pdf_download_stub.dart      # Mobile/desktop save dialog (file_picker)
 └── widgets/
-    └── common.dart                 # InputCard, ResultCard, SourceButton, PdfExportButton,
-                                    #   BrowserSafeImage, AppSources, theme colour tokens
+    ├── common.dart                 # InputCard, ResultCard, SourceButton, PdfExportButton,
+    │                               #   BrowserSafeImage, AppSources, theme colour tokens
+    └── frozen_column_table.dart    # Wide reference table with a fixed first column
 
 PROJECT_STATE.md                    # Compact maintainer context: conventions,
                                     #   architecture, formulas, open items
@@ -645,7 +647,7 @@ test/
 assets/
 ├── fonts/                          # Roboto Regular/Bold/Italic for PDF export
 ├── icon.png, o2_chart.png
-├── finck_va.jpg, finck_vv.jpg      # Pediatric cannula tables
+├── finck_va.jpg, finck_vv.jpg      # Finck originals (web/cannulas.html; in-app as tables)
 ├── heart_anterior.jpg, heart_posterior.jpg, heart_cross_section.jpg
 └── coronary_arteries.jpg
 ```

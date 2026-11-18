@@ -565,7 +565,7 @@ class GoldListCard extends StatelessWidget {
 // path 'assets/assets/<filename>'.
 
 class BrowserSafeImage extends StatelessWidget {
-  final String assetPath;        // wie in pubspec deklariert, z.B. 'assets/finck_va.jpg'
+  final String assetPath;        // as declared in pubspec, e.g. 'assets/heart_anterior.jpg'
   final BoxFit fit;
   final double? width;
   final double? height;
@@ -643,96 +643,6 @@ class BrowserSafeImage extends StatelessWidget {
   }
 }
 
-class ImageSectionCard extends StatelessWidget {
-  final String title;
-  final String assetPath;
-
-  const ImageSectionCard({super.key, required this.title, required this.assetPath});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-          child: Text(title,
-              style: const TextStyle(color: kGold, fontSize: 14, fontWeight: FontWeight.bold)),
-        ),
-        Semantics(
-          button: true,
-          label: t('a11y_view_fullscreen'),
-          child: GestureDetector(
-            onTap: () => _showFullImage(context),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-              child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.fitWidth),
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  void _showFullImage(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(8),
-        // Stack layout: image fills the dialog and uses InteractiveViewer
-        // for pinch-zoom; the close button floats on top. This keeps the
-        // close button always reachable, even when the image is very tall
-        // (e.g. the portrait-format Finck tables).
-        child: Stack(children: [
-          // Title at top
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(48, 12, 48, 12),
-              color: Colors.black54,
-              child: Text(title, textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-            ),
-          ),
-          // Zoomable image fills the entire dialog
-          Padding(
-            padding: const EdgeInsets.only(top: 48, bottom: 8),
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 5.0,
-              child: Center(child: BrowserSafeImage(assetPath: assetPath, fit: BoxFit.contain)),
-            ),
-          ),
-          // Close button — top right, always reachable
-          Positioned(
-            top: 8, right: 8,
-            child: Semantics(
-              button: true,
-              label: t('a11y_close_fullscreen'),
-              excludeSemantics: true,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(ctx),
-                child: Container(
-                  width: 34, height: 34,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2C2C2C),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 18),
-                ),
-              ),
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
 // ── PDF Export button ─────────────────────────────────────────────────────────
 //
 // Reusable button at the end of a tab for exporting the current
@@ -805,8 +715,13 @@ class PdfExportButton extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(color: kCardColor, borderRadius: BorderRadius.circular(8)),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(t('pdf_export_button'),
-              style:  TextStyle(color: kText, fontSize: 15)),
+          // Flexible (v0.4.40): at the largest system text sizes the label
+          // is wider than a phone and the Row overflowed; now it wraps.
+          Flexible(
+            child: Text(t('pdf_export_button'),
+                textAlign: TextAlign.center,
+                style:  TextStyle(color: kText, fontSize: 15)),
+          ),
           const SizedBox(width: 8),
           const Icon(Icons.picture_as_pdf, color: kGold, size: 20),
         ]),

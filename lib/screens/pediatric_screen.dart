@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/common.dart';
+import '../widgets/frozen_column_table.dart';
+import '../models/finck_cannula_tables.dart';
 import '../models/patient_data.dart';
 import '../models/transfusion_settings.dart';
 import '../models/ranges.dart';
@@ -73,9 +75,47 @@ class _PediatricScreenState extends State<PediatricScreen> {
             flexes: [2, 3],
           ),
           const SizedBox(height: 16),
-          ImageSectionCard(title: t('ped_title_va'), assetPath: 'assets/finck_va.jpg'),
+          // ── Finck 2025 cannula tables (were screenshots until v0.4.40) ──
+          // Data and transcription notes: models/finck_cannula_tables.dart.
+          _sectionTitle(t('ped_title_va')),
           const SizedBox(height: 8),
-          ImageSectionCard(title: t('ped_title_vv'), assetPath: 'assets/finck_vv.jpg'),
+          FrozenColumnTable(
+            headers: [
+              FrozenTableHeader(t('ped_col_weight')),
+              FrozenTableHeader(t('ped_cannula_venous'),   caption: t('ped_cannula_site_neck')),
+              FrozenTableHeader(t('ped_cannula_arterial'), caption: t('ped_cannula_site_neck')),
+              FrozenTableHeader(t('ped_cannula_venous'),   caption: t('ped_cannula_site_groin')),
+              FrozenTableHeader(t('ped_cannula_arterial'), caption: t('ped_cannula_site_groin')),
+              FrozenTableHeader(t('ped_cannula_venous'),   caption: t('ped_cannula_site_chest')),
+              FrozenTableHeader(t('ped_cannula_arterial'), caption: t('ped_cannula_site_chest')),
+              FrozenTableHeader(t('ped_cannula_connector')),
+            ],
+            rows: _translated(kFinckVaRows),
+          ),
+          _hintRow(Icons.info_outline, t('ped_cannula_note_va')),
+          const SizedBox(height: 16),
+          _sectionTitle(t('ped_title_vv')),
+          const SizedBox(height: 8),
+          FrozenColumnTable(
+            headers: [
+              FrozenTableHeader(t('ped_col_weight')),
+              FrozenTableHeader(t('ped_cannula_dl_reinfusion'), caption: t('ped_cannula_site_neck')),
+              FrozenTableHeader(t('ped_cannula_drainage'),      caption: t('ped_cannula_site_groin')),
+              FrozenTableHeader(t('ped_cannula_reinfusion'),    caption: t('ped_cannula_site_groin')),
+              FrozenTableHeader(t('ped_cannula_avalon'),        caption: t('ped_cannula_site_neck')),
+              FrozenTableHeader(t('ped_cannula_connector')),
+            ],
+            rows: _translated(kFinckVvRows),
+          ),
+          _hintRow(Icons.info_outline, t('ped_cannula_note_vv')),
+          const SizedBox(height: 16),
+          _sectionTitle(t('ped_title_full_flow')),
+          const SizedBox(height: 8),
+          _fancyTable(
+            headers: [t('ped_col_weight'), t('ped_col_flow')],
+            rows: kFinckFullFlowRows,
+            flexes: [2, 3],
+          ),
           const SizedBox(height: 16),
           _sectionTitle(t('ped_title_bv')),
           const SizedBox(height: 8),
@@ -145,6 +185,12 @@ class _PediatricScreenState extends State<PediatricScreen> {
         ]),
       ),
     );
+  }
+
+  /// Resolves the {or} token in the Finck cells for the current language.
+  List<List<String>> _translated(List<List<String>> rows) {
+    final or = t('ped_or');
+    return [for (final r in rows) [for (final c in r) finckOr(c, or)]];
   }
 
   /// Small explanatory line under an input - same visual weight as the

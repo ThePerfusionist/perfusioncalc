@@ -4,7 +4,7 @@
 > searching the tree — it saves re-deriving structure, conventions and
 > decisions. Keep it up to date with every change.
 
-**State:** v0.4.39+61 · 12 tabs · **316 tests** (15 files, incl. widget tests) · i18n complete
+**State:** v0.4.40+62 · 12 tabs · **332 tests** (16 files, incl. widget tests) · i18n complete
 EN+DE (guarded by a parity test) · contact: perfusioncalc@unbox.at
 
 ---
@@ -70,14 +70,16 @@ lib/
     calafiore_syringe.dart          pure value object: syringe composition + derived [K+]/[Mg2+]
     cardioplegia_alarm_settings.dart persisted re-dose alarm + firing schedule
     transfusion_settings.dart        persisted RBC unit haematocrit
+    finck_cannula_tables.dart        Finck 2025 V-A/V-V cannula tables (transcribed)
   i18n/app_strings.dart  EN/DE maps + t() helper + LocaleNotifier
   theme/app_theme.dart   ThemeNotifier (system/light/dark) + buildAppTheme()
+  widgets/frozen_column_table.dart  wide reference table, fixed first column
   widgets/common.dart    InputCard, ResultCard, SectionHeader, DataTable2,
                          PdfExportButton, SourceButton, AppSources, colour tokens
   utils/                 pdf_export, duration_format, step_clamp,
                          decimal_input_formatter, notification_service
   screens/*.dart         one screen per tab
-test/                    15 files, 316 tests
+test/                    16 files, 332 tests
 tool/verify/             consistency_check.py, coverage_report.py, verify-all.ps1
 tool/offline/            start.bat, serve.ps1, test-serve.ps1, LIESMICH.txt
 ```
@@ -255,6 +257,7 @@ its protocol-specific pressure instead.
 | **RBC unit haematocrit 0.55** | deliberately left as is. Configurable in the pediatric tab since v0.4.4 and printed in the PDF. |
 | **Postal address in the privacy policy** | deliberately omitted by the controller. Art. 13(1)(a) GDPR formally requires it. |
 | **ProGuard `-keep` rules** | deliberately kept. Cost: a few hundred KB of APK size. Removing them only shows its effect in a release build and the failure mode is a crash when a scheduled reminder fires. Test recipe in `proguard-rules.pro`. |
+| **Finck transcription (v0.4.40)** | to confirm by the maintainer: „VAD 12210" at 15–16 kg (V-V) kept verbatim, probably VAK; reading of the merged Avalon cells (23 Fr 17–30 kg, 27 Fr 31–50 kg, 31 Fr from 51 kg). See § 7.5e. |
 | Safari PDF export | the only fix from block E without confirmation — needs a Mac or iPhone. |
 | St. Thomas' and Eppendorf protocols · perfusion log with timestamps · heparin/protamine + ACT calculator · native share sheet | ideas |
 
@@ -524,6 +527,41 @@ values plus the spreadsheet anchor (30.0 ml/h) as an explicit test.
 PDF row and eight tests. The maintainer decided against it after seeing it in
 use; method, card, PDF row, strings and tests are gone. **Do not re-propose it
 without a new reason.**
+
+### 7.5e Finck tables as data, flow table header (v0.4.40)
+
+Maintainer request, from a phone screenshot: in the flow/drainage table on the
+tube tab „Schlauch" was split into „Schlauc" + „h", and the two Finck 2025
+cannula tables on the pediatric tab were screenshots of a spreadsheet.
+
+- **Flow/drainage table** is a `Table` now: the first column is
+  `IntrinsicColumnWidth`, so it is as wide as its widest word; the value
+  columns share the rest. The unit moved out of every cell into the header,
+  on a line of its own — in a cell or appended to the header it wrapped as
+  „l/" + „min".
+- **Finck tables** are transcribed into `models/finck_cannula_tables.dart`
+  (V-A, V-V and the recommended full flow) and shown with the new
+  `FrozenColumnTable`: weight column fixed, the rest scrolls sideways, rows
+  in a fixed two-line height so both halves line up. Transcription notes sit
+  in the file header. Three judgement calls the maintainer should confirm:
+  „VAD 12210" (15–16 kg, V-V) kept verbatim although every other row says
+  VAK; the merged Avalon cells read as 23 Fr 17–30 kg, 27 Fr 31–50 kg,
+  31 Fr from 51 kg; the colour coding and the „additional cannula" box (stock
+  locations of the source institution) not transcribed.
+- **The two JPGs stay.** `web/cannulas.html`, the fallback page for browsers
+  without WebGL, shows them and the service worker precaches them for it.
+  Deleting them would have failed the strict precache.
+- `ImageSectionCard` had no user left and was removed, together with its
+  string `a11y_view_fullscreen`.
+- `PdfExportButton`: label wrapped in `Flexible`. At text size ×2 the Row
+  overflowed on a phone; the new widget tests at that size found it.
+
+Tests: `test/reference_tables_test.dart` (16) — the data's structure
+(rows per weight band, cell kinds per column, sizes never decreasing with
+weight, which a mistyped number would violate), row alignment and width cap
+of `FrozenColumnTable`, the pediatric tab without overflow in EN/DE at
+text ×1 and ×2, and „Schlauch" on one line at ×1.3 (fails on the old layout
+with three lines).
 
 ### 7.6 Rules for future audits
 

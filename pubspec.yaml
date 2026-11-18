@@ -9,7 +9,7 @@ description: >-
 
 publish_to: 'none'
 
-version: 0.4.39+61
+version: 0.4.40+62
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
@@ -52,6 +52,9 @@ flutter:
     # source for the launcher/PWA icons) and would otherwise add 451 KB to
     # the web bundle for nothing.
     - assets/o2_chart.png
+    # The Finck tables are native tables in the app since v0.4.40; the two
+    # screenshots stay because web/cannulas.html (fallback page without
+    # WebGL) shows them and the service worker precaches them for it.
     - assets/finck_va.jpg
     - assets/finck_vv.jpg
     - assets/heart_anterior.jpg
