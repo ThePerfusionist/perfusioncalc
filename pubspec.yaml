@@ -27,7 +27,7 @@ dependencies:
   # PDF-Export: erzeugt PDF-Dokumente direkt im Browser, native Dart-Lib.
   pdf: ^3.11.1
   # Native DOM API for file download on the web (window.HTMLAnchorElement).
-  web: ^1.1.0   # was "any": a fresh pub upgrade could otherwise jump across a breaking change
+  web: ^1.1.2   # was "any": a fresh pub upgrade could otherwise jump across a breaking change
   # Cross-platform save dialog: opens the Storage Access Framework on
   # Android and the Files app on iOS, and writes the PDF to the location the
   # user chose. Same API on every platform.
